@@ -1,0 +1,475 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1">
+   
+   <!-- Barre d'outils supérieure -->
+   <top>
+      <VBox spacing="15.0" style="-fx-padding: 20; -fx-background-color: white;">
+         
+         <!-- En-tête -->
+         <HBox alignment="CENTER_LEFT" spacing="20.0">
+            <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="Gestion des Utilisateurs et Rôles">
+               <font>
+                  <Font size="24.0" />
+               </font>
+            </Label>
+            <Region HBox.hgrow="ALWAYS" />
+            <Button styleClass="button-success" text="+ Nouvel utilisateur" />
+            <Button styleClass="button-primary" text="+ Nouveau rôle" />
+            <Button styleClass="button-info" text="📊 Rapports" />
+         </HBox>
+         
+         <!-- Onglets de navigation -->
+         <TabPane fx:id="tabsAdmin" tabClosingPolicy="UNAVAILABLE">
+            
+            <!-- Onglet Utilisateurs -->
+            <Tab text="👤 Utilisateurs">
+               <VBox spacing="15.0" style="-fx-padding: 20;">
+                  
+                  <!-- Filtres utilisateurs -->
+                  <HBox alignment="CENTER_LEFT" spacing="15.0">
+                     <Label text="Filtrer:" />
+                     <ComboBox fx:id="filtreStatutUtilisateur" prefWidth="100.0" promptText="Statut">
+					    <items>
+					        <FXCollections fx:factory="observableArrayList">
+					            <String fx:value="Tous" />
+					            <String fx:value="Actifs" />
+					            <String fx:value="Inactifs" />
+					            <String fx:value="Suspendus" />
+					        </FXCollections>
+					    </items>
+					</ComboBox>
+					
+					<ComboBox fx:id="filtreRoleUtilisateur" prefWidth="120.0" promptText="Rôle">
+					    <items>
+					        <FXCollections fx:factory="observableArrayList">
+					            <String fx:value="Tous les rôles" />
+					            <String fx:value="Administrateur" />
+					            <String fx:value="Gestionnaire" />
+					            <String fx:value="Utilisateur" />
+					            <String fx:value="Invité" />
+					        </FXCollections>
+					    </items>
+					</ComboBox>
+
+                     
+                     <Region HBox.hgrow="ALWAYS" />
+                     
+                     <TextField fx:id="champRechercheUtilisateur" prefWidth="250.0" promptText="🔍 Rechercher (nom, email, code...)" />
+                     <Button styleClass="button-primary" text="Rechercher" />
+                  </HBox>
+                  
+                  <!-- Tableau des utilisateurs -->
+                  <TableView fx:id="tableauUtilisateurs" VBox.vgrow="ALWAYS">
+                     <columns>
+                        <TableColumn fx:id="colonneCodeUtilisateur" prefWidth="80.0" text="Code" />
+                        <TableColumn fx:id="colonneNomUtilisateur" prefWidth="120.0" text="Nom" />
+                        <TableColumn fx:id="colonnePrenomUtilisateur" prefWidth="120.0" text="Prénom" />
+                        <TableColumn fx:id="colonneEmailUtilisateur" prefWidth="180.0" text="Email" />
+                        <TableColumn fx:id="colonneRoleUtilisateur" prefWidth="100.0" text="Rôle" />
+                        <TableColumn fx:id="colonneStatutUtilisateur" prefWidth="80.0" text="Statut" />
+                        <TableColumn fx:id="colonneDernierAcces" prefWidth="120.0" text="Dernier accès" />
+                        <TableColumn fx:id="colonneActionsUtilisateur" prefWidth="120.0" text="Actions" />
+                     </columns>
+                     
+                     <placeholder>
+                        <VBox alignment="CENTER" spacing="10.0">
+                           <Label style="-fx-font-size: 48px; -fx-text-fill: #bdc3c7;" text="👤" />
+                           <Label style="-fx-text-fill: #7f8c8d;" text="Aucun utilisateur trouvé" />
+                           <Button styleClass="button-primary" text="Créer le premier utilisateur" />
+                        </VBox>
+                     </placeholder>
+                  </TableView>
+                  
+               </VBox>
+            </Tab>
+            
+            <!-- Onglet Rôles -->
+            <Tab text="🛡️ Rôles">
+               <VBox spacing="15.0" style="-fx-padding: 20;">
+                  
+                  <!-- Liste des rôles -->
+                  <HBox alignment="CENTER_LEFT" spacing="10.0">
+                     <Label style="-fx-font-weight: bold;" text="Rôles configurés" />
+                     <Label fx:id="nombreRoles" style="-fx-text-fill: #7f8c8d;" text="(4 rôles)" />
+                     <Region HBox.hgrow="ALWAYS" />
+                     <Button styleClass="button-success" text="+ Nouveau rôle" />
+                  </HBox>
+                  
+                  <HBox spacing="20.0" VBox.vgrow="ALWAYS">
+                     
+                     <!-- Liste des rôles -->
+                     <VBox prefWidth="300.0" spacing="10.0">
+                        
+                        <ListView fx:id="listeRoles" VBox.vgrow="ALWAYS">
+                           <!-- Les rôles seront ajoutés dynamiquement -->
+                        </ListView>
+                        
+                     </VBox>
+                     
+                     <!-- Détails du rôle sélectionné -->
+                     <VBox HBox.hgrow="ALWAYS" spacing="15.0">
+                        
+                        <!-- Informations du rôle -->
+                        <VBox spacing="15.0" styleClass="card">
+                           <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Informations du rôle" />
+                           
+                           <GridPane hgap="15.0" vgap="12.0">
+                              <columnConstraints>
+                                 <ColumnConstraints hgrow="NEVER" minWidth="100.0" />
+                                 <ColumnConstraints hgrow="ALWAYS" />
+                              </columnConstraints>
+                              
+                              <Label text="Nom:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                              <TextField fx:id="champNomRole" text="Administrateur" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                              
+                              <Label text="Description:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                              <TextArea fx:id="textAreaDescriptionRole" prefRowCount="2" text="Accès complet à toutes les fonctionnalités du système" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                              
+                              <Label text="Utilisateurs:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                              <Label fx:id="labelNombreUtilisateurs" text="2 utilisateurs assignés" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                              
+                              <Label text="Actif:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                              <CheckBox fx:id="checkRoleActif" selected="true" text="Rôle actif" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                           </GridPane>
+                           
+                           <HBox spacing="10.0">
+                              <Button fx:id="btnSauvegarderRole" styleClass="button-success" text="💾 Sauvegarder" />
+                              <Button fx:id="btnAnnulerRole" styleClass="button-secondary" text="❌ Annuler" />
+                              <Region HBox.hgrow="ALWAYS" />
+                              <Button fx:id="btnSupprimerRole" styleClass="button-danger" text="🗑️ Supprimer le rôle" />
+                           </HBox>
+                        </VBox>
+                        
+                        <!-- Permissions -->
+                        <VBox spacing="15.0" styleClass="card" VBox.vgrow="ALWAYS">
+                           <HBox alignment="CENTER_LEFT" spacing="10.0">
+                              <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Permissions" />
+                              <Region HBox.hgrow="ALWAYS" />
+                              <Button text="Tout sélectionner" />
+                              <Button text="Tout désélectionner" />
+                           </HBox>
+                           
+                           <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                              <VBox spacing="15.0">
+                                 
+                                 <!-- Permissions générales -->
+                                 <VBox spacing="8.0">
+                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="🏠 Accès général" />
+                                    <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
+                                       <CheckBox fx:id="permAccueil" selected="true" text="Accueil" />
+                                       <CheckBox fx:id="permDashboard" selected="true" text="Dashboard" />
+                                    </VBox>
+                                 </VBox>
+                                 
+                                 <Separator />
+                                 
+                                 <!-- Permissions courrier -->
+                                 <VBox spacing="8.0">
+                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="📧 Gestion du courrier" />
+                                    <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
+                                       <CheckBox fx:id="permCourrierLecture" selected="true" text="Consulter les courriers" />
+                                       <CheckBox fx:id="permCourrierCreation" selected="true" text="Créer des courriers" />
+                                       <CheckBox fx:id="permCourrierModification" selected="true" text="Modifier les courriers" />
+                                       <CheckBox fx:id="permCourrierSuppression" selected="true" text="Supprimer les courriers" />
+                                       <CheckBox fx:id="permCourrierArchivage" selected="true" text="Archiver les courriers" />
+                                       <CheckBox fx:id="permCourrierValidation" selected="true" text="Valider les courriers" />
+                                    </VBox>
+                                 </VBox>
+                                 
+                                 <Separator />
+                                 
+                                 <!-- Permissions documents -->
+                                 <VBox spacing="8.0">
+                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="📄 Gestion des documents" />
+                                    <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
+                                       <CheckBox fx:id="permDocumentLecture" selected="true" text="Consulter les documents" />
+                                       <CheckBox fx:id="permDocumentCreation" selected="true" text="Créer des documents" />
+                                       <CheckBox fx:id="permDocumentModification" selected="true" text="Modifier les documents" />
+                                       <CheckBox fx:id="permDocumentSuppression" selected="true" text="Supprimer les documents" />
+                                       <CheckBox fx:id="permDocumentPartage" selected="true" text="Partager les documents" />
+                                    </VBox>
+                                 </VBox>
+                                 
+                                 <Separator />
+                                 
+                                 <!-- Permissions réunions -->
+                                 <VBox spacing="8.0">
+                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="👥 Gestion des réunions" />
+                                    <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
+                                       <CheckBox fx:id="permReunionLecture" selected="true" text="Consulter les réunions" />
+                                       <CheckBox fx:id="permReunionCreation" selected="true" text="Créer des réunions" />
+                                       <CheckBox fx:id="permReunionModification" selected="true" text="Modifier les réunions" />
+                                       <CheckBox fx:id="permReunionSuppression" selected="true" text="Supprimer les réunions" />
+                                       <CheckBox fx:id="permReunionAnimation" selected="true" text="Animer les réunions" />
+                                    </VBox>
+                                 </VBox>
+                                 
+                                 <Separator />
+                                 
+                                 <!-- Permissions messages -->
+                                 <VBox spacing="8.0">
+                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="💬 Messagerie" />
+                                    <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
+                                       <CheckBox fx:id="permMessageLecture" selected="true" text="Lire les messages" />
+                                       <CheckBox fx:id="permMessageEnvoi" selected="true" text="Envoyer des messages" />
+                                       <CheckBox fx:id="permMessageSuppression" text="Supprimer des messages" />
+                                       <CheckBox fx:id="permMessageDiffusion" selected="true" text="Diffusion générale" />
+                                    </VBox>
+                                 </VBox>
+                                 
+                                 <Separator />
+                                 
+                                 <!-- Permissions administration -->
+                                 <VBox spacing="8.0">
+                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #e74c3c;" text="⚙️ Administration" />
+                                    <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
+                                       <CheckBox fx:id="permAdminUtilisateurs" selected="true" text="Gérer les utilisateurs" />
+                                       <CheckBox fx:id="permAdminRoles" selected="true" text="Gérer les rôles" />
+                                       <CheckBox fx:id="permAdminSysteme" selected="true" text="Administration système" />
+                                       <CheckBox fx:id="permAdminLogs" selected="true" text="Consulter les logs" />
+                                       <CheckBox fx:id="permAdminSauvegarde" selected="true" text="Gestion des sauvegardes" />
+                                    </VBox>
+                                 </VBox>
+                                 
+                                 <Separator />
+                                 
+                                 <!-- Permissions recherche -->
+                                 <VBox spacing="8.0">
+                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="🔍 Recherche et archivage" />
+                                    <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
+                                       <CheckBox fx:id="permRecherche" selected="true" text="Recherche basique" />
+                                       <CheckBox fx:id="permRechercheAvancee" selected="true" text="Recherche avancée" />
+                                       <CheckBox fx:id="permArchivageLecture" selected="true" text="Consulter les archives" />
+                                       <CheckBox fx:id="permArchivageGestion" selected="true" text="Gérer les archives" />
+                                    </VBox>
+                                 </VBox>
+                                 
+                                 <Separator />
+                                 
+                                 <!-- Permissions rapports -->
+                                 <VBox spacing="8.0">
+                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="📊 Rapports et statistiques" />
+                                    <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
+                                       <CheckBox fx:id="permRapportLecture" selected="true" text="Consulter les rapports" />
+                                       <CheckBox fx:id="permRapportCreation" selected="true" text="Créer des rapports" />
+                                       <CheckBox fx:id="permRapportExport" selected="true" text="Exporter les rapports" />
+                                       <CheckBox fx:id="permStatistiques" selected="true" text="Accès aux statistiques" />
+                                    </VBox>
+                                 </VBox>
+                                 
+                              </VBox>
+                           </ScrollPane>
+                        </VBox>
+                        
+                     </VBox>
+                     
+                  </HBox>
+                  
+               </VBox>
+            </Tab>
+            
+            <!-- Onglet Logs d'activité -->
+            <Tab text="📋 Logs d'activité">
+               <VBox spacing="15.0" style="-fx-padding: 20;">
+                  
+                  <!-- Filtres des logs -->
+                  <HBox alignment="CENTER_LEFT" spacing="15.0">
+                     <Label text="Filtrer:" />
+                     <ComboBox fx:id="filtreTypeAction" prefWidth="120.0" promptText="Type d'action">
+					    <items>
+					        <FXCollections fx:factory="observableArrayList">
+					            <String fx:value="Toutes" />
+					            <String fx:value="Connexion" />
+					            <String fx:value="Déconnexion" />
+					            <String fx:value="Création" />
+					            <String fx:value="Modification" />
+					            <String fx:value="Suppression" />
+					            <String fx:value="Consultation" />
+					        </FXCollections>
+					    </items>
+					</ComboBox>
+                     
+                     <ComboBox fx:id="filtreUtilisateurLog" prefWidth="120.0" promptText="Utilisateur">
+					    <items>
+					        <FXCollections fx:factory="observableArrayList">
+					            <String fx:value="Tous" />
+					            <String fx:value="admin" />
+					            <String fx:value="jean.dupont" />
+					            <String fx:value="marie.martin" />
+					        </FXCollections>
+					    </items>
+					</ComboBox>
+                     
+                     <DatePicker fx:id="dateDebutLogs" promptText="Date début" />
+                     <DatePicker fx:id="dateFinLogs" promptText="Date fin" />
+                     
+                     <Region HBox.hgrow="ALWAYS" />
+                     
+                     <Button styleClass="button-primary" text="🔍 Filtrer" />
+                     <Button styleClass="button-secondary" text="🔄 Actualiser" />
+                     <Button styleClass="button-info" text="📊 Exporter" />
+                  </HBox>
+                  
+                  <!-- Tableau des logs -->
+                  <TableView fx:id="tableauLogs" VBox.vgrow="ALWAYS">
+                     <columns>
+                        <TableColumn fx:id="colonneTimestamp" prefWidth="140.0" text="Date/Heure" />
+                        <TableColumn fx:id="colonneUtilisateurLog" prefWidth="100.0" text="Utilisateur" />
+                        <TableColumn fx:id="colonneActionLog" prefWidth="120.0" text="Action" />
+                        <TableColumn fx:id="colonneDetailsLog" prefWidth="300.0" text="Détails" />
+                        <TableColumn fx:id="colonneIPLog" prefWidth="120.0" text="Adresse IP" />
+                        <TableColumn fx:id="colonneStatutLog" prefWidth="80.0" text="Statut" />
+                     </columns>
+                     
+                     <placeholder>
+                        <VBox alignment="CENTER" spacing="10.0">
+                           <Label style="-fx-font-size: 48px; -fx-text-fill: #bdc3c7;" text="📋" />
+                           <Label style="-fx-text-fill: #7f8c8d;" text="Aucun log trouvé pour les critères sélectionnés" />
+                        </VBox>
+                     </placeholder>
+                  </TableView>
+                  
+                  <!-- Pagination des logs -->
+                  <HBox alignment="CENTER" spacing="10.0">
+                     <Button text="‹ Précédent" />
+                     <Label text="Page 1 sur 25" />
+                     <Button text="Suivant ›" />
+                     <Region HBox.hgrow="ALWAYS" />
+                     <Label text="2,456 entrées au total" />
+                  </HBox>
+                  
+               </VBox>
+            </Tab>
+            
+            <!-- Onglet Statistiques -->
+            <Tab text="📊 Statistiques">
+               <VBox spacing="20.0" style="-fx-padding: 20;">
+                  
+                  <!-- Statistiques générales -->
+                  <GridPane hgap="20.0" vgap="20.0">
+                     <columnConstraints>
+                        <ColumnConstraints hgrow="ALWAYS" percentWidth="25.0" />
+                        <ColumnConstraints hgrow="ALWAYS" percentWidth="25.0" />
+                        <ColumnConstraints hgrow="ALWAYS" percentWidth="25.0" />
+                        <ColumnConstraints hgrow="ALWAYS" percentWidth="25.0" />
+                     </columnConstraints>
+                     
+                     <!-- Utilisateurs totaux -->
+                     <VBox alignment="CENTER" spacing="10.0" styleClass="stat-card" GridPane.columnIndex="0">
+                        <Label style="-fx-font-size: 36px;" text="👥" />
+                        <Label styleClass="stat-number" style="-fx-text-fill: #3498db;" text="24" />
+                        <Label styleClass="stat-label" text="Utilisateurs totaux" />
+                        <Label styleClass="stat-trend-up" text="↗ +3 ce mois" />
+                     </VBox>
+                     
+                     <!-- Utilisateurs actifs -->
+                     <VBox alignment="CENTER" spacing="10.0" styleClass="stat-card" GridPane.columnIndex="1">
+                        <Label style="-fx-font-size: 36px;" text="🟢" />
+                        <Label styleClass="stat-number" style="-fx-text-fill: #27ae60;" text="18" />
+                        <Label styleClass="stat-label" text="Utilisateurs actifs" />
+                        <Label style="-fx-text-fill: #7f8c8d;" text="75% du total" />
+                     </VBox>
+                     
+                     <!-- Connexions aujourd'hui -->
+                     <VBox alignment="CENTER" spacing="10.0" styleClass="stat-card" GridPane.columnIndex="2">
+                        <Label style="-fx-font-size: 36px;" text="🔑" />
+                        <Label styleClass="stat-number" style="-fx-text-fill: #f39c12;" text="45" />
+                        <Label styleClass="stat-label" text="Connexions aujourd'hui" />
+                        <Label styleClass="stat-trend-up" text="↗ +12%" />
+                     </VBox>
+                     
+                     <!-- Rôles configurés -->
+                     <VBox alignment="CENTER" spacing="10.0" styleClass="stat-card" GridPane.columnIndex="3">
+                        <Label style="-fx-font-size: 36px;" text="🛡️" />
+                        <Label styleClass="stat-number" style="-fx-text-fill: #9b59b6;" text="4" />
+                        <Label styleClass="stat-label" text="Rôles configurés" />
+                        <Label style="-fx-text-fill: #7f8c8d;" text="Stable" />
+                     </VBox>
+                  </GridPane>
+                  
+                  <!-- Répartition par rôle -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Répartition des utilisateurs par rôle" />
+                     
+                     <VBox spacing="10.0">
+                        <!-- Administrateur -->
+                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                           <Label prefWidth="120.0" text="Administrateur:" />
+                           <ProgressBar prefWidth="200.0" progress="0.08" />
+                           <Label style="-fx-font-weight: bold;" text="2 (8%)" />
+                        </HBox>
+                        
+                        <!-- Gestionnaire -->
+                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                           <Label prefWidth="120.0" text="Gestionnaire:" />
+                           <ProgressBar prefWidth="200.0" progress="0.25" />
+                           <Label style="-fx-font-weight: bold;" text="6 (25%)" />
+                        </HBox>
+                        
+                        <!-- Utilisateur -->
+                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                           <Label prefWidth="120.0" text="Utilisateur:" />
+                           <ProgressBar prefWidth="200.0" progress="0.58" />
+                           <Label style="-fx-font-weight: bold;" text="14 (58%)" />
+                        </HBox>
+                        
+                        <!-- Invité -->
+                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                           <Label prefWidth="120.0" text="Invité:" />
+                           <ProgressBar prefWidth="200.0" progress="0.08" />
+                           <Label style="-fx-font-weight: bold;" text="2 (8%)" />
+                        </HBox>
+                     </VBox>
+                  </VBox>
+                  
+                  <!-- Activité récente -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Activité récente des utilisateurs" />
+                     
+                     <VBox spacing="8.0">
+                        <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 10; -fx-background-color: #f8f9fa; -fx-background-radius: 5;">
+                           <Label style="-fx-font-size: 16px;" text="🔑" />
+                           <VBox HBox.hgrow="ALWAYS">
+                              <Label style="-fx-font-weight: bold;" text="jean.dupont s'est connecté" />
+                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="IP: 192.168.1.100 • Chrome sur Windows" />
+                           </VBox>
+                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="Il y a 5 min" />
+                        </HBox>
+                        
+                        <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 10; -fx-background-color: #f8f9fa; -fx-background-radius: 5;">
+                           <Label style="-fx-font-size: 16px;" text="👤" />
+                           <VBox HBox.hgrow="ALWAYS">
+                              <Label style="-fx-font-weight: bold;" text="Nouvel utilisateur créé: marie.bernard" />
+                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Rôle: Utilisateur • Créé par: admin" />
+                           </VBox>
+                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="Il y a 2h" />
+                        </HBox>
+                        
+                        <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 10; -fx-background-color: #f8f9fa; -fx-background-radius: 5;">
+                           <Label style="-fx-font-size: 16px;" text="🛡️" />
+                           <VBox HBox.hgrow="ALWAYS">
+                              <Label style="-fx-font-weight: bold;" text="Permissions modifiées pour le rôle Gestionnaire" />
+                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Modification par: admin" />
+                           </VBox>
+                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="Hier 16:30" />
+                        </HBox>
+                     </VBox>
+                  </VBox>
+                  
+               </VBox>
+            </Tab>
+            
+         </TabPane>
+         
+      </VBox>
+   </top>
+   
+</BorderPane>

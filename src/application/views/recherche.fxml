@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+<?import java.lang.String?>
+<?import javafx.collections.FXCollections?>
+
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1">
+   
+   <!-- Barre de recherche supérieure -->
+   <top>
+      <VBox spacing="20.0" style="-fx-padding: 20; -fx-background-color: white;">
+         
+         <!-- En-tête -->
+         <HBox alignment="CENTER_LEFT" spacing="20.0">
+            <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="Recherche et Archivage">
+               <font>
+                  <Font size="24.0" />
+               </font>
+            </Label>
+            <Region HBox.hgrow="ALWAYS" />
+            <Button styleClass="button-primary" text="🔍 Recherche avancée" />
+            <Button styleClass="button-info" text="📊 Statistiques" />
+         </HBox>
+         
+         <!-- Barre de recherche principale -->
+         <VBox spacing="15.0" styleClass="card">
+            <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Recherche globale" />
+            
+            <HBox spacing="15.0" alignment="CENTER_LEFT">
+               <TextField fx:id="champRechercheGlobale" prefWidth="400.0" promptText="🔍 Rechercher dans tous les documents, courriers, messages..." />
+               <Button fx:id="btnRechercherGlobal" styleClass="button-primary" text="Rechercher" />
+               <Button text="Effacer" />
+            </HBox>
+            
+            <!-- Filtres rapides -->
+            <HBox spacing="15.0" alignment="CENTER_LEFT">
+               <Label text="Rechercher dans:" />
+               <CheckBox fx:id="checkDocuments" selected="true" text="📄 Documents" />
+               <CheckBox fx:id="checkCourriers" selected="true" text="📧 Courriers" />
+               <CheckBox fx:id="checkMessages" selected="true" text="💬 Messages" />
+               <CheckBox fx:id="checkReunions" selected="true" text="👥 Réunions" />
+               
+               <Separator orientation="VERTICAL" />
+               
+               <Label text="Période:" />
+               <DatePicker fx:id="dateDebutRecherche" promptText="Du" />
+               <DatePicker fx:id="dateFinRecherche" promptText="Au" />
+            </HBox>
+         </VBox>
+         
+      </VBox>
+   </top>
+   
+   <!-- Zone principale -->
+   <center>
+      <HBox>
+         
+         <!-- Panneau des filtres -->
+         <VBox prefWidth="300.0" spacing="15.0" style="-fx-padding: 20; -fx-border-color: #e9ecef; -fx-border-width: 0 1 0 0;">
+            
+            <!-- Recherche avancée -->
+            <VBox spacing="10.0" styleClass="card">
+               <Label style="-fx-font-weight: bold;" text="Recherche avancée" />
+               
+               <VBox spacing="8.0">
+                  <Label text="Type de contenu:" />
+                  <ComboBox fx:id="comboTypeContenu" maxWidth="1.7976931348623157E308" promptText="Tous les types">
+				    <items>
+				        <FXCollections fx:factory="observableArrayList">
+				            <String fx:value="Tous les types" />
+				            <String fx:value="Documents PDF" />
+				            <String fx:value="Documents Word" />
+				            <String fx:value="Feuilles de calcul" />
+				            <String fx:value="Images" />
+				            <String fx:value="Courriers entrants" />
+				            <String fx:value="Courriers sortants" />
+				            <String fx:value="Messages internes" />
+				            <String fx:value="Comptes-rendus" />
+				        </FXCollections>
+				    </items>
+				</ComboBox>
+               </VBox>
+               
+               <VBox spacing="8.0">
+                  <Label text="Auteur/Expéditeur:" />
+                  <TextField fx:id="champAuteur" promptText="Nom de l'auteur" />
+               </VBox>
+               
+               <VBox spacing="8.0">
+                  <Label text="Mots-clés:" />
+                  <TextField fx:id="champMotsCles" promptText="Tags, mots-clés" />
+               </VBox>
+               
+               <VBox spacing="8.0">
+                  <Label text="Taille de fichier:" />
+                  <HBox spacing="5.0">
+                     <TextField fx:id="champTailleMin" prefWidth="80.0" promptText="Min" />
+                     <Label text="à" />
+                     <TextField fx:id="champTailleMax" prefWidth="80.0" promptText="Max" />
+                     <ComboBox fx:id="comboUniteTaille" prefWidth="60.0" value="KB">
+					    <items>
+					        <FXCollections fx:factory="observableArrayList">
+					            <String fx:value="KB" />
+					            <String fx:value="MB" />
+					            <String fx:value="GB" />
+					        </FXCollections>
+					    </items>
+					</ComboBox>
+                  </HBox>
+               </VBox>
+               
+               <Button maxWidth="1.7976931348623157E308" styleClass="button-info" text="Appliquer les filtres" />
+            </VBox>
+            
+            <!-- Recherches récentes -->
+            <VBox spacing="10.0" styleClass="card">
+               <Label style="-fx-font-weight: bold;" text="Recherches récentes" />
+               
+               <VBox spacing="5.0">
+                  <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
+                     <Label style="-fx-font-size: 16px;" text="🔍" />
+                     <Label HBox.hgrow="ALWAYS" text="rapport mensuel novembre" />
+                     <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="5 résultats" />
+                  </HBox>
+                  
+                  <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
+                     <Label style="-fx-font-size: 16px;" text="🔍" />
+                     <Label HBox.hgrow="ALWAYS" text="contrat client xyz" />
+                     <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="12 résultats" />
+                  </HBox>
+                  
+                  <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
+                     <Label style="-fx-font-size: 16px;" text="🔍" />
+                     <Label HBox.hgrow="ALWAYS" text="procédure sécurité" />
+                     <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="3 résultats" />
+                  </HBox>
+               </VBox>
+               
+               <Button maxWidth="1.7976931348623157E308" text="Effacer l'historique" />
+            </VBox>
+            
+            <!-- Recherches sauvegardées -->
+            <VBox spacing="10.0" styleClass="card">
+               <HBox alignment="CENTER_LEFT" spacing="10.0">
+                  <Label style="-fx-font-weight: bold;" text="Recherches sauvegardées" />
+                  <Region HBox.hgrow="ALWAYS" />
+                  <Button text="+" />
+               </HBox>
+               
+               <VBox spacing="5.0">
+                  <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
+                     <Label style="-fx-font-size: 16px;" text="⭐" />
+                     <Label HBox.hgrow="ALWAYS" text="Documents importants" />
+                     <Button text="🗑️" />
+                  </HBox>
+                  
+                  <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
+                     <Label style="-fx-font-size: 16px;" text="⭐" />
+                     <Label HBox.hgrow="ALWAYS" text="Courriers non traités" />
+                     <Button text="🗑️" />
+                  </HBox>
+               </VBox>
+            </VBox>
+            
+            <!-- Archives -->
+            <VBox spacing="10.0" styleClass="card">
+               <Label style="-fx-font-weight: bold;" text="Archives" />
+               
+               <VBox spacing="5.0">
+                  <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
+                     <Label style="-fx-font-size: 16px;" text="📁" />
+                     <Label HBox.hgrow="ALWAYS" text="Archive 2024" />
+                     <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="1,245 éléments" />
+                  </HBox>
+                  
+                  <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
+                     <Label style="-fx-font-size: 16px;" text="📁" />
+                     <Label HBox.hgrow="ALWAYS" text="Archive 2023" />
+                     <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="2,156 éléments" />
+                  </HBox>
+                  
+                  <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
+                     <Label style="-fx-font-size: 16px;" text="📁" />
+                     <Label HBox.hgrow="ALWAYS" text="Archive 2022" />
+                     <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="1,887 éléments" />
+                  </HBox>
+               </VBox>
+               
+               <Button maxWidth="1.7976931348623157E308" styleClass="button-info" text="Gérer les archives" />
+            </VBox>
+            
+         </VBox>
+         
+         <!-- Zone des résultats -->
+         <VBox HBox.hgrow="ALWAYS" spacing="15.0" style="-fx-padding: 20;">
+            
+            <!-- En-tête des résultats -->
+            <HBox alignment="CENTER_LEFT" spacing="15.0">
+               <Label fx:id="labelNombreResultats" style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Résultats de recherche" />
+               <Label fx:id="labelStatsResultats" style="-fx-text-fill: #7f8c8d;" text="(125 résultats trouvés en 0.24s)" />
+               <Region HBox.hgrow="ALWAYS" />
+               
+               <Label text="Trier par:" />
+               <ComboBox fx:id="comboTriResultats" prefWidth="120.0" value="Pertinence">
+				    <items>
+				        <FXCollections fx:factory="observableArrayList">
+				            <String fx:value="Pertinence" />
+				            <String fx:value="Date (récent)" />
+				            <String fx:value="Date (ancien)" />
+				            <String fx:value="Nom (A-Z)" />
+				            <String fx:value="Nom (Z-A)" />
+				            <String fx:value="Taille" />
+				            <String fx:value="Type" />
+				        </FXCollections>
+				    </items>
+				</ComboBox>
+               
+               <Button text="📊 Export" />
+            </HBox>
+            
+            <!-- Onglets des résultats -->
+            <TabPane fx:id="tabsResultats">
+               
+               <!-- Onglet Tous -->
+               <Tab text="Tous (125)" closable="false">
+                  <ScrollPane fitToWidth="true">
+                     <VBox spacing="10.0">
+                        
+                        <!-- Résultat 1 - Document -->
+                        <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 15; -fx-background-color: white; -fx-background-radius: 8; -fx-cursor: hand;" styleClass="card">
+                           <VBox alignment="CENTER">
+                              <Label style="-fx-font-size: 32px;" text="📄" />
+                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 10px;" text="PDF" />
+                           </VBox>
+                           <VBox HBox.hgrow="ALWAYS" spacing="5.0">
+                              <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Rapport_Mensuel_Novembre_2025.pdf" />
+                              <Label style="-fx-text-fill: #7f8c8d;" text="Rapport détaillé des activités du mois de novembre incluant les statistiques de performance..." />
+                              <HBox spacing="15.0">
+                                 <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="📁 Documents/Rapports" />
+                                 <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="👤 Jean Dupont" />
+                                 <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="📅 2 nov. 2025" />
+                                 <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="📦 2.3 MB" />
+                              </HBox>
+                           </VBox>
+                           <VBox alignment="CENTER" spacing="5.0">
+                              <Button styleClass="button-primary" text="👁️ Aperçu" />
+                              <Button text="💾 Télécharger" />
+                           </VBox>
+                        </HBox>
+                        
+                        <!-- Résultat 2 - Courrier -->
+                        <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 15; -fx-background-color: white; -fx-background-radius: 8; -fx-cursor: hand;" styleClass="card">
+                           <VBox alignment="CENTER">
+                              <Label style="-fx-font-size: 32px;" text="📧" />
+                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 10px;" text="COURRIER" />
+                           </VBox>
+                           <VBox HBox.hgrow="ALWAYS" spacing="5.0">
+                              <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Demande de devis - Société ABC" />
+                              <Label style="-fx-text-fill: #7f8c8d;" text="Courrier entrant concernant une demande de devis pour les services informatiques..." />
+                              <HBox spacing="15.0">
+                                 <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="📧 Courrier entrant" />
+                                 <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="👤 Société ABC" />
+                                 <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="📅 1 nov. 2025" />
+                                 <Label style="-fx-background-color: #f39c12; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 8; -fx-font-size: 10px;" text="EN COURS" />
+                              </HBox>
+                           </VBox>
+                           <VBox alignment="CENTER" spacing="5.0">
+                              <Button styleClass="button-primary" text="📂 Ouvrir" />
+                              <Button text="📄 Détails" />
+                           </VBox>
+                        </HBox>
+                        
+                        <!-- Résultat 3 - Message -->
+                        <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 15; -fx-background-color: white; -fx-background-radius: 8; -fx-cursor: hand;" styleClass="card">
+                           <VBox alignment="CENTER">
+                              <Label style="-fx-font-size: 32px;" text="💬" />
+                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 10px;" text="MESSAGE" />
+                           </VBox>
+                           <VBox HBox.hgrow="ALWAYS" spacing="5.0">
+                              <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Nouvelle procédure de sécurité" />
+                              <Label style="-fx-text-fill: #7f8c8d;" text="Message de la direction concernant la mise en place de nouvelles procédures de sécurité..." />
+                              <HBox spacing="15.0">
+                                 <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="💬 Message interne" />
+                                 <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="👤 Direction" />
+                                 <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="📅 4 nov. 2025" />
+                                 <Label style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 8; -fx-font-size: 10px;" text="PRIORITÉ HAUTE" />
+                              </HBox>
+                           </VBox>
+                           <VBox alignment="CENTER" spacing="5.0">
+                              <Button styleClass="button-primary" text="📖 Lire" />
+                              <Button text="↩️ Répondre" />
+                           </VBox>
+                        </HBox>
+                        
+                        <!-- Résultat 4 - Réunion -->
+                        <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 15; -fx-background-color: white; -fx-background-radius: 8; -fx-cursor: hand;" styleClass="card">
+                           <VBox alignment="CENTER">
+                              <Label style="-fx-font-size: 32px;" text="👥" />
+                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 10px;" text="RÉUNION" />
+                           </VBox>
+                           <VBox HBox.hgrow="ALWAYS" spacing="5.0">
+                              <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Compte-rendu réunion équipe projet" />
+                              <Label style="-fx-text-fill: #7f8c8d;" text="Compte-rendu de la réunion hebdomadaire de l'équipe projet avec points d'avancement..." />
+                              <HBox spacing="15.0">
+                                 <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="👥 Réunion" />
+                                 <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="👤 Jean Dupont" />
+                                 <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="📅 30 oct. 2025" />
+                                 <Label style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 8; -fx-font-size: 10px;" text="TERMINÉE" />
+                              </HBox>
+                           </VBox>
+                           <VBox alignment="CENTER" spacing="5.0">
+                              <Button styleClass="button-primary" text="📋 Consulter" />
+                              <Button text="📄 Export" />
+                           </VBox>
+                        </HBox>
+                        
+                     </VBox>
+                  </ScrollPane>
+               </Tab>
+               
+               <!-- Onglet Documents -->
+               <Tab text="Documents (45)" closable="false">
+                  <Label text="Résultats filtrés pour les documents uniquement..." />
+               </Tab>
+               
+               <!-- Onglet Courriers -->
+               <Tab text="Courriers (32)" closable="false">
+                  <Label text="Résultats filtrés pour les courriers uniquement..." />
+               </Tab>
+               
+               <!-- Onglet Messages -->
+               <Tab text="Messages (28)" closable="false">
+                  <Label text="Résultats filtrés pour les messages uniquement..." />
+               </Tab>
+               
+               <!-- Onglet Réunions -->
+               <Tab text="Réunions (20)" closable="false">
+                  <Label text="Résultats filtrés pour les réunions uniquement..." />
+               </Tab>
+               
+            </TabPane>
+            
+            <!-- Pagination des résultats -->
+            <HBox alignment="CENTER" spacing="15.0">
+               <Button text="‹‹ Premier" />
+               <Button text="‹ Précédent" />
+               <HBox spacing="5.0">
+                  <Button styleClass="button-primary" text="1" />
+                  <Button text="2" />
+                  <Button text="3" />
+                  <Button text="4" />
+                  <Button text="5" />
+                  <Label text="..." />
+                  <Button text="13" />
+               </HBox>
+               <Button text="Suivant ›" />
+               <Button text="Dernier ››" />
+               <Region HBox.hgrow="ALWAYS" />
+               <Label text="Résultats 1-10 sur 125" />
+            </HBox>
+            
+         </VBox>
+         
+      </HBox>
+   </center>
+   
+</BorderPane>

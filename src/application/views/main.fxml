@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane fx:id="mainContainer" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.controllers.MainController">
+   
+   <!-- Barre supérieure -->
+   <top>
+      <VBox style="-fx-background-color: #2c3e50;">
+         
+         <!-- En-tête principal -->
+         <HBox alignment="CENTER_LEFT" spacing="20.0" style="-fx-padding: 15 25;">
+            <Label style="-fx-text-fill: white; -fx-font-weight: bold;" text="📋 Gestion Documentaire">
+               <font>
+                  <Font size="24.0" />
+               </font>
+            </Label>
+            
+            <Region HBox.hgrow="ALWAYS" />
+            
+            <!-- Informations utilisateur -->
+            <VBox alignment="CENTER_RIGHT" spacing="2.0">
+               <HBox alignment="CENTER_RIGHT" spacing="10.0">
+                  <VBox alignment="CENTER_RIGHT">
+                     <Label fx:id="userNameLabel" style="-fx-text-fill: white; -fx-font-weight: bold;" text="Nom Utilisateur">
+                        <font>
+                           <Font size="16.0" />
+                        </font>
+                     </Label>
+                     <Label fx:id="userRoleLabel" style="-fx-text-fill: #bdc3c7;" text="Rôle">
+                        <font>
+                           <Font size="12.0" />
+                        </font>
+                     </Label>
+                  </VBox>
+                  <Separator orientation="VERTICAL" />
+                  <VBox alignment="CENTER_RIGHT">
+                     <Label fx:id="currentTimeLabel" style="-fx-text-fill: #ecf0f1;" text="--/--/---- --:--:--">
+                        <font>
+                           <Font size="13.0" />
+                        </font>
+                     </Label>
+                  </VBox>
+               </HBox>
+            </VBox>
+            
+            <!-- Bouton de déconnexion -->
+            <Button fx:id="btnDeconnexion" onAction="#handleDeconnexion" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-background-radius: 6; -fx-border-radius: 6; -fx-padding: 8 16;" text="🚪 Déconnexion">
+               <font>
+                  <Font size="13.0" />
+               </font>
+            </Button>
+         </HBox>
+         
+         <!-- Ligne de séparation -->
+         <Separator style="-fx-background-color: #34495e;" />
+         
+      </VBox>
+   </top>
+   
+   <!-- Zone principale avec sidebar et contenu -->
+   <center>
+      <HBox>
+         
+         <!-- Sidebar de navigation -->
+         <VBox fx:id="sidebar" prefWidth="250.0" style="-fx-background-color: #34495e; -fx-padding: 0;">
+            
+            <!-- Menu de navigation -->
+            <VBox spacing="2.0" style="-fx-padding: 20 0;">
+               
+               <!-- Section principale -->
+               <Label style="-fx-text-fill: #bdc3c7; -fx-font-weight: bold; -fx-padding: 0 20 10 20; -fx-font-size: 12px;" text="NAVIGATION PRINCIPALE" />
+               
+               <Button fx:id="btnAccueil" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="🏠 Accueil">
+                  <padding>
+                     <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+                  </padding>
+                  <font>
+                     <Font size="14.0" />
+                  </font>
+               </Button>
+               
+               <Button fx:id="btnDashboard" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="📊 Tableau de bord">
+                  <padding>
+                     <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+                  </padding>
+                  <font>
+                     <Font size="14.0" />
+                  </font>
+               </Button>
+               
+               <!-- Séparateur -->
+               <Separator style="-fx-background-color: rgba(255,255,255,0.1); -fx-padding: 10 20;" />
+               
+               <!-- Section gestion -->
+               <Label style="-fx-text-fill: #bdc3c7; -fx-font-weight: bold; -fx-padding: 0 20 10 20; -fx-font-size: 12px;" text="GESTION" />
+               
+               <Button fx:id="btnCourrier" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="📧 Courrier">
+                  <padding>
+                     <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+                  </padding>
+                  <font>
+                     <Font size="14.0" />
+                  </font>
+               </Button>
+               
+               <Button fx:id="btnDocuments" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="📄 Documents">
+                  <padding>
+                     <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+                  </padding>
+                  <font>
+                     <Font size="14.0" />
+                  </font>
+               </Button>
+               
+               <Button fx:id="btnReunions" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="👥 Réunions">
+                  <padding>
+                     <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+                  </padding>
+                  <font>
+                     <Font size="14.0" />
+                  </font>
+               </Button>
+               
+               <Button fx:id="btnMessages" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="💬 Messages">
+                  <padding>
+                     <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+                  </padding>
+                  <font>
+                     <Font size="14.0" />
+                  </font>
+               </Button>
+               
+               <!-- Séparateur -->
+               <Separator style="-fx-background-color: rgba(255,255,255,0.1); -fx-padding: 10 20;" />
+               
+               <!-- Section outils -->
+               <Label style="-fx-text-fill: #bdc3c7; -fx-font-weight: bold; -fx-padding: 0 20 10 20; -fx-font-size: 12px;" text="OUTILS" />
+               
+               <Button fx:id="btnRecherche" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="🔍 Recherche">
+                  <padding>
+                     <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+                  </padding>
+                  <font>
+                     <Font size="14.0" />
+                  </font>
+               </Button>
+               
+               <Button fx:id="btnParametres" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="⚙️ Paramètres">
+                  <padding>
+                     <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+                  </padding>
+                  <font>
+                     <Font size="14.0" />
+                  </font>
+               </Button>
+               
+               <!-- Séparateur (conditionnel pour admin) -->
+               <Separator fx:id="adminSeparator" style="-fx-background-color: rgba(255,255,255,0.1); -fx-padding: 10 20;" />
+               
+               <!-- Section administration -->
+               <Label fx:id="adminLabel" style="-fx-text-fill: #e74c3c; -fx-font-weight: bold; -fx-padding: 0 20 10 20; -fx-font-size: 12px;" text="ADMINISTRATION" />
+               
+               <Button fx:id="btnAdmin" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="🛡️ Administration">
+                  <padding>
+                     <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+                  </padding>
+                  <font>
+                     <Font size="14.0" />
+                  </font>
+               </Button>
+               
+            </VBox>
+            
+            <!-- Espace flexible -->
+            <Region VBox.vgrow="ALWAYS" />
+            
+            <!-- Informations en bas de sidebar -->
+            <VBox spacing="5.0" style="-fx-padding: 20; -fx-background-color: rgba(0,0,0,0.2);">
+               <Label style="-fx-text-fill: #95a5a6; -fx-font-size: 11px;" text="Système de Gestion Documentaire" />
+               <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 10px;" text="Version 1.0.0" />
+               <Separator style="-fx-background-color: rgba(255,255,255,0.1);" />
+               <Label fx:id="statusLabel" style="-fx-text-fill: #95a5a6; -fx-font-size: 11px;" text="Prêt" />
+            </VBox>
+            
+         </VBox>
+         
+         <!-- Zone de contenu principal -->
+         <BorderPane fx:id="contentArea" HBox.hgrow="ALWAYS" style="-fx-background-color: #ecf0f1;">
+            
+            <!-- Zone de contenu dynamique -->
+            <center>
+               <!-- Le contenu sera chargé dynamiquement par le contrôleur -->
+               <VBox alignment="CENTER" spacing="30.0" style="-fx-padding: 50;">
+                  
+                  <!-- Message de bienvenue par défaut -->
+                  <VBox alignment="CENTER" spacing="15.0">
+                     <Label style="-fx-font-size: 48px;" text="📋" />
+                     <Label style="-fx-font-size: 28px; -fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="Système de Gestion Documentaire" />
+                     <Label style="-fx-font-size: 16px; -fx-text-fill: #7f8c8d;" text="Bienvenue dans votre espace de travail" />
+                  </VBox>
+                  
+                  <!-- Actions rapides -->
+                  <VBox alignment="CENTER" spacing="15.0">
+                     <Label style="-fx-font-size: 18px; -fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="Actions rapides" />
+                     
+                     <HBox alignment="CENTER" spacing="20.0">
+                        <VBox alignment="CENTER" spacing="10.0" styleClass="card" style="-fx-cursor: hand; -fx-padding: 20; -fx-max-width: 150;">
+                           <Label style="-fx-font-size: 32px;" text="📧" />
+                           <Label style="-fx-font-weight: bold;" text="Nouveau courrier" />
+                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Créer un courrier" />
+                        </VBox>
+                        
+                        <VBox alignment="CENTER" spacing="10.0" styleClass="card" style="-fx-cursor: hand; -fx-padding: 20; -fx-max-width: 150;">
+                           <Label style="-fx-font-size: 32px;" text="👥" />
+                           <Label style="-fx-font-weight: bold;" text="Nouvelle réunion" />
+                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Planifier une réunion" />
+                        </VBox>
+                        
+                        <VBox alignment="CENTER" spacing="10.0" styleClass="card" style="-fx-cursor: hand; -fx-padding: 20; -fx-max-width: 150;">
+                           <Label style="-fx-font-size: 32px;" text="🔍" />
+                           <Label style="-fx-font-weight: bold;" text="Rechercher" />
+                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Trouver un document" />
+                        </VBox>
+                        
+                        <VBox alignment="CENTER" spacing="10.0" styleClass="card" style="-fx-cursor: hand; -fx-padding: 20; -fx-max-width: 150;">
+                           <Label style="-fx-font-size: 32px;" text="📊" />
+                           <Label style="-fx-font-weight: bold;" text="Statistiques" />
+                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Voir le tableau de bord" />
+                        </VBox>
+                     </HBox>
+                  </VBox>
+                  
+                  <!-- Informations système -->
+                  <VBox alignment="CENTER" spacing="8.0" style="-fx-padding: 20; -fx-background-color: rgba(52, 152, 219, 0.1); -fx-background-radius: 8;">
+                     <Label style="-fx-text-fill: #3498db; -fx-font-weight: bold;" text="ℹ️ Information" />
+                     <Label style="-fx-text-fill: #2c3e50; -fx-text-alignment: center;" text="Sélectionnez une option dans le menu de gauche pour commencer." wrapText="true" />
+                     <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Le contenu s'affichera dans cette zone." />
+                  </VBox>
+                  
+               </VBox>
+            </center>
+            
+         </BorderPane>
+         
+      </HBox>
+   </center>
+   
+   <!-- Barre de statut en bas -->
+   <bottom>
+      <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-background-color: #2c3e50; -fx-padding: 8 25;">
+         
+         <Label style="-fx-text-fill: #27ae60; -fx-font-size: 12px;" text="🟢 Système opérationnel" />
+         
+         <Separator orientation="VERTICAL" style="-fx-background-color: #34495e;" />
+         
+         <Label style="-fx-text-fill: #bdc3c7; -fx-font-size: 11px;" text="Base de données connectée" />
+         
+         <Region HBox.hgrow="ALWAYS" />
+         
+         <Label style="-fx-text-fill: #95a5a6; -fx-font-size: 11px;" text="Gestion Documentaire v1.0" />
+         
+      </HBox>
+   </bottom>
+   
+</BorderPane>

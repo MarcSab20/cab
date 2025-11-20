@@ -1,0 +1,487 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+<?import java.lang.String?>
+<?import javafx.collections.FXCollections?>
+
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1">
+   
+   <!-- En-tête -->
+   <top>
+      <VBox spacing="15.0" style="-fx-padding: 20; -fx-background-color: white;">
+         <HBox alignment="CENTER_LEFT" spacing="20.0">
+            <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="Paramètres">
+               <font>
+                  <Font size="24.0" />
+               </font>
+            </Label>
+            <Region HBox.hgrow="ALWAYS" />
+            <Button fx:id="btnSauvegarderParametres" styleClass="button-success" text="💾 Sauvegarder" />
+            <Button fx:id="btnAnnulerParametres" styleClass="button-secondary" text="❌ Annuler" />
+         </HBox>
+      </VBox>
+   </top>
+   
+   <!-- Zone principale -->
+   <center>
+      <HBox>
+         
+         <!-- Menu des catégories -->
+         <VBox prefWidth="250.0" spacing="5.0" style="-fx-padding: 20; -fx-border-color: #e9ecef; -fx-border-width: 0 1 0 0;">
+            
+            <Label style="-fx-font-weight: bold; -fx-padding: 0 0 10 0;" text="Catégories" />
+            
+            <!-- Boutons de navigation -->
+            <VBox fx:id="menuParametres" spacing="2.0">
+               
+               <Button fx:id="btnParametresPersonnels" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button-active" text="👤 Profil personnel">
+                  <padding>
+                     <Insets bottom="12.0" left="15.0" right="15.0" top="12.0" />
+                  </padding>
+               </Button>
+               
+               <Button fx:id="btnParametresCompte" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="🔐 Compte et sécurité">
+                  <padding>
+                     <Insets bottom="12.0" left="15.0" right="15.0" top="12.0" />
+                  </padding>
+               </Button>
+               
+               <Button fx:id="btnParametresInterface" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="🎨 Interface">
+                  <padding>
+                     <Insets bottom="12.0" left="15.0" right="15.0" top="12.0" />
+                  </padding>
+               </Button>
+               
+               <Button fx:id="btnParametresNotifications" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="🔔 Notifications">
+                  <padding>
+                     <Insets bottom="12.0" left="15.0" right="15.0" top="12.0" />
+                  </padding>
+               </Button>
+               
+               <Separator />
+               
+               <Button fx:id="btnParametresSysteme" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="⚙️ Système" visible="false">
+                  <padding>
+                     <Insets bottom="12.0" left="15.0" right="15.0" top="12.0" />
+                  </padding>
+               </Button>
+               
+               <Button fx:id="btnParametresReseau" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="🌐 Réseau" visible="false">
+                  <padding>
+                     <Insets bottom="12.0" left="15.0" right="15.0" top="12.0" />
+                  </padding>
+               </Button>
+               
+               <Button fx:id="btnParametresUtilisateurs" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="👥 Utilisateurs" visible="false">
+                  <padding>
+                     <Insets bottom="12.0" left="15.0" right="15.0" top="12.0" />
+                  </padding>
+               </Button>
+               
+               <Button fx:id="btnParametresSauvegarde" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="💾 Sauvegarde" visible="false">
+                  <padding>
+                     <Insets bottom="12.0" left="15.0" right="15.0" top="12.0" />
+                  </padding>
+               </Button>
+               
+            </VBox>
+            
+         </VBox>
+         
+         <!-- Zone de contenu des paramètres -->
+         <ScrollPane HBox.hgrow="ALWAYS" fitToWidth="true">
+            <VBox fx:id="zoneParametres" spacing="20.0" style="-fx-padding: 30;">
+               
+               <!-- Paramètres personnels (visible par défaut) -->
+               <VBox fx:id="parametresPersonnels" spacing="15.0">
+                  
+                  <!-- En-tête -->
+                  <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="Profil personnel" />
+                  
+                  <!-- Informations de base -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-weight: bold;" text="Informations de base" />
+                     
+                     <GridPane hgap="15.0" vgap="12.0">
+                        <columnConstraints>
+                           <ColumnConstraints hgrow="NEVER" minWidth="120.0" />
+                           <ColumnConstraints hgrow="ALWAYS" />
+                        </columnConstraints>
+                        
+                        <Label text="Nom:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <TextField fx:id="champNom" text="Dupont" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        
+                        <Label text="Prénom:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <TextField fx:id="champPrenom" text="Jean" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        
+                        <Label text="Email:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <TextField fx:id="champEmail" text="jean.dupont@entreprise.com" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        
+                        <Label text="Téléphone:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                        <TextField fx:id="champTelephone" promptText="Numéro de téléphone" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                        
+                        <Label text="Poste:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                        <TextField fx:id="champPoste" text="Chef de projet" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                        
+                        <Label text="Service:" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+                        <TextField fx:id="champService" text="Informatique" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+                     </GridPane>
+                  </VBox>
+                  
+                  <!-- Préférences -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-weight: bold;" text="Préférences" />
+                     
+                     <VBox spacing="10.0">
+                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                           <Label prefWidth="120.0" text="Langue:" />
+                           <ComboBox fx:id="comboLangue" prefWidth="150.0" value="Français">
+						    <items>
+						        <FXCollections fx:factory="observableArrayList">
+						            <String fx:value="Français" />
+						            <String fx:value="English" />
+						            <String fx:value="Español" />
+						        </FXCollections>
+						    </items>
+						</ComboBox>
+                        </HBox>
+                        
+                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                           <Label prefWidth="120.0" text="Fuseau horaire:" />
+                           <ComboBox fx:id="comboFuseauHoraire" prefWidth="200.0" value="Europe/Paris">
+							    <items>
+							        <FXCollections fx:factory="observableArrayList">
+							            <String fx:value="Europe/Paris" />
+							            <String fx:value="Europe/London" />
+							            <String fx:value="America/New_York" />
+							            <String fx:value="Asia/Tokyo" />
+							        </FXCollections>
+							    </items>
+							</ComboBox>
+                        </HBox>
+                        
+                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                           <Label prefWidth="120.0" text="Format de date:" />
+                           <ComboBox fx:id="comboFormatDate" prefWidth="150.0" value="DD/MM/YYYY">
+							    <items>
+							        <FXCollections fx:factory="observableArrayList">
+							            <String fx:value="DD/MM/YYYY" />
+							            <String fx:value="MM/DD/YYYY" />
+							            <String fx:value="YYYY-MM-DD" />
+							        </FXCollections>
+							    </items>
+							</ComboBox>
+                        </HBox>
+                     </VBox>
+                  </VBox>
+                  
+                  <!-- Photo de profil -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-weight: bold;" text="Photo de profil" />
+                     
+                     <HBox alignment="CENTER_LEFT" spacing="20.0">
+                        <VBox alignment="CENTER" spacing="10.0">
+                           <Label style="-fx-background-color: #e9ecef; -fx-padding: 30; -fx-background-radius: 50; -fx-font-size: 48px;" text="👤" />
+                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Photo actuelle" />
+                        </VBox>
+                        
+                        <VBox spacing="10.0">
+                           <Label text="Formats acceptés: JPG, PNG (max 2MB)" />
+                           <HBox spacing="10.0">
+                              <Button styleClass="button-primary" text="📎 Choisir une photo" />
+                              <Button styleClass="button-secondary" text="🗑️ Supprimer" />
+                           </HBox>
+                        </VBox>
+                     </HBox>
+                  </VBox>
+                  
+                  <!-- Signature -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-weight: bold;" text="Signature électronique" />
+                     
+                     <VBox spacing="10.0">
+                        <Label text="Cette signature sera automatiquement ajoutée à vos messages:" />
+                        <TextArea fx:id="textAreaSignature" prefRowCount="4" text="Jean Dupont&#10;Chef de projet&#10;Service Informatique&#10;Tél: +33 1 23 45 67 89" wrapText="true" />
+                     </VBox>
+                  </VBox>
+                  
+               </VBox>
+               
+               <!-- Paramètres compte et sécurité (masqué par défaut) -->
+               <VBox fx:id="parametresCompte" spacing="15.0" visible="false" managed="false">
+                  
+                  <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="Compte et sécurité" />
+                  
+                  <!-- Changement de mot de passe -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-weight: bold;" text="Changement de mot de passe" />
+                     
+                     <GridPane hgap="15.0" vgap="12.0">
+                        <columnConstraints>
+                           <ColumnConstraints hgrow="NEVER" minWidth="150.0" />
+                           <ColumnConstraints hgrow="ALWAYS" />
+                        </columnConstraints>
+                        
+                        <Label text="Mot de passe actuel:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <PasswordField fx:id="champMotDePasseActuel" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        
+                        <Label text="Nouveau mot de passe:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <PasswordField fx:id="champNouveauMotDePasse" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        
+                        <Label text="Confirmer:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <PasswordField fx:id="champConfirmerMotDePasse" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                     </GridPane>
+                     
+                     <VBox spacing="5.0">
+                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Le mot de passe doit contenir:" />
+                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="• Au moins 8 caractères" />
+                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="• Une majuscule et une minuscule" />
+                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="• Un chiffre et un caractère spécial" />
+                     </VBox>
+                     
+                     <HBox alignment="CENTER_LEFT" spacing="10.0">
+                        <Button styleClass="button-primary" text="Changer le mot de passe" />
+                        <ProgressBar fx:id="forceMotDePasse" prefWidth="150.0" progress="0.0" />
+                        <Label fx:id="labelForceMotDePasse" text="Sécurité du mot de passe" />
+                     </HBox>
+                  </VBox>
+                  
+                  <!-- Authentification à deux facteurs -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-weight: bold;" text="Authentification à deux facteurs (2FA)" />
+                     
+                     <HBox alignment="CENTER_LEFT" spacing="15.0">
+                        <CheckBox fx:id="checkA2F" text="Activer l'authentification à deux facteurs" />
+                        <Label style="-fx-background-color: #d4edda; -fx-text-fill: #155724; -fx-padding: 4 8; -fx-background-radius: 4; -fx-font-size: 11px;" text="RECOMMANDÉ" />
+                     </HBox>
+                     
+                     <Label style="-fx-text-fill: #7f8c8d;" text="L'authentification à deux facteurs ajoute une couche de sécurité supplémentaire à votre compte." />
+                     
+                     <HBox spacing="10.0">
+                        <Button styleClass="button-info" text="📱 Configurer avec app mobile" />
+                        <Button styleClass="button-secondary" text="📧 Configurer par email" />
+                     </HBox>
+                  </VBox>
+                  
+                  <!-- Sessions actives -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-weight: bold;" text="Sessions actives" />
+                     
+                     <VBox spacing="8.0">
+                        <!-- Session actuelle -->
+                        <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 10; -fx-background-color: #e8f5e8; -fx-background-radius: 6;">
+                           <Label style="-fx-font-size: 16px;" text="💻" />
+                           <VBox HBox.hgrow="ALWAYS">
+                              <Label style="-fx-font-weight: bold;" text="Session actuelle" />
+                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Windows 10 - Chrome • IP: 192.168.1.100" />
+                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Connecté depuis: 4 nov. 2025, 08:30" />
+                           </VBox>
+                           <Label style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-padding: 4 8; -fx-background-radius: 10; -fx-font-size: 10px;" text="ACTUELLE" />
+                        </HBox>
+                        
+                        <!-- Autre session -->
+                        <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 10; -fx-background-color: #f8f9fa; -fx-background-radius: 6;">
+                           <Label style="-fx-font-size: 16px;" text="📱" />
+                           <VBox HBox.hgrow="ALWAYS">
+                              <Label style="-fx-font-weight: bold;" text="Application mobile" />
+                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Android • IP: 192.168.1.150" />
+                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Dernière activité: 3 nov. 2025, 18:45" />
+                           </VBox>
+                           <Button styleClass="button-danger" text="Déconnecter" />
+                        </HBox>
+                     </VBox>
+                     
+                     <Button maxWidth="200.0" styleClass="button-warning" text="Déconnecter toutes les sessions" />
+                  </VBox>
+                  
+               </VBox>
+               
+               <!-- Paramètres interface (masqué par défaut) -->
+               <VBox fx:id="parametresInterface" spacing="15.0" visible="false" managed="false">
+                  
+                  <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="Interface utilisateur" />
+                  
+                  <!-- Apparence -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-weight: bold;" text="Apparence" />
+                     
+                     <VBox spacing="12.0">
+                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                           <Label prefWidth="120.0" text="Thème:" />
+                           <RadioButton text="🌞 Clair" toggleGroup="$toggleTheme" selected="true" />
+                           <RadioButton text="🌙 Sombre" toggleGroup="$toggleTheme" />
+                           <RadioButton text="⚙️ Système" toggleGroup="$toggleTheme" />
+                        </HBox>
+                        
+                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                           <Label prefWidth="120.0" text="Taille de police:" />
+                           <Slider fx:id="sliderTaillePolice" min="12.0" max="18.0" value="14.0" prefWidth="200.0" />
+                           <Label fx:id="labelTaillePolice" text="14px" />
+                        </HBox>
+                        
+                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                           <Label prefWidth="120.0" text="Densité:" />
+                           <ComboBox fx:id="comboDensite" prefWidth="150.0" value="Normale">
+							    <items>
+							        <FXCollections fx:factory="observableArrayList">
+							            <String fx:value="Compacte" />
+							            <String fx:value="Normale" />
+							            <String fx:value="Confortable" />
+							        </FXCollections>
+							    </items>
+							</ComboBox>
+                        </HBox>
+                     </VBox>
+                  </VBox>
+                  
+                  <!-- Options d'affichage -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-weight: bold;" text="Options d'affichage" />
+                     
+                     <VBox spacing="8.0">
+                        <CheckBox fx:id="checkAnimations" selected="true" text="Activer les animations" />
+                        <CheckBox fx:id="checkSonsInterface" text="Sons de l'interface" />
+                        <CheckBox fx:id="checkAffichageComplet" selected="true" text="Affichage plein écran au démarrage" />
+                        <CheckBox fx:id="checkBarreEtat" selected="true" text="Afficher la barre d'état" />
+                        <CheckBox fx:id="checkRaccourcisClavier" selected="true" text="Afficher les raccourcis clavier" />
+                     </VBox>
+                  </VBox>
+                  
+                  <!-- Page de démarrage -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-weight: bold;" text="Page de démarrage" />
+                     
+                     <VBox spacing="10.0">
+                        <Label text="Page à afficher au lancement de l'application:" />
+                        <ComboBox fx:id="comboPageDemarrage" prefWidth="200.0" value="Accueil">
+						    <items>
+						        <FXCollections fx:factory="observableArrayList">
+						            <String fx:value="Accueil" />
+						            <String fx:value="Dashboard" />
+						            <String fx:value="Courrier" />
+						            <String fx:value="Messages" />
+						            <String fx:value="Dernière page visitée" />
+						        </FXCollections>
+						    </items>
+						</ComboBox>
+
+                     </VBox>
+                  </VBox>
+                  
+               </VBox>
+               
+               <!-- Paramètres notifications (masqué par défaut) -->
+               <VBox fx:id="parametresNotifications" spacing="15.0" visible="false" managed="false">
+                  
+                  <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="Notifications" />
+                  
+                  <!-- Notifications générales -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-weight: bold;" text="Notifications générales" />
+                     
+                     <VBox spacing="8.0">
+                        <CheckBox fx:id="checkNotificationsActives" selected="true" text="Activer les notifications" />
+                        <CheckBox fx:id="checkNotificationsSon" selected="true" text="Son des notifications" />
+                        <CheckBox fx:id="checkNotificationsBulle" selected="true" text="Notifications en bulle" />
+                        <CheckBox fx:id="checkNotificationsBureaux" text="Notifications sur le bureau (système)" />
+                     </VBox>
+                  </VBox>
+                  
+                  <!-- Notifications par type -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-weight: bold;" text="Notifications par type de contenu" />
+                     
+                     <GridPane hgap="20.0" vgap="12.0">
+                        <columnConstraints>
+                           <ColumnConstraints hgrow="NEVER" minWidth="150.0" />
+                           <ColumnConstraints hgrow="NEVER" minWidth="80.0" />
+                           <ColumnConstraints hgrow="NEVER" minWidth="80.0" />
+                           <ColumnConstraints hgrow="NEVER" minWidth="80.0" />
+                        </columnConstraints>
+                        
+                        <!-- En-têtes -->
+                        <Label text="" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <Label style="-fx-font-weight: bold;" text="Application" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        <Label style="-fx-font-weight: bold;" text="Email" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+                        <Label style="-fx-font-weight: bold;" text="Mobile" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+                        
+                        <!-- Nouveaux courriers -->
+                        <Label text="Nouveaux courriers:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <CheckBox fx:id="checkCourrierApp" selected="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <CheckBox fx:id="checkCourrierEmail" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                        <CheckBox fx:id="checkCourrierMobile" selected="true" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+                        
+                        <!-- Nouveaux messages -->
+                        <Label text="Messages internes:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <CheckBox fx:id="checkMessageApp" selected="true" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        <CheckBox fx:id="checkMessageEmail" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+                        <CheckBox fx:id="checkMessageMobile" selected="true" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+                        
+                        <!-- Réunions -->
+                        <Label text="Rappels réunions:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                        <CheckBox fx:id="checkReunionApp" selected="true" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                        <CheckBox fx:id="checkReunionEmail" selected="true" GridPane.columnIndex="2" GridPane.rowIndex="3" />
+                        <CheckBox fx:id="checkReunionMobile" selected="true" GridPane.columnIndex="3" GridPane.rowIndex="3" />
+                        
+                        <!-- Tâches -->
+                        <Label text="Échéances tâches:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                        <CheckBox fx:id="checkTacheApp" selected="true" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                        <CheckBox fx:id="checkTacheEmail" GridPane.columnIndex="2" GridPane.rowIndex="4" />
+                        <CheckBox fx:id="checkTacheMobile" GridPane.columnIndex="3" GridPane.rowIndex="4" />
+                        
+                        <!-- Système -->
+                        <Label text="Alertes système:" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+                        <CheckBox fx:id="checkSystemeApp" selected="true" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+                        <CheckBox fx:id="checkSystemeEmail" selected="true" GridPane.columnIndex="2" GridPane.rowIndex="5" />
+                        <CheckBox fx:id="checkSystemeMobile" GridPane.columnIndex="3" GridPane.rowIndex="5" />
+                     </GridPane>
+                  </VBox>
+                  
+                  <!-- Horaires de notification -->
+                  <VBox spacing="15.0" styleClass="card">
+                     <Label style="-fx-font-weight: bold;" text="Horaires de notification" />
+                     
+                     <VBox spacing="10.0">
+                        <CheckBox fx:id="checkHorairesTravail" selected="true" text="Limiter aux heures de travail" />
+                        
+                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                           <Label text="Heures de travail:" />
+                           <ComboBox fx:id="comboHeureDebut" prefWidth="80.0" value="08:00">
+							    <items>
+							        <FXCollections fx:factory="observableArrayList">
+							            <String fx:value="07:00" />
+							            <String fx:value="08:00" />
+							            <String fx:value="09:00" />
+							        </FXCollections>
+							    </items>
+							</ComboBox>
+                           <Label text="à" />
+                           <ComboBox fx:id="comboHeureFin" prefWidth="80.0" value="18:00">
+							    <items>
+							        <FXCollections fx:factory="observableArrayList">
+							            <String fx:value="17:00" />
+							            <String fx:value="18:00" />
+							            <String fx:value="19:00" />
+							            <String fx:value="20:00" />
+							        </FXCollections>
+							    </items>
+							</ComboBox>
+                        </HBox>
+                        
+                        <CheckBox fx:id="checkWeekend" text="Notifications le week-end" />
+                     </VBox>
+                  </VBox>
+                  
+               </VBox>
+               
+            </VBox>
+         </ScrollPane>
+         
+      </HBox>
+   </center>
+   
+</BorderPane>
