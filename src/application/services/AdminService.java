@@ -3,9 +3,13 @@ package application.services;
 import application.models.User;
 import application.models.Role;
 import application.models.Permission;
-import application.controllers.AdminController;
+import application.models.LogActivity;
 import application.utils.PasswordUtils;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -34,7 +38,10 @@ public class AdminService {
     // GESTION DES UTILISATEURS
     // ========================================
     
-    public List<User> getTousUtilisateurs() {
+    /**
+     * Récupère tous les utilisateurs
+     */
+    public List<User> getAllUsers() {
         List<User> users = new ArrayList<>();
         
         String query = """
@@ -61,7 +68,10 @@ public class AdminService {
         return users;
     }
     
-    public boolean creerUtilisateur(User user) {
+    /**
+     * Crée un nouvel utilisateur
+     */
+    public boolean createUser(User user) {
         String query = """
             INSERT INTO users (code, password, nom, prenom, email, role_id, actif)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -96,7 +106,10 @@ public class AdminService {
         return false;
     }
     
-    public boolean modifierUtilisateur(User user) {
+    /**
+     * Met à jour un utilisateur
+     */
+    public boolean updateUser(User user) {
         String query = """
             UPDATE users SET
                 code = ?, nom = ?, prenom = ?, email = ?,
@@ -125,13 +138,16 @@ public class AdminService {
         return false;
     }
     
-    public boolean supprimerUtilisateur(User user) {
+    /**
+     * Supprime un utilisateur
+     */
+    public boolean deleteUser(int userId) {
         String query = "DELETE FROM users WHERE id = ?";
         
         try (Connection conn = databaseService.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             
-            stmt.setInt(1, user.getId());
+            stmt.setInt(1, userId);
             return stmt.executeUpdate() > 0;
             
         } catch (SQLException e) {
@@ -142,6 +158,9 @@ public class AdminService {
         return false;
     }
     
+    /**
+     * Réinitialise le mot de passe d'un utilisateur
+     */
     public boolean resetPassword(User user, String newPassword) {
         String query = "UPDATE users SET password = ? WHERE id = ?";
         
@@ -166,7 +185,10 @@ public class AdminService {
     // GESTION DES RÔLES
     // ========================================
     
-    public List<Role> getTousRoles() {
+    /**
+     * Récupère tous les rôles
+     */
+    public List<Role> getAllRoles() {
         List<Role> rolesList = new ArrayList<>();
         
         String query = "SELECT * FROM roles ORDER BY nom";
@@ -188,7 +210,10 @@ public class AdminService {
         return rolesList;
     }
     
-    public boolean creerRole(Role role) {
+    /**
+     * Crée un nouveau rôle
+     */
+    public boolean createRole(Role role) {
         String query = """
             INSERT INTO roles (nom, description, permissions, actif)
             VALUES (?, ?, ?, ?)
@@ -220,7 +245,10 @@ public class AdminService {
         return false;
     }
     
-    public boolean modifierRole(Role role) {
+    /**
+     * Met à jour un rôle
+     */
+    public boolean updateRole(Role role) {
         String query = """
             UPDATE roles SET
                 nom = ?, description = ?, permissions = ?, actif = ?
@@ -246,13 +274,16 @@ public class AdminService {
         return false;
     }
     
-    public boolean supprimerRole(Role role) {
+    /**
+     * Supprime un rôle
+     */
+    public boolean deleteRole(int roleId) {
         String query = "DELETE FROM roles WHERE id = ?";
         
         try (Connection conn = databaseService.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             
-            stmt.setInt(1, role.getId());
+            stmt.setInt(1, roleId);
             return stmt.executeUpdate() > 0;
             
         } catch (SQLException e) {
@@ -267,18 +298,27 @@ public class AdminService {
     // GESTION DES LOGS
     // ========================================
     
-    public List<LogActivite> getLogsRecents(int limit) {
+    /**
+     * Récupère les logs récents
+     */
+    public List<LogActivity> getRecentLogs(int limit) {
         return getLogs(null, null, null, null, limit);
     }
     
-    public List<LogActivite> getLogs(LocalDateTime debut, LocalDateTime fin, 
+    /**
+     * Récupère les logs avec filtres
+     */
+    public List<LogActivity> getLogs(LocalDateTime debut, LocalDateTime fin, 
                                      String typeAction, String utilisateur) {
         return getLogs(debut, fin, typeAction, utilisateur, -1);
     }
     
-    public List<LogActivite> getLogs(LocalDateTime debut, LocalDateTime fin, 
+    /**
+     * Récupère les logs avec tous les paramètres
+     */
+    public List<LogActivity> getLogs(LocalDateTime debut, LocalDateTime fin, 
                                      String typeAction, String utilisateur, int limit) {
-        List<LogActivite> logsList = new ArrayList<>();
+        List<LogActivity> logsList = new ArrayList<>();
         
         StringBuilder query = new StringBuilder("""
             SELECT l.*, u.code as user_code
@@ -300,8 +340,8 @@ public class AdminService {
         }
         
         if (typeAction != null && !typeAction.equals("Toutes")) {
-            query.append(" AND l.action = ?");
-            params.add(typeAction);
+            query.append(" AND l.action LIKE ?");
+            params.add("%" + typeAction + "%");
         }
         
         if (utilisateur != null && !utilisateur.equals("Tous")) {
@@ -326,14 +366,7 @@ public class AdminService {
             ResultSet rs = stmt.executeQuery();
             
             while (rs.next()) {
-                LogActivite log = new LogActivite(
-                    formatTimestamp(rs.getTimestamp("timestamp")),
-                    rs.getString("user_code"),
-                    rs.getString("action"),
-                    rs.getString("details"),
-                    rs.getString("ip_address"),
-                    "Succès"
-                );
+                LogActivity log = mapResultSetToLog(rs);
                 logsList.add(log);
             }
             
@@ -345,6 +378,16 @@ public class AdminService {
         return logsList;
     }
     
+    /**
+     * Enregistre une action dans les logs
+     */
+    public void logAction(int userId, String action, String details) {
+        logAction(userId, action, details, null);
+    }
+    
+    /**
+     * Enregistre une action dans les logs avec adresse IP
+     */
     public void logAction(int userId, String action, String details, String ipAddress) {
         String query = """
             INSERT INTO logs_activite (user_id, action, details, ip_address)
@@ -368,9 +411,138 @@ public class AdminService {
     }
     
     // ========================================
+    // EXPORT CSV
+    // ========================================
+    
+    /**
+     * Exporte la liste des utilisateurs en CSV
+     */
+    public boolean exportUsersToCSV(File file, List<User> users) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
+            
+            // En-têtes
+            writer.println("Code,Nom,Prénom,Email,Rôle,Statut,Date création,Dernier accès");
+            
+            // Données
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            
+            for (User user : users) {
+                StringBuilder line = new StringBuilder();
+                
+                // Code
+                line.append(escapeCsv(user.getCode())).append(",");
+                
+                // Nom
+                line.append(escapeCsv(user.getNom())).append(",");
+                
+                // Prénom
+                line.append(escapeCsv(user.getPrenom())).append(",");
+                
+                // Email
+                line.append(escapeCsv(user.getEmail())).append(",");
+                
+                // Rôle
+                String roleName = user.getRole() != null ? user.getRole().getNom() : "";
+                line.append(escapeCsv(roleName)).append(",");
+                
+                // Statut
+                line.append(user.isActif() ? "Actif" : "Inactif").append(",");
+                
+                // Date création
+                String dateCreation = user.getDateCreation() != null 
+                    ? user.getDateCreation().format(formatter) 
+                    : "";
+                line.append(escapeCsv(dateCreation)).append(",");
+                
+                // Dernier accès
+                String dernierAcces = user.getDernierAcces() != null 
+                    ? user.getDernierAcces().format(formatter) 
+                    : "Jamais";
+                line.append(escapeCsv(dernierAcces));
+                
+                writer.println(line.toString());
+            }
+            
+            return true;
+            
+        } catch (IOException e) {
+            System.err.println("Erreur lors de l'export CSV des utilisateurs: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Exporte les logs d'activité en CSV
+     */
+    public boolean exportLogsToCSV(File file, List<LogActivity> logs) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
+            
+            // En-têtes
+            writer.println("Date/Heure,Utilisateur,Action,Détails,Adresse IP,Statut");
+            
+            // Données
+            for (LogActivity log : logs) {
+                StringBuilder line = new StringBuilder();
+                
+                // Date/Heure
+                line.append(escapeCsv(log.getTimestampFormatted())).append(",");
+                
+                // Utilisateur
+                String userCode = log.getUserCode() != null ? log.getUserCode() : "Système";
+                line.append(escapeCsv(userCode)).append(",");
+                
+                // Action
+                line.append(escapeCsv(log.getAction())).append(",");
+                
+                // Détails
+                String details = log.getDetails() != null ? log.getDetails() : "";
+                line.append(escapeCsv(details)).append(",");
+                
+                // Adresse IP
+                String ipAddress = log.getIpAddress() != null ? log.getIpAddress() : "";
+                line.append(escapeCsv(ipAddress)).append(",");
+                
+                // Statut
+                String statut = log.getStatut() != null ? log.getStatut() : "Succès";
+                line.append(escapeCsv(statut));
+                
+                writer.println(line.toString());
+            }
+            
+            return true;
+            
+        } catch (IOException e) {
+            System.err.println("Erreur lors de l'export CSV des logs: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Échappe les valeurs pour le format CSV
+     */
+    private String escapeCsv(String value) {
+        if (value == null) {
+            return "";
+        }
+        
+        // Si la valeur contient une virgule, un guillemet ou un retour à la ligne,
+        // on l'entoure de guillemets et on double les guillemets internes
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        
+        return value;
+    }
+    
+    // ========================================
     // MÉTHODES UTILITAIRES
     // ========================================
     
+    /**
+     * Mappe un ResultSet vers un User
+     */
     private User mapResultSetToUser(ResultSet rs) throws SQLException {
         User user = new User();
         user.setId(rs.getInt("id"));
@@ -413,6 +585,9 @@ public class AdminService {
         return user;
     }
     
+    /**
+     * Mappe un ResultSet vers un Role
+     */
     private Role mapResultSetToRole(ResultSet rs) throws SQLException {
         Role role = new Role();
         role.setId(rs.getInt("id"));
@@ -428,6 +603,29 @@ public class AdminService {
         return role;
     }
     
+    /**
+     * Mappe un ResultSet vers un LogActivity
+     */
+    private LogActivity mapResultSetToLog(ResultSet rs) throws SQLException {
+        LogActivity log = new LogActivity();
+        log.setId(rs.getInt("id"));
+        log.setUserId(rs.getInt("user_id"));
+        log.setUserCode(rs.getString("user_code"));
+        log.setAction(rs.getString("action"));
+        log.setDetails(rs.getString("details"));
+        log.setIpAddress(rs.getString("ip_address"));
+        
+        Timestamp timestamp = rs.getTimestamp("timestamp");
+        if (timestamp != null) {
+            log.setTimestamp(timestamp.toLocalDateTime());
+        }
+        
+        return log;
+    }
+    
+    /**
+     * Convertit un Set de permissions en JSON
+     */
     private String permissionsToJson(Set<Permission> permissions) {
         if (permissions == null || permissions.isEmpty()) {
             return "[]";
@@ -441,6 +639,9 @@ public class AdminService {
         return "[\"" + String.join("\",\"", permNames) + "\"]";
     }
     
+    /**
+     * Convertit une chaîne JSON en Set de permissions
+     */
     private Set<Permission> jsonToPermissions(String json) {
         Set<Permission> permissions = new HashSet<>();
         
@@ -462,13 +663,5 @@ public class AdminService {
         }
         
         return permissions;
-    }
-    
-    private String formatTimestamp(Timestamp timestamp) {
-        if (timestamp == null) return "";
-        
-        LocalDateTime dateTime = timestamp.toLocalDateTime();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-        return dateTime.format(formatter);
     }
 }
