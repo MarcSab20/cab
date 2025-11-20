@@ -7,7 +7,7 @@
 <?import javafx.collections.FXCollections?>
 <?import java.lang.String?>
 
-<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.controllers.AdminController">
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1">
    
    <!-- Barre d'outils supérieure -->
    <top>
@@ -21,9 +21,9 @@
                </font>
             </Label>
             <Region HBox.hgrow="ALWAYS" />
-            <Button styleClass="button-success" text="+ Nouvel utilisateur" />
-            <Button styleClass="button-primary" text="+ Nouveau rôle" />
-            <Button styleClass="button-info" text="📊 Rapports" />
+            <Button fx:id="btnNouvelUtilisateur" onAction="#handleNouvelUtilisateur" styleClass="button-success" text="+ Nouvel utilisateur" />
+			<Button fx:id="btnNouveauRole" onAction="#handleNouveauRole" styleClass="button-primary" text="+ Nouveau rôle" />
+			<Button fx:id="btnGenererRapport" onAction="#handleGenererRapportUtilisateurs" styleClass="button-info" text="📊 Rapports" />
          </HBox>
          
          <!-- Onglets de navigation -->
@@ -63,7 +63,7 @@
                      <Region HBox.hgrow="ALWAYS" />
                      
                      <TextField fx:id="champRechercheUtilisateur" prefWidth="250.0" promptText="🔍 Rechercher (nom, email, code...)" />
-                     <Button styleClass="button-primary" text="Rechercher" />
+                     <Button onAction="#handleRechercherUtilisateur" styleClass="button-primary" text="Rechercher" />
                   </HBox>
                   
                   <!-- Tableau des utilisateurs -->
@@ -100,7 +100,7 @@
                      <Label style="-fx-font-weight: bold;" text="Rôles configurés" />
                      <Label fx:id="nombreRoles" style="-fx-text-fill: #7f8c8d;" text="(4 rôles)" />
                      <Region HBox.hgrow="ALWAYS" />
-                     <Button styleClass="button-success" text="+ Nouveau rôle" />
+                     <Button onAction="#handleNouveauRole" styleClass="button-success" text="+ Nouveau rôle" />
                   </HBox>
                   
                   <HBox spacing="20.0" VBox.vgrow="ALWAYS">
@@ -153,8 +153,8 @@
                            <HBox alignment="CENTER_LEFT" spacing="10.0">
                               <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Permissions" />
                               <Region HBox.hgrow="ALWAYS" />
-                              <Button text="Tout sélectionner" />
-                              <Button text="Tout désélectionner" />
+                              <Button onAction="#handleToutSelectionner" text="Tout sélectionner" />
+							  <Button onAction="#handleToutDeselectionner" text="Tout désélectionner" />
                            </HBox>
                            
                            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
@@ -313,9 +313,9 @@
                      
                      <Region HBox.hgrow="ALWAYS" />
                      
-                     <Button styleClass="button-primary" text="🔍 Filtrer" />
-                     <Button styleClass="button-secondary" text="🔄 Actualiser" />
-                     <Button styleClass="button-info" text="📊 Exporter" />
+                     <Button onAction="#handleFiltrerLogs" styleClass="button-primary" text="🔍 Filtrer" />
+					 <Button onAction="#handleActualiserLogs" styleClass="button-secondary" text="🔄 Actualiser" />
+                     <Button onAction="#handleExporterLogs" styleClass="button-info" text="📊 Exporter" />
                   </HBox>
                   
                   <!-- Tableau des logs -->
