@@ -1,6 +1,8 @@
 package application.models;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.Duration;
 import java.util.Objects;
 
 /**
@@ -20,7 +22,7 @@ public class Message {
     private String pieceJointe;
     private boolean important;
     private boolean archive;
-    private String reponseA; // ID du message parent si c'est une réponse
+    private Integer reponseA; // ID du message parent si c'est une réponse
     private StatutMessage statut;
     
     // Constructeurs
@@ -107,6 +109,7 @@ public class Message {
         this.lu = lu;
         if (lu && this.dateLecture == null) {
             this.dateLecture = LocalDateTime.now();
+            this.statut = StatutMessage.LU;
         }
     }
     
@@ -148,13 +151,16 @@ public class Message {
     
     public void setArchive(boolean archive) {
         this.archive = archive;
+        if (archive) {
+            this.statut = StatutMessage.ARCHIVE;
+        }
     }
     
-    public String getReponseA() {
+    public Integer getReponseA() {
         return reponseA;
     }
     
-    public void setReponseA(String reponseA) {
+    public void setReponseA(Integer reponseA) {
         this.reponseA = reponseA;
     }
     
@@ -174,6 +180,7 @@ public class Message {
     public void marquerCommeLu() {
         this.lu = true;
         this.dateLecture = LocalDateTime.now();
+        this.statut = StatutMessage.LU;
     }
     
     /**
@@ -182,6 +189,9 @@ public class Message {
     public void marquerCommeNonLu() {
         this.lu = false;
         this.dateLecture = null;
+        if (this.statut == StatutMessage.LU) {
+            this.statut = StatutMessage.DELIVRE;
+        }
     }
     
     /**
@@ -215,45 +225,21 @@ public class Message {
      * Vérifie si c'est une réponse à un autre message
      */
     public boolean isReponse() {
-        return reponseA != null && !reponseA.trim().isEmpty();
+        return reponseA != null;
     }
     
     /**
      * Retourne la couleur associée à la priorité
      */
     public String getCouleurPriorite() {
-        switch (priorite) {
-            case TRES_HAUTE:
-                return "#d32f2f"; // Rouge foncé
-            case HAUTE:
-                return "#f57c00"; // Orange
-            case NORMALE:
-                return "#1976d2"; // Bleu
-            case BASSE:
-                return "#388e3c"; // Vert
-            default:
-                return "#757575"; // Gris
-        }
+        return priorite.getCouleur();
     }
     
     /**
      * Retourne l'icône associée au type de message
      */
     public String getIconeType() {
-        switch (typeMessage) {
-            case INTERNE:
-                return "💬";
-            case SYSTEME:
-                return "⚙️";
-            case NOTIFICATION:
-                return "🔔";
-            case ALERTE:
-                return "⚠️";
-            case DIFFUSION:
-                return "📢";
-            default:
-                return "📧";
-        }
+        return typeMessage.getIcone();
     }
     
     /**
@@ -267,14 +253,22 @@ public class Message {
         
         if (debut.isEqual(maintenant.toLocalDate().atStartOfDay())) {
             // Aujourd'hui
-            return dateEnvoi.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+            return dateEnvoi.format(DateTimeFormatter.ofPattern("HH:mm"));
         } else if (debut.isEqual(maintenant.minusDays(1).toLocalDate().atStartOfDay())) {
             // Hier
-            return "Hier " + dateEnvoi.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+            return "Hier " + dateEnvoi.format(DateTimeFormatter.ofPattern("HH:mm"));
         } else {
             // Autre date
-            return dateEnvoi.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+            return dateEnvoi.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
         }
+    }
+    
+    /**
+     * Formate la date de lecture pour l'affichage
+     */
+    public String getDateLectureFormatee() {
+        if (dateLecture == null) return "Non lu";
+        return dateLecture.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
     }
     
     /**
@@ -284,7 +278,7 @@ public class Message {
         if (dateEnvoi == null) return "";
         
         LocalDateTime maintenant = LocalDateTime.now();
-        java.time.Duration duree = java.time.Duration.between(dateEnvoi, maintenant);
+        Duration duree = Duration.between(dateEnvoi, maintenant);
         
         long secondes = duree.getSeconds();
         
@@ -300,6 +294,63 @@ public class Message {
             long jours = secondes / 86400;
             return "Il y a " + jours + " jour" + (jours > 1 ? "s" : "");
         }
+    }
+    
+    /**
+     * Retourne le nom complet de l'expéditeur
+     */
+    public String getNomExpediteur() {
+        return expediteur != null ? expediteur.getNomComplet() : "Inconnu";
+    }
+    
+    /**
+     * Retourne le nom complet du destinataire
+     */
+    public String getNomDestinataire() {
+        return destinataire != null ? destinataire.getNomComplet() : "Inconnu";
+    }
+    
+    /**
+     * Retourne l'email de l'expéditeur
+     */
+    public String getEmailExpediteur() {
+        return expediteur != null ? expediteur.getEmail() : "";
+    }
+    
+    /**
+     * Retourne l'email du destinataire
+     */
+    public String getEmailDestinataire() {
+        return destinataire != null ? destinataire.getEmail() : "";
+    }
+    
+    /**
+     * Archive le message
+     */
+    public void archiver() {
+        this.archive = true;
+        this.statut = StatutMessage.ARCHIVE;
+    }
+    
+    /**
+     * Supprime le message
+     */
+    public void supprimer() {
+        this.statut = StatutMessage.SUPPRIME;
+    }
+    
+    /**
+     * Marque comme important
+     */
+    public void marquerImportant() {
+        this.important = true;
+    }
+    
+    /**
+     * Retire la marque important
+     */
+    public void retirerImportant() {
+        this.important = false;
     }
     
     @Override
@@ -319,97 +370,13 @@ public class Message {
     public String toString() {
         return "Message{" +
                 "id=" + id +
-                ", expediteur=" + (expediteur != null ? expediteur.getCode() : "null") +
-                ", destinataire=" + (destinataire != null ? destinataire.getCode() : "null") +
+                ", expediteur=" + getNomExpediteur() +
+                ", destinataire=" + getNomDestinataire() +
                 ", objet='" + objet + '\'' +
-                ", dateEnvoi=" + dateEnvoi +
+                ", dateEnvoi=" + getDateEnvoiFormatee() +
                 ", lu=" + lu +
                 ", priorite=" + priorite +
+                ", statut=" + statut +
                 '}';
-    }
-}
-
-/**
- * Énumération des priorités des messages
- */
-enum PrioriteMessage {
-    TRES_HAUTE("Très haute", 4),
-    HAUTE("Haute", 3),
-    NORMALE("Normale", 2),
-    BASSE("Basse", 1);
-    
-    private final String libelle;
-    private final int niveau;
-    
-    PrioriteMessage(String libelle, int niveau) {
-        this.libelle = libelle;
-        this.niveau = niveau;
-    }
-    
-    public String getLibelle() {
-        return libelle;
-    }
-    
-    public int getNiveau() {
-        return niveau;
-    }
-    
-    @Override
-    public String toString() {
-        return libelle;
-    }
-}
-
-/**
- * Énumération des types de messages
- */
-enum TypeMessage {
-    INTERNE("Message interne"),
-    SYSTEME("Message système"),
-    NOTIFICATION("Notification"),
-    ALERTE("Alerte"),
-    DIFFUSION("Diffusion");
-    
-    private final String libelle;
-    
-    TypeMessage(String libelle) {
-        this.libelle = libelle;
-    }
-    
-    public String getLibelle() {
-        return libelle;
-    }
-    
-    @Override
-    public String toString() {
-        return libelle;
-    }
-}
-
-/**
- * Énumération des statuts des messages
- */
-enum StatutMessage {
-    BROUILLON("Brouillon"),
-    ENVOYE("Envoyé"),
-    DELIVRE("Délivré"),
-    LU("Lu"),
-    ARCHIVE("Archivé"),
-    SUPPRIME("Supprimé"),
-    ECHEC("Échec d'envoi");
-    
-    private final String libelle;
-    
-    StatutMessage(String libelle) {
-        this.libelle = libelle;
-    }
-    
-    public String getLibelle() {
-        return libelle;
-    }
-    
-    @Override
-    public String toString() {
-        return libelle;
     }
 }

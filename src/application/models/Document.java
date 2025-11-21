@@ -1,8 +1,10 @@
 package application.models;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -48,6 +50,7 @@ public class Document {
         // Extraction de l'extension
         if (cheminFichier != null && cheminFichier.contains(".")) {
             this.extension = cheminFichier.substring(cheminFichier.lastIndexOf(".") + 1).toLowerCase();
+            this.mimeType = getMimeTypeFromExtension();
         }
     }
     
@@ -83,9 +86,10 @@ public class Document {
     public void setCheminFichier(String cheminFichier) {
         this.cheminFichier = cheminFichier;
         
-        // Mise à jour automatique de l'extension
+        // Mise à jour automatique de l'extension et du type MIME
         if (cheminFichier != null && cheminFichier.contains(".")) {
             this.extension = cheminFichier.substring(cheminFichier.lastIndexOf(".") + 1).toLowerCase();
+            this.mimeType = getMimeTypeFromExtension();
         }
     }
     
@@ -235,6 +239,24 @@ public class Document {
     }
     
     /**
+     * Retourne les tags sous forme de chaîne séparée par des virgules
+     */
+    public String getTagsAsString() {
+        return String.join(", ", tags);
+    }
+    
+    /**
+     * Définit les tags à partir d'une chaîne séparée par des virgules
+     */
+    public void setTagsFromString(String tagsString) {
+        if (tagsString != null && !tagsString.trim().isEmpty()) {
+            this.tags = new ArrayList<>(Arrays.asList(tagsString.split("\\s*,\\s*")));
+        } else {
+            this.tags = new ArrayList<>();
+        }
+    }
+    
+    /**
      * Retourne la taille du fichier formatée
      */
     public String getTailleFormatee() {
@@ -277,46 +299,56 @@ public class Document {
     public String getMimeTypeFromExtension() {
         if (extension == null) return "application/octet-stream";
         
-        switch (extension.toLowerCase()) {
-            case "pdf":
-                return "application/pdf";
-            case "doc":
-                return "application/msword";
-            case "docx":
-                return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-            case "xls":
-                return "application/vnd.ms-excel";
-            case "xlsx":
-                return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            case "ppt":
-                return "application/vnd.ms-powerpoint";
-            case "pptx":
-                return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
-            case "txt":
-                return "text/plain";
-            case "html":
-            case "htm":
-                return "text/html";
-            case "xml":
-                return "text/xml";
-            case "csv":
-                return "text/csv";
-            case "jpg":
-            case "jpeg":
-                return "image/jpeg";
-            case "png":
-                return "image/png";
-            case "gif":
-                return "image/gif";
-            case "bmp":
-                return "image/bmp";
-            case "zip":
-                return "application/zip";
-            case "rar":
-                return "application/x-rar-compressed";
-            default:
-                return "application/octet-stream";
-        }
+        return switch (extension.toLowerCase()) {
+            case "pdf" -> "application/pdf";
+            case "doc" -> "application/msword";
+            case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "xls" -> "application/vnd.ms-excel";
+            case "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case "ppt" -> "application/vnd.ms-powerpoint";
+            case "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            case "txt" -> "text/plain";
+            case "html", "htm" -> "text/html";
+            case "xml" -> "text/xml";
+            case "csv" -> "text/csv";
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "png" -> "image/png";
+            case "gif" -> "image/gif";
+            case "bmp" -> "image/bmp";
+            case "svg" -> "image/svg+xml";
+            case "zip" -> "application/zip";
+            case "rar" -> "application/x-rar-compressed";
+            case "7z" -> "application/x-7z-compressed";
+            case "json" -> "application/json";
+            case "mp3" -> "audio/mpeg";
+            case "mp4" -> "video/mp4";
+            case "avi" -> "video/x-msvideo";
+            default -> "application/octet-stream";
+        };
+    }
+    
+    /**
+     * Retourne l'icône associée au type de fichier
+     */
+    public String getIcone() {
+        if (extension == null) return "📄";
+        
+        return switch (extension.toLowerCase()) {
+            case "pdf" -> "📕";
+            case "doc", "docx" -> "📘";
+            case "xls", "xlsx" -> "📗";
+            case "ppt", "pptx" -> "📙";
+            case "txt" -> "📝";
+            case "html", "htm" -> "🌐";
+            case "xml" -> "📋";
+            case "csv" -> "📊";
+            case "jpg", "jpeg", "png", "gif", "bmp", "svg" -> "🖼️";
+            case "zip", "rar", "7z" -> "📦";
+            case "mp3" -> "🎵";
+            case "mp4", "avi" -> "🎬";
+            case "json" -> "📋";
+            default -> "📄";
+        };
     }
     
     /**
@@ -326,6 +358,66 @@ public class Document {
         this.dateModification = LocalDateTime.now();
         this.modifiePar = utilisateur;
         this.version++;
+    }
+    
+    /**
+     * Retourne la date de création formatée
+     */
+    public String getDateCreationFormatee() {
+        if (dateCreation == null) return "";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        return dateCreation.format(formatter);
+    }
+    
+    /**
+     * Retourne la date de modification formatée
+     */
+    public String getDateModificationFormatee() {
+        if (dateModification == null) return "Jamais modifié";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        return dateModification.format(formatter);
+    }
+    
+    /**
+     * Retourne le nom de l'auteur
+     */
+    public String getNomAuteur() {
+        return creePar != null ? creePar.getNomComplet() : "Inconnu";
+    }
+    
+    /**
+     * Retourne le nom du dernier modificateur
+     */
+    public String getNomModificateur() {
+        return modifiePar != null ? modifiePar.getNomComplet() : "Aucun";
+    }
+    
+    /**
+     * Vérifie si le document peut être modifié
+     */
+    public boolean peutEtreModifie() {
+        return statut.peutEtreModifie();
+    }
+    
+    /**
+     * Archive le document
+     */
+    public void archiver() {
+        if (!statut.isActif()) {
+            throw new IllegalStateException("Seuls les documents actifs peuvent être archivés");
+        }
+        this.statut = StatutDocument.ARCHIVE;
+    }
+    
+    /**
+     * Valide le document
+     */
+    public void valider(User validateur) {
+        if (statut != StatutDocument.ATTENTE_VALIDATION) {
+            throw new IllegalStateException("Seuls les documents en attente peuvent être validés");
+        }
+        this.statut = StatutDocument.VALIDE;
+        this.marquerCommeModifie(validateur);
     }
     
     @Override
@@ -351,35 +443,7 @@ public class Document {
                 ", tailleFichier=" + getTailleFormatee() +
                 ", statut=" + statut +
                 ", version=" + version +
+                ", confidentiel=" + confidentiel +
                 '}';
-    }
-}
-
-/**
- * Énumération des statuts possibles pour un document
- */
-enum StatutDocument {
-    ACTIF("Actif"),
-    ARCHIVE("Archivé"),
-    SUPPRIME("Supprimé"),
-    BROUILLON("Brouillon"),
-    EN_COURS("En cours"),
-    VALIDE("Validé"),
-    EXPIRE("Expiré"),
-    SUSPENDU("Suspendu");
-    
-    private final String libelle;
-    
-    StatutDocument(String libelle) {
-        this.libelle = libelle;
-    }
-    
-    public String getLibelle() {
-        return libelle;
-    }
-    
-    @Override
-    public String toString() {
-        return libelle;
     }
 }
