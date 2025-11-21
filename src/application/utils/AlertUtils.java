@@ -262,7 +262,7 @@ public class AlertUtils {
         
         // Application du style CSS
         alert.getDialogPane().getStylesheets().add(
-            AlertUtils.class.getResource("/styles/application.css").toExternalForm()
+            AlertUtils.class.getResource("/application/styles/application.css").toExternalForm()
         );
         
         return alert;

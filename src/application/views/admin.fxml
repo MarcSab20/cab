@@ -7,7 +7,7 @@
 <?import javafx.collections.FXCollections?>
 <?import java.lang.String?>
 
-<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1">
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.controllers.AdminController">
    
    <!-- Barre d'outils supérieure -->
    <top>
@@ -22,8 +22,8 @@
             </Label>
             <Region HBox.hgrow="ALWAYS" />
             <Button fx:id="btnNouvelUtilisateur" onAction="#handleNouvelUtilisateur" styleClass="button-success" text="+ Nouvel utilisateur" />
-			<Button fx:id="btnNouveauRole" onAction="#handleNouveauRole" styleClass="button-primary" text="+ Nouveau rôle" />
-			<Button fx:id="btnGenererRapport" onAction="#handleGenererRapportUtilisateurs" styleClass="button-info" text="📊 Rapports" />
+            <Button fx:id="btnNouveauRole" onAction="#handleNouveauRole" styleClass="button-primary" text="+ Nouveau rôle" />
+            <Button fx:id="btnGenererRapport" onAction="#handleGenererRapportUtilisateurs" styleClass="button-info" text="📊 Rapports" />
          </HBox>
          
          <!-- Onglets de navigation -->
@@ -37,28 +37,23 @@
                   <HBox alignment="CENTER_LEFT" spacing="15.0">
                      <Label text="Filtrer:" />
                      <ComboBox fx:id="filtreStatutUtilisateur" prefWidth="100.0" promptText="Statut">
-					    <items>
-					        <FXCollections fx:factory="observableArrayList">
-					            <String fx:value="Tous" />
-					            <String fx:value="Actifs" />
-					            <String fx:value="Inactifs" />
-					            <String fx:value="Suspendus" />
-					        </FXCollections>
-					    </items>
-					</ComboBox>
-					
-					<ComboBox fx:id="filtreRoleUtilisateur" prefWidth="120.0" promptText="Rôle">
-					    <items>
-					        <FXCollections fx:factory="observableArrayList">
-					            <String fx:value="Tous les rôles" />
-					            <String fx:value="Administrateur" />
-					            <String fx:value="Gestionnaire" />
-					            <String fx:value="Utilisateur" />
-					            <String fx:value="Invité" />
-					        </FXCollections>
-					    </items>
-					</ComboBox>
-
+                        <items>
+                           <FXCollections fx:factory="observableArrayList">
+                              <String fx:value="Tous" />
+                              <String fx:value="Actifs" />
+                              <String fx:value="Inactifs" />
+                              <String fx:value="Suspendus" />
+                           </FXCollections>
+                        </items>
+                     </ComboBox>
+                     
+                     <ComboBox fx:id="filtreRoleUtilisateur" prefWidth="120.0" promptText="Rôle">
+                        <items>
+                           <FXCollections fx:factory="observableArrayList">
+                              <String fx:value="Tous les rôles" />
+                           </FXCollections>
+                        </items>
+                     </ComboBox>
                      
                      <Region HBox.hgrow="ALWAYS" />
                      
@@ -83,7 +78,7 @@
                         <VBox alignment="CENTER" spacing="10.0">
                            <Label style="-fx-font-size: 48px; -fx-text-fill: #bdc3c7;" text="👤" />
                            <Label style="-fx-text-fill: #7f8c8d;" text="Aucun utilisateur trouvé" />
-                           <Button styleClass="button-primary" text="Créer le premier utilisateur" />
+                           <Button onAction="#handleNouvelUtilisateur" styleClass="button-primary" text="Créer le premier utilisateur" />
                         </VBox>
                      </placeholder>
                   </TableView>
@@ -98,74 +93,74 @@
                   <!-- Liste des rôles -->
                   <HBox alignment="CENTER_LEFT" spacing="10.0">
                      <Label style="-fx-font-weight: bold;" text="Rôles configurés" />
-                     <Label fx:id="nombreRoles" style="-fx-text-fill: #7f8c8d;" text="(4 rôles)" />
+                     <Label fx:id="nombreRoles" style="-fx-text-fill: #7f8c8d;" text="(0 rôle)" />
                      <Region HBox.hgrow="ALWAYS" />
                      <Button onAction="#handleNouveauRole" styleClass="button-success" text="+ Nouveau rôle" />
                   </HBox>
                   
-                  <HBox spacing="20.0" VBox.vgrow="ALWAYS">
+                  <HBox spacing="20.0" VBox.vgrow="ALWAYS" prefHeight="600.0" maxHeight="700.0">
                      
                      <!-- Liste des rôles -->
                      <VBox prefWidth="300.0" spacing="10.0">
                         
-                        <ListView fx:id="listeRoles" VBox.vgrow="ALWAYS">
+                        <ListView fx:id="listeRoles" onMouseClicked="#handleRoleDoubleClick" VBox.vgrow="ALWAYS">
                            <!-- Les rôles seront ajoutés dynamiquement -->
                         </ListView>
                         
                      </VBox>
                      
                      <!-- Détails du rôle sélectionné -->
-                     <VBox HBox.hgrow="ALWAYS" spacing="15.0">
+                     <VBox HBox.hgrow="ALWAYS" spacing="15.0" maxHeight="650.0">
                         
                         <!-- Informations du rôle -->
                         <VBox spacing="15.0" styleClass="card">
                            <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Informations du rôle" />
                            
-                           <GridPane hgap="15.0" vgap="12.0">
+                           <GridPane hgap="3.0" vgap="4.0">
                               <columnConstraints>
                                  <ColumnConstraints hgrow="NEVER" minWidth="100.0" />
                                  <ColumnConstraints hgrow="ALWAYS" />
                               </columnConstraints>
                               
                               <Label text="Nom:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                              <TextField fx:id="champNomRole" text="Administrateur" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                              <TextField fx:id="champNomRole" editable="false" promptText="Nom du rôle" GridPane.columnIndex="1" GridPane.rowIndex="0" />
                               
                               <Label text="Description:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                              <TextArea fx:id="textAreaDescriptionRole" prefRowCount="2" text="Accès complet à toutes les fonctionnalités du système" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                              <TextArea fx:id="textAreaDescriptionRole" editable="false" prefRowCount="2" promptText="Description du rôle" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                               
                               <Label text="Utilisateurs:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                              <Label fx:id="labelNombreUtilisateurs" text="2 utilisateurs assignés" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                              <Label fx:id="labelNombreUtilisateurs" text="0 utilisateur(s) assigné(s)" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                               
                               <Label text="Actif:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-                              <CheckBox fx:id="checkRoleActif" selected="true" text="Rôle actif" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                              <CheckBox fx:id="checkRoleActif" disable="true" selected="true" text="Rôle actif" GridPane.columnIndex="1" GridPane.rowIndex="3" />
                            </GridPane>
                            
                            <HBox spacing="10.0">
-                              <Button fx:id="btnSauvegarderRole" styleClass="button-success" text="💾 Sauvegarder" />
-                              <Button fx:id="btnAnnulerRole" styleClass="button-secondary" text="❌ Annuler" />
+                              <Button fx:id="btnSauvegarderRole" disable="true" onAction="#handleSauvegarderRole" styleClass="button-success" text="💾 Sauvegarder" />
+                              <Button fx:id="btnAnnulerRole" disable="true" onAction="#handleAnnulerRole" styleClass="button-secondary" text="❌ Annuler" />
                               <Region HBox.hgrow="ALWAYS" />
-                              <Button fx:id="btnSupprimerRole" styleClass="button-danger" text="🗑️ Supprimer le rôle" />
+                              <Button fx:id="btnSupprimerRole" onAction="#handleSupprimerRole" styleClass="button-danger" text="🗑️ Supprimer le rôle" />
                            </HBox>
                         </VBox>
                         
                         <!-- Permissions -->
-                        <VBox spacing="15.0" styleClass="card" VBox.vgrow="ALWAYS">
+                        <VBox spacing="15.0" styleClass="card">
                            <HBox alignment="CENTER_LEFT" spacing="10.0">
                               <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Permissions" />
                               <Region HBox.hgrow="ALWAYS" />
                               <Button onAction="#handleToutSelectionner" text="Tout sélectionner" />
-							  <Button onAction="#handleToutDeselectionner" text="Tout désélectionner" />
+                              <Button onAction="#handleToutDeselectionner" text="Tout désélectionner" />
                            </HBox>
                            
-                           <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                           <ScrollPane fitToWidth="true" prefHeight="200.0" minHeight="150.0" maxHeight="250.0" VBox.vgrow="ALWAYS" style="-fx-border-color: #e0e0e0; -fx-border-width: 1;">
                               <VBox spacing="15.0">
                                  
                                  <!-- Permissions générales -->
                                  <VBox spacing="8.0">
                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="🏠 Accès général" />
                                     <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
-                                       <CheckBox fx:id="permAccueil" selected="true" text="Accueil" />
-                                       <CheckBox fx:id="permDashboard" selected="true" text="Dashboard" />
+                                       <CheckBox fx:id="permAccueil" disable="true" text="Accueil" />
+                                       <CheckBox fx:id="permDashboard" disable="true" text="Dashboard" />
                                     </VBox>
                                  </VBox>
                                  
@@ -175,12 +170,12 @@
                                  <VBox spacing="8.0">
                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="📧 Gestion du courrier" />
                                     <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
-                                       <CheckBox fx:id="permCourrierLecture" selected="true" text="Consulter les courriers" />
-                                       <CheckBox fx:id="permCourrierCreation" selected="true" text="Créer des courriers" />
-                                       <CheckBox fx:id="permCourrierModification" selected="true" text="Modifier les courriers" />
-                                       <CheckBox fx:id="permCourrierSuppression" selected="true" text="Supprimer les courriers" />
-                                       <CheckBox fx:id="permCourrierArchivage" selected="true" text="Archiver les courriers" />
-                                       <CheckBox fx:id="permCourrierValidation" selected="true" text="Valider les courriers" />
+                                       <CheckBox fx:id="permCourrierLecture" disable="true" text="Consulter les courriers" />
+                                       <CheckBox fx:id="permCourrierCreation" disable="true" text="Créer des courriers" />
+                                       <CheckBox fx:id="permCourrierModification" disable="true" text="Modifier les courriers" />
+                                       <CheckBox fx:id="permCourrierSuppression" disable="true" text="Supprimer les courriers" />
+                                       <CheckBox fx:id="permCourrierArchivage" disable="true" text="Archiver les courriers" />
+                                       <CheckBox fx:id="permCourrierValidation" disable="true" text="Valider les courriers" />
                                     </VBox>
                                  </VBox>
                                  
@@ -190,11 +185,11 @@
                                  <VBox spacing="8.0">
                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="📄 Gestion des documents" />
                                     <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
-                                       <CheckBox fx:id="permDocumentLecture" selected="true" text="Consulter les documents" />
-                                       <CheckBox fx:id="permDocumentCreation" selected="true" text="Créer des documents" />
-                                       <CheckBox fx:id="permDocumentModification" selected="true" text="Modifier les documents" />
-                                       <CheckBox fx:id="permDocumentSuppression" selected="true" text="Supprimer les documents" />
-                                       <CheckBox fx:id="permDocumentPartage" selected="true" text="Partager les documents" />
+                                       <CheckBox fx:id="permDocumentLecture" disable="true" text="Consulter les documents" />
+                                       <CheckBox fx:id="permDocumentCreation" disable="true" text="Créer des documents" />
+                                       <CheckBox fx:id="permDocumentModification" disable="true" text="Modifier les documents" />
+                                       <CheckBox fx:id="permDocumentSuppression" disable="true" text="Supprimer les documents" />
+                                       <CheckBox fx:id="permDocumentPartage" disable="true" text="Partager les documents" />
                                     </VBox>
                                  </VBox>
                                  
@@ -204,11 +199,11 @@
                                  <VBox spacing="8.0">
                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="👥 Gestion des réunions" />
                                     <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
-                                       <CheckBox fx:id="permReunionLecture" selected="true" text="Consulter les réunions" />
-                                       <CheckBox fx:id="permReunionCreation" selected="true" text="Créer des réunions" />
-                                       <CheckBox fx:id="permReunionModification" selected="true" text="Modifier les réunions" />
-                                       <CheckBox fx:id="permReunionSuppression" selected="true" text="Supprimer les réunions" />
-                                       <CheckBox fx:id="permReunionAnimation" selected="true" text="Animer les réunions" />
+                                       <CheckBox fx:id="permReunionLecture" disable="true" text="Consulter les réunions" />
+                                       <CheckBox fx:id="permReunionCreation" disable="true" text="Créer des réunions" />
+                                       <CheckBox fx:id="permReunionModification" disable="true" text="Modifier les réunions" />
+                                       <CheckBox fx:id="permReunionSuppression" disable="true" text="Supprimer les réunions" />
+                                       <CheckBox fx:id="permReunionAnimation" disable="true" text="Animer les réunions" />
                                     </VBox>
                                  </VBox>
                                  
@@ -218,10 +213,10 @@
                                  <VBox spacing="8.0">
                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="💬 Messagerie" />
                                     <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
-                                       <CheckBox fx:id="permMessageLecture" selected="true" text="Lire les messages" />
-                                       <CheckBox fx:id="permMessageEnvoi" selected="true" text="Envoyer des messages" />
-                                       <CheckBox fx:id="permMessageSuppression" text="Supprimer des messages" />
-                                       <CheckBox fx:id="permMessageDiffusion" selected="true" text="Diffusion générale" />
+                                       <CheckBox fx:id="permMessageLecture" disable="true" text="Lire les messages" />
+                                       <CheckBox fx:id="permMessageEnvoi" disable="true" text="Envoyer des messages" />
+                                       <CheckBox fx:id="permMessageSuppression" disable="true" text="Supprimer des messages" />
+                                       <CheckBox fx:id="permMessageDiffusion" disable="true" text="Diffusion générale" />
                                     </VBox>
                                  </VBox>
                                  
@@ -231,11 +226,11 @@
                                  <VBox spacing="8.0">
                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #e74c3c;" text="⚙️ Administration" />
                                     <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
-                                       <CheckBox fx:id="permAdminUtilisateurs" selected="true" text="Gérer les utilisateurs" />
-                                       <CheckBox fx:id="permAdminRoles" selected="true" text="Gérer les rôles" />
-                                       <CheckBox fx:id="permAdminSysteme" selected="true" text="Administration système" />
-                                       <CheckBox fx:id="permAdminLogs" selected="true" text="Consulter les logs" />
-                                       <CheckBox fx:id="permAdminSauvegarde" selected="true" text="Gestion des sauvegardes" />
+                                       <CheckBox fx:id="permAdminUtilisateurs" disable="true" text="Gérer les utilisateurs" />
+                                       <CheckBox fx:id="permAdminRoles" disable="true" text="Gérer les rôles" />
+                                       <CheckBox fx:id="permAdminSysteme" disable="true" text="Administration système" />
+                                       <CheckBox fx:id="permAdminLogs" disable="true" text="Consulter les logs" />
+                                       <CheckBox fx:id="permAdminSauvegarde" disable="true" text="Gestion des sauvegardes" />
                                     </VBox>
                                  </VBox>
                                  
@@ -245,10 +240,10 @@
                                  <VBox spacing="8.0">
                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="🔍 Recherche et archivage" />
                                     <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
-                                       <CheckBox fx:id="permRecherche" selected="true" text="Recherche basique" />
-                                       <CheckBox fx:id="permRechercheAvancee" selected="true" text="Recherche avancée" />
-                                       <CheckBox fx:id="permArchivageLecture" selected="true" text="Consulter les archives" />
-                                       <CheckBox fx:id="permArchivageGestion" selected="true" text="Gérer les archives" />
+                                       <CheckBox fx:id="permRecherche" disable="true" text="Recherche basique" />
+                                       <CheckBox fx:id="permRechercheAvancee" disable="true" text="Recherche avancée" />
+                                       <CheckBox fx:id="permArchivageLecture" disable="true" text="Consulter les archives" />
+                                       <CheckBox fx:id="permArchivageGestion" disable="true" text="Gérer les archives" />
                                     </VBox>
                                  </VBox>
                                  
@@ -258,10 +253,10 @@
                                  <VBox spacing="8.0">
                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="📊 Rapports et statistiques" />
                                     <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
-                                       <CheckBox fx:id="permRapportLecture" selected="true" text="Consulter les rapports" />
-                                       <CheckBox fx:id="permRapportCreation" selected="true" text="Créer des rapports" />
-                                       <CheckBox fx:id="permRapportExport" selected="true" text="Exporter les rapports" />
-                                       <CheckBox fx:id="permStatistiques" selected="true" text="Accès aux statistiques" />
+                                       <CheckBox fx:id="permRapportLecture" disable="true" text="Consulter les rapports" />
+                                       <CheckBox fx:id="permRapportCreation" disable="true" text="Créer des rapports" />
+                                       <CheckBox fx:id="permRapportExport" disable="true" text="Exporter les rapports" />
+                                       <CheckBox fx:id="permStatistiques" disable="true" text="Accès aux statistiques" />
                                     </VBox>
                                  </VBox>
                                  
@@ -284,29 +279,26 @@
                   <HBox alignment="CENTER_LEFT" spacing="15.0">
                      <Label text="Filtrer:" />
                      <ComboBox fx:id="filtreTypeAction" prefWidth="120.0" promptText="Type d'action">
-					    <items>
-					        <FXCollections fx:factory="observableArrayList">
-					            <String fx:value="Toutes" />
-					            <String fx:value="Connexion" />
-					            <String fx:value="Déconnexion" />
-					            <String fx:value="Création" />
-					            <String fx:value="Modification" />
-					            <String fx:value="Suppression" />
-					            <String fx:value="Consultation" />
-					        </FXCollections>
-					    </items>
-					</ComboBox>
+                        <items>
+                           <FXCollections fx:factory="observableArrayList">
+                              <String fx:value="Toutes" />
+                              <String fx:value="Connexion" />
+                              <String fx:value="Déconnexion" />
+                              <String fx:value="Création" />
+                              <String fx:value="Modification" />
+                              <String fx:value="Suppression" />
+                              <String fx:value="Consultation" />
+                           </FXCollections>
+                        </items>
+                     </ComboBox>
                      
                      <ComboBox fx:id="filtreUtilisateurLog" prefWidth="120.0" promptText="Utilisateur">
-					    <items>
-					        <FXCollections fx:factory="observableArrayList">
-					            <String fx:value="Tous" />
-					            <String fx:value="admin" />
-					            <String fx:value="jean.dupont" />
-					            <String fx:value="marie.martin" />
-					        </FXCollections>
-					    </items>
-					</ComboBox>
+                        <items>
+                           <FXCollections fx:factory="observableArrayList">
+                              <String fx:value="Tous" />
+                           </FXCollections>
+                        </items>
+                     </ComboBox>
                      
                      <DatePicker fx:id="dateDebutLogs" promptText="Date début" />
                      <DatePicker fx:id="dateFinLogs" promptText="Date fin" />
@@ -314,7 +306,7 @@
                      <Region HBox.hgrow="ALWAYS" />
                      
                      <Button onAction="#handleFiltrerLogs" styleClass="button-primary" text="🔍 Filtrer" />
-					 <Button onAction="#handleActualiserLogs" styleClass="button-secondary" text="🔄 Actualiser" />
+                     <Button onAction="#handleActualiserLogs" styleClass="button-secondary" text="🔄 Actualiser" />
                      <Button onAction="#handleExporterLogs" styleClass="button-info" text="📊 Exporter" />
                   </HBox>
                   
@@ -337,24 +329,15 @@
                      </placeholder>
                   </TableView>
                   
-                  <!-- Pagination des logs -->
-                  <HBox alignment="CENTER" spacing="10.0">
-                     <Button text="‹ Précédent" />
-                     <Label text="Page 1 sur 25" />
-                     <Button text="Suivant ›" />
-                     <Region HBox.hgrow="ALWAYS" />
-                     <Label text="2,456 entrées au total" />
-                  </HBox>
-                  
                </VBox>
             </Tab>
             
             <!-- Onglet Statistiques -->
             <Tab text="📊 Statistiques">
-               <VBox spacing="20.0" style="-fx-padding: 20;">
+               <VBox spacing="10.0" style="-fx-padding: 10;">
                   
                   <!-- Statistiques générales -->
-                  <GridPane hgap="20.0" vgap="20.0">
+                  <GridPane hgap="10.0" vgap="10.0">
                      <columnConstraints>
                         <ColumnConstraints hgrow="ALWAYS" percentWidth="25.0" />
                         <ColumnConstraints hgrow="ALWAYS" percentWidth="25.0" />
@@ -431,7 +414,7 @@
                   </VBox>
                   
                   <!-- Activité récente -->
-                  <VBox spacing="15.0" styleClass="card">
+                  <ScrollPane fitToWidth="true" prefHeight="200.0" minHeight="150.0" maxHeight="250.0" VBox.vgrow="ALWAYS" style="-fx-border-color: #e0e0e0; -fx-border-width: 1;">
                      <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Activité récente des utilisateurs" />
                      
                      <VBox spacing="8.0">
@@ -462,7 +445,7 @@
                            <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="Hier 16:30" />
                         </HBox>
                      </VBox>
-                  </VBox>
+                  </ScrollPane>
                   
                </VBox>
             </Tab>

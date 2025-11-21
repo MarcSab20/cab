@@ -11,11 +11,11 @@ import java.util.*;
 
 /**
  * Service de base de données utilisant MySQL pour la persistance
+ * VERSION AMÉLIORÉE : Gestion correcte du pool de connexions
  */
 public class DatabaseService {
     
     private static DatabaseService instance;
-    private Connection connection;
     
     // Configuration MySQL
     private static final String DB_HOST = "localhost";
@@ -23,8 +23,22 @@ public class DatabaseService {
     private static final String DB_NAME = "document";
     private static final String DB_USER = "marco";
     private static final String DB_PASSWORD = "29Papa278."; 
+    
+    // URL JDBC améliorée avec gestion de reconnexion
     private static final String JDBC_URL = "jdbc:mysql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME + 
-                                          "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+                                          "?useSSL=false" +
+                                          "&allowPublicKeyRetrieval=true" +
+                                          "&serverTimezone=UTC" +
+                                          "&autoReconnect=true" +           // Reconnexion automatique
+                                          "&maxReconnects=3" +              // Nombre de tentatives
+                                          "&initialTimeout=2" +             // Timeout initial
+                                          "&cachePrepStmts=true" +          // Cache des PreparedStatements
+                                          "&useServerPrepStmts=true" +      // Utiliser PreparedStatements serveur
+                                          "&rewriteBatchedStatements=true"; // Optimisation des batchs
+    
+    // Connexion principale pour l'initialisation
+    private Connection mainConnection;
+    private boolean initialized = false;
     
     private DatabaseService() {}
     
@@ -39,15 +53,22 @@ public class DatabaseService {
      * Initialise la base de données et crée les tables
      */
     public void initialize() throws SQLException {
+        if (initialized) {
+            System.out.println("DatabaseService déjà initialisé");
+            return;
+        }
+        
         try {
             // Chargement du driver MySQL
             Class.forName("com.mysql.cj.jdbc.Driver");
             
-            // Connexion à la base de données
-            connection = DriverManager.getConnection(JDBC_URL, DB_USER, DB_PASSWORD);
-            connection.setAutoCommit(true);
+            // Connexion à la base de données pour initialisation
+            mainConnection = createNewConnection();
+            mainConnection.setAutoCommit(true);
             
-            System.out.println("Connexion à la base de données MySQL établie");
+            System.out.println("✓ Connexion à la base de données MySQL établie");
+            System.out.println("✓ Base de données: " + DB_NAME);
+            System.out.println("✓ Utilisateur: " + DB_USER);
             
             // Création des tables
             createTables();
@@ -55,8 +76,44 @@ public class DatabaseService {
             // Insertion des données par défaut
             insertDefaultData();
             
+            initialized = true;
+            System.out.println("✓ DatabaseService initialisé avec succès");
+            
         } catch (ClassNotFoundException e) {
             throw new SQLException("Driver MySQL non trouvé", e);
+        } catch (SQLException e) {
+            System.err.println("✗ Erreur lors de l'initialisation: " + e.getMessage());
+            throw e;
+        }
+    }
+    
+    /**
+     * Crée une NOUVELLE connexion à chaque appel
+     * CORRECTION: Ne réutilise pas la même connexion
+     */
+    private Connection createNewConnection() throws SQLException {
+        return DriverManager.getConnection(JDBC_URL, DB_USER, DB_PASSWORD);
+    }
+    
+    /**
+     * Récupère une connexion pour une opération
+     * CORRECTION: Retourne une NOUVELLE connexion à chaque fois
+     */
+    public Connection getConnection() throws SQLException {
+        try {
+            Connection conn = createNewConnection();
+            
+            // Vérifier que la connexion est valide
+            if (conn == null || conn.isClosed()) {
+                throw new SQLException("Impossible d'établir une connexion à la base de données");
+            }
+            
+            conn.setAutoCommit(true);
+            return conn;
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur lors de la création de connexion: " + e.getMessage());
+            throw e;
         }
     }
     
@@ -64,8 +121,60 @@ public class DatabaseService {
      * Crée les tables de la base de données
      */
     private void createTables() throws SQLException {
-        
-        System.out.println("Tables MySQL créées avec succès");
+        try (Statement stmt = mainConnection.createStatement()) {
+            
+            // Table des rôles
+            String createRolesTable = """
+                CREATE TABLE IF NOT EXISTS roles (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    nom VARCHAR(50) UNIQUE NOT NULL,
+                    description TEXT,
+                    permissions TEXT,
+                    actif BOOLEAN DEFAULT TRUE,
+                    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """;
+            stmt.executeUpdate(createRolesTable);
+            
+            // Table des utilisateurs
+            String createUsersTable = """
+                CREATE TABLE IF NOT EXISTS users (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    code VARCHAR(50) UNIQUE NOT NULL,
+                    password VARCHAR(255) NOT NULL,
+                    nom VARCHAR(100) NOT NULL,
+                    prenom VARCHAR(100) NOT NULL,
+                    email VARCHAR(100) UNIQUE NOT NULL,
+                    role_id INT,
+                    actif BOOLEAN DEFAULT TRUE,
+                    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    dernier_acces TIMESTAMP NULL,
+                    session_token VARCHAR(255),
+                    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL,
+                    INDEX idx_code (code),
+                    INDEX idx_session_token (session_token)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """;
+            stmt.executeUpdate(createUsersTable);
+            
+            // Table des logs d'activité
+            String createLogsTable = """
+                CREATE TABLE IF NOT EXISTS logs_activite (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT,
+                    action VARCHAR(100) NOT NULL,
+                    details TEXT,
+                    ip_address VARCHAR(45),
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+                    INDEX idx_timestamp (timestamp),
+                    INDEX idx_user_id (user_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """;
+            stmt.executeUpdate(createLogsTable);
+            
+            System.out.println("✓ Tables MySQL créées/vérifiées avec succès");
+        }
     }
     
     /**
@@ -74,6 +183,7 @@ public class DatabaseService {
     private void insertDefaultData() throws SQLException {
         // Vérifier si les données existent déjà
         if (getRoleCount() > 0) {
+            System.out.println("✓ Données par défaut déjà présentes");
             return; // Données déjà présentes
         }
         
@@ -83,7 +193,7 @@ public class DatabaseService {
         // Création de l'utilisateur administrateur par défaut
         createDefaultAdmin();
         
-        System.out.println("Données par défaut insérées");
+        System.out.println("✓ Données par défaut insérées");
     }
     
     /**
@@ -95,7 +205,7 @@ public class DatabaseService {
             VALUES (?, ?, ?)
         """;
         
-        try (PreparedStatement stmt = connection.prepareStatement(insertRoleQuery)) {
+        try (PreparedStatement stmt = mainConnection.prepareStatement(insertRoleQuery)) {
             // Rôle Administrateur
             stmt.setString(1, "Administrateur");
             stmt.setString(2, "Accès complet à toutes les fonctionnalités");
@@ -119,6 +229,8 @@ public class DatabaseService {
             stmt.setString(2, "Accès en lecture seule");
             stmt.setString(3, getGuestPermissionsJson());
             stmt.executeUpdate();
+            
+            System.out.println("✓ Rôles par défaut créés");
         }
     }
     
@@ -131,7 +243,7 @@ public class DatabaseService {
             VALUES (?, ?, ?, ?, ?, ?)
         """;
         
-        try (PreparedStatement stmt = connection.prepareStatement(insertUserQuery)) {
+        try (PreparedStatement stmt = mainConnection.prepareStatement(insertUserQuery)) {
             stmt.setString(1, "admin");
             stmt.setString(2, PasswordUtils.hashPassword("admin123"));
             stmt.setString(3, "Administrateur");
@@ -139,6 +251,8 @@ public class DatabaseService {
             stmt.setString(5, "admin@documentmanager.com");
             stmt.setInt(6, 1); // ID du rôle Administrateur
             stmt.executeUpdate();
+            
+            System.out.println("✓ Utilisateur administrateur créé (admin/admin123)");
         }
     }
     
@@ -147,46 +261,50 @@ public class DatabaseService {
      */
     private int getRoleCount() throws SQLException {
         String query = "SELECT COUNT(*) FROM roles";
-        try (Statement stmt = connection.createStatement();
+        try (Statement stmt = mainConnection.createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
             return rs.next() ? rs.getInt(1) : 0;
         }
     }
     
-    // Méthodes pour les permissions JSON (simulées)
+    // Méthodes pour les permissions JSON
     private String getAllPermissionsJson() {
-        return "[\"ACCUEIL\",\"DASHBOARD\",\"COURRIER_LECTURE\",\"COURRIER_CREATION\",\"COURRIER_MODIFICATION\",\"COURRIER_SUPPRESSION\",\"REUNIONS_LECTURE\",\"REUNIONS_CREATION\",\"REUNIONS_MODIFICATION\",\"MESSAGES_LECTURE\",\"MESSAGES_ENVOI\",\"ADMIN_UTILISATEURS\",\"ADMIN_ROLES\",\"RECHERCHE\",\"ARCHIVAGE_LECTURE\",\"ARCHIVAGE_GESTION\",\"PARAMETRES_PERSONNELS\",\"PARAMETRES_SYSTEME\"]";
+        return "[\"ACCUEIL\",\"DASHBOARD\",\"COURRIER_LECTURE\",\"COURRIER_CREATION\",\"COURRIER_MODIFICATION\",\"COURRIER_SUPPRESSION\",\"COURRIER_ARCHIVAGE\",\"COURRIER_VALIDATION\",\"DOCUMENT_LECTURE\",\"DOCUMENT_CREATION\",\"DOCUMENT_MODIFICATION\",\"DOCUMENT_SUPPRESSION\",\"DOCUMENT_PARTAGE\",\"REUNIONS_LECTURE\",\"REUNIONS_CREATION\",\"REUNIONS_MODIFICATION\",\"REUNIONS_SUPPRESSION\",\"REUNIONS_ANIMATION\",\"MESSAGES_LECTURE\",\"MESSAGES_ENVOI\",\"MESSAGES_SUPPRESSION\",\"MESSAGES_DIFFUSION\",\"ADMIN_UTILISATEURS\",\"ADMIN_ROLES\",\"ADMIN_SYSTEME\",\"ADMIN_LOGS\",\"ADMIN_SAUVEGARDE\",\"RECHERCHE\",\"RECHERCHE_AVANCEE\",\"ARCHIVAGE_LECTURE\",\"ARCHIVAGE_GESTION\",\"RAPPORTS_LECTURE\",\"RAPPORTS_CREATION\",\"RAPPORTS_EXPORT\",\"STATISTIQUES\"]";
     }
     
     private String getManagerPermissionsJson() {
-        return "[\"ACCUEIL\",\"DASHBOARD\",\"COURRIER_LECTURE\",\"COURRIER_CREATION\",\"COURRIER_MODIFICATION\",\"REUNIONS_LECTURE\",\"REUNIONS_CREATION\",\"REUNIONS_MODIFICATION\",\"MESSAGES_LECTURE\",\"MESSAGES_ENVOI\",\"RECHERCHE\",\"ARCHIVAGE_LECTURE\",\"PARAMETRES_PERSONNELS\"]";
+        return "[\"ACCUEIL\",\"DASHBOARD\",\"COURRIER_LECTURE\",\"COURRIER_CREATION\",\"COURRIER_MODIFICATION\",\"COURRIER_ARCHIVAGE\",\"DOCUMENT_LECTURE\",\"DOCUMENT_CREATION\",\"DOCUMENT_MODIFICATION\",\"DOCUMENT_PARTAGE\",\"REUNIONS_LECTURE\",\"REUNIONS_CREATION\",\"REUNIONS_MODIFICATION\",\"REUNIONS_ANIMATION\",\"MESSAGES_LECTURE\",\"MESSAGES_ENVOI\",\"RECHERCHE\",\"RECHERCHE_AVANCEE\",\"ARCHIVAGE_LECTURE\",\"RAPPORTS_LECTURE\",\"RAPPORTS_CREATION\",\"STATISTIQUES\"]";
     }
     
     private String getUserPermissionsJson() {
-        return "[\"ACCUEIL\",\"DASHBOARD\",\"COURRIER_LECTURE\",\"COURRIER_CREATION\",\"REUNIONS_LECTURE\",\"MESSAGES_LECTURE\",\"MESSAGES_ENVOI\",\"RECHERCHE\",\"PARAMETRES_PERSONNELS\"]";
+        return "[\"ACCUEIL\",\"DASHBOARD\",\"COURRIER_LECTURE\",\"COURRIER_CREATION\",\"DOCUMENT_LECTURE\",\"DOCUMENT_CREATION\",\"REUNIONS_LECTURE\",\"REUNIONS_CREATION\",\"MESSAGES_LECTURE\",\"MESSAGES_ENVOI\",\"RECHERCHE\"]";
     }
     
     private String getGuestPermissionsJson() {
-        return "[\"ACCUEIL\",\"COURRIER_LECTURE\",\"REUNIONS_LECTURE\",\"PARAMETRES_PERSONNELS\"]";
+        return "[\"ACCUEIL\",\"COURRIER_LECTURE\",\"DOCUMENT_LECTURE\",\"REUNIONS_LECTURE\"]";
     }
     
     /**
      * Récupère un utilisateur par son code
+     * CORRECTION: Utilise une NOUVELLE connexion
      */
     public User getUserByCode(String code) throws SQLException {
         String query = """
-            SELECT u.*, r.nom as role_nom, r.description as role_desc, r.permissions 
+            SELECT u.*, r.nom as role_nom, r.description as role_desc, r.permissions, r.actif as role_actif
             FROM users u 
             LEFT JOIN roles r ON u.role_id = r.id 
             WHERE u.code = ? AND u.actif = 1
         """;
         
-        try (PreparedStatement stmt = connection.prepareStatement(query)) {
-            stmt.setString(1, code);
-            ResultSet rs = stmt.executeQuery();
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
             
-            if (rs.next()) {
-                return mapResultSetToUser(rs);
+            stmt.setString(1, code);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToUser(rs);
+                }
             }
         }
         
@@ -195,21 +313,25 @@ public class DatabaseService {
     
     /**
      * Récupère un utilisateur par son token de session
+     * CORRECTION: Utilise une NOUVELLE connexion
      */
     public User getUserBySessionToken(String sessionToken) throws SQLException {
         String query = """
-            SELECT u.*, r.nom as role_nom, r.description as role_desc, r.permissions 
+            SELECT u.*, r.nom as role_nom, r.description as role_desc, r.permissions, r.actif as role_actif
             FROM users u 
             LEFT JOIN roles r ON u.role_id = r.id 
             WHERE u.session_token = ? AND u.actif = 1
         """;
         
-        try (PreparedStatement stmt = connection.prepareStatement(query)) {
-            stmt.setString(1, sessionToken);
-            ResultSet rs = stmt.executeQuery();
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
             
-            if (rs.next()) {
-                return mapResultSetToUser(rs);
+            stmt.setString(1, sessionToken);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToUser(rs);
+                }
             }
         }
         
@@ -218,6 +340,7 @@ public class DatabaseService {
     
     /**
      * Met à jour un utilisateur
+     * CORRECTION: Utilise une NOUVELLE connexion
      */
     public void updateUser(User user) throws SQLException {
         String query = """
@@ -227,7 +350,9 @@ public class DatabaseService {
             WHERE id = ?
         """;
         
-        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
             stmt.setString(1, user.getPassword());
             stmt.setString(2, user.getNom());
             stmt.setString(3, user.getPrenom());
@@ -243,12 +368,14 @@ public class DatabaseService {
     
     /**
      * Récupère tous les rôles actifs
+     * CORRECTION: Utilise une NOUVELLE connexion
      */
     public List<Role> getActiveRoles() throws SQLException {
         String query = "SELECT * FROM roles WHERE actif = 1 ORDER BY nom";
         List<Role> roles = new ArrayList<>();
         
-        try (Statement stmt = connection.createStatement();
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
             
             while (rs.next()) {
@@ -261,6 +388,7 @@ public class DatabaseService {
     
     /**
      * Enregistre une activité dans les logs
+     * CORRECTION: Utilise une NOUVELLE connexion
      */
     public void logActivity(int userId, String action, String details, String ipAddress) throws SQLException {
         String query = """
@@ -268,7 +396,9 @@ public class DatabaseService {
             VALUES (?, ?, ?, ?)
         """;
         
-        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
             stmt.setInt(1, userId);
             stmt.setString(2, action);
             stmt.setString(3, details);
@@ -309,12 +439,13 @@ public class DatabaseService {
             role.setId(rs.getInt("role_id"));
             role.setNom(roleNom);
             role.setDescription(rs.getString("role_desc"));
+            role.setActif(rs.getBoolean("role_actif"));
             
-            // Parsing des permissions (simplifié)
+            // Parsing des permissions
             String permissionsJson = rs.getString("permissions");
-            if (permissionsJson != null) {
-                // Ici on devrait parser le JSON et créer les permissions
-                // Pour la simplicité, on simule
+            if (permissionsJson != null && !permissionsJson.trim().isEmpty()) {
+                role.setPermissions(parsePermissions(permissionsJson));
+            } else {
                 role.setPermissions(new HashSet<>());
             }
             
@@ -334,9 +465,11 @@ public class DatabaseService {
         role.setDescription(rs.getString("description"));
         role.setActif(rs.getBoolean("actif"));
         
-        // Parsing des permissions (simplifié)
+        // Parsing des permissions
         String permissionsJson = rs.getString("permissions");
-        if (permissionsJson != null) {
+        if (permissionsJson != null && !permissionsJson.trim().isEmpty()) {
+            role.setPermissions(parsePermissions(permissionsJson));
+        } else {
             role.setPermissions(new HashSet<>());
         }
         
@@ -344,34 +477,73 @@ public class DatabaseService {
     }
     
     /**
-     * Ferme la connexion à la base de données
+     * Parse les permissions depuis le JSON
+     */
+    private Set<Permission> parsePermissions(String json) {
+        Set<Permission> permissions = new HashSet<>();
+        
+        if (json == null || json.trim().isEmpty() || json.equals("[]")) {
+            return permissions;
+        }
+        
+        // Parse simple du JSON
+        String cleaned = json.replace("[", "").replace("]", "").replace("\"", "");
+        String[] permNames = cleaned.split(",");
+        
+        for (String permName : permNames) {
+            try {
+                Permission perm = Permission.valueOf(permName.trim());
+                permissions.add(perm);
+            } catch (IllegalArgumentException e) {
+                System.err.println("Permission inconnue ignorée: " + permName);
+            }
+        }
+        
+        return permissions;
+    }
+    
+    /**
+     * Ferme la connexion principale d'initialisation
+     * CORRECTION: Ne ferme que la connexion principale
      */
     public void close() {
         try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-                System.out.println("Connexion à la base de données fermée");
+            if (mainConnection != null && !mainConnection.isClosed()) {
+                mainConnection.close();
+                System.out.println("✓ Connexion principale fermée");
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la fermeture de la base de données: " + e.getMessage());
+            System.err.println("Erreur lors de la fermeture de la connexion: " + e.getMessage());
         }
     }
     
     /**
-     * Vérifie si la connexion est active
+     * Vérifie si le service est initialisé
+     */
+    public boolean isInitialized() {
+        return initialized;
+    }
+    
+    /**
+     * Vérifie si la connexion principale est active
      */
     public boolean isConnected() {
         try {
-            return connection != null && !connection.isClosed();
+            return mainConnection != null && !mainConnection.isClosed();
         } catch (SQLException e) {
             return false;
         }
     }
     
     /**
-     * Récupère la connexion (pour les requêtes personnalisées)
+     * Teste la connexion à la base de données
      */
-    public Connection getConnection() {
-        return connection;
+    public boolean testConnection() {
+        try (Connection conn = getConnection()) {
+            return conn != null && !conn.isClosed();
+        } catch (SQLException e) {
+            System.err.println("Test de connexion échoué: " + e.getMessage());
+            return false;
+        }
     }
 }

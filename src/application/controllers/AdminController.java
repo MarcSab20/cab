@@ -820,12 +820,19 @@ public class AdminController implements Initializable {
     
     // Double-clic pour éditer un rôle
     @FXML
-    private void handleRoleDoubleClick() {
-        if (selectedRole != null) {
-            setRoleFieldsEditable(true);
-            champNomRole.requestFocus();
+    private void handleRoleDoubleClick(javafx.scene.input.MouseEvent event) {
+        // Vérifier si c'est un double-clic
+        if (event.getClickCount() == 2) {
+            Role selectedRole = listeRoles.getSelectionModel().getSelectedItem();
+            if (selectedRole != null) {
+                setRoleFieldsEditable(true);
+                champNomRole.requestFocus();
+            }
         }
     }
+
+
+
     
     // ===== GESTION DES LOGS =====
     
