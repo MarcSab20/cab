@@ -8,7 +8,7 @@
 <?import javafx.collections.FXCollections?>
 
 
-<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"fx:controller="application.controllers.ParametresController">
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.controllers.ParametresController">
    
    <!-- En-tête -->
    <top>
@@ -179,26 +179,6 @@
                      </VBox>
                   </VBox>
                   
-                  <!-- Photo de profil -->
-                  <VBox spacing="15.0" styleClass="card">
-                     <Label style="-fx-font-weight: bold;" text="Photo de profil" />
-                     
-                     <HBox alignment="CENTER_LEFT" spacing="20.0">
-                        <VBox alignment="CENTER" spacing="10.0">
-                           <Label style="-fx-background-color: #e9ecef; -fx-padding: 30; -fx-background-radius: 50; -fx-font-size: 48px;" text="👤" />
-                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Photo actuelle" />
-                        </VBox>
-                        
-                        <VBox spacing="10.0">
-                           <Label text="Formats acceptés: JPG, PNG (max 2MB)" />
-                           <HBox spacing="10.0">
-                              <Button styleClass="button-primary" text="📎 Choisir une photo" />
-                              <Button styleClass="button-secondary" text="🗑️ Supprimer" />
-                           </HBox>
-                        </VBox>
-                     </HBox>
-                  </VBox>
-                  
                   <!-- Signature -->
                   <VBox spacing="15.0" styleClass="card">
                      <Label style="-fx-font-weight: bold;" text="Signature électronique" />
@@ -236,13 +216,6 @@
                         <PasswordField fx:id="champConfirmerMotDePasse" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                      </GridPane>
                      
-                     <VBox spacing="5.0">
-                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Le mot de passe doit contenir:" />
-                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="• Au moins 8 caractères" />
-                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="• Une majuscule et une minuscule" />
-                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="• Un chiffre et un caractère spécial" />
-                     </VBox>
-                     
                      <HBox alignment="CENTER_LEFT" spacing="10.0">
                         <Button styleClass="button-primary" text="Changer le mot de passe" />
                         <ProgressBar fx:id="forceMotDePasse" prefWidth="150.0" progress="0.0" />
@@ -258,44 +231,6 @@
                         <CheckBox fx:id="checkA2F" text="Activer l'authentification à deux facteurs" />
                         <Label style="-fx-background-color: #d4edda; -fx-text-fill: #155724; -fx-padding: 4 8; -fx-background-radius: 4; -fx-font-size: 11px;" text="RECOMMANDÉ" />
                      </HBox>
-                     
-                     <Label style="-fx-text-fill: #7f8c8d;" text="L'authentification à deux facteurs ajoute une couche de sécurité supplémentaire à votre compte." />
-                     
-                     <HBox spacing="10.0">
-                        <Button styleClass="button-info" text="📱 Configurer avec app mobile" />
-                        <Button styleClass="button-secondary" text="📧 Configurer par email" />
-                     </HBox>
-                  </VBox>
-                  
-                  <!-- Sessions actives -->
-                  <VBox spacing="15.0" styleClass="card">
-                     <Label style="-fx-font-weight: bold;" text="Sessions actives" />
-                     
-                     <VBox spacing="8.0">
-                        <!-- Session actuelle -->
-                        <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 10; -fx-background-color: #e8f5e8; -fx-background-radius: 6;">
-                           <Label style="-fx-font-size: 16px;" text="💻" />
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="Session actuelle" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Windows 10 - Chrome • IP: 192.168.1.100" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Connecté depuis: 4 nov. 2025, 08:30" />
-                           </VBox>
-                           <Label style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-padding: 4 8; -fx-background-radius: 10; -fx-font-size: 10px;" text="ACTUELLE" />
-                        </HBox>
-                        
-                        <!-- Autre session -->
-                        <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 10; -fx-background-color: #f8f9fa; -fx-background-radius: 6;">
-                           <Label style="-fx-font-size: 16px;" text="📱" />
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="Application mobile" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Android • IP: 192.168.1.150" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Dernière activité: 3 nov. 2025, 18:45" />
-                           </VBox>
-                           <Button styleClass="button-danger" text="Déconnecter" />
-                        </HBox>
-                     </VBox>
-                     
-                     <Button maxWidth="200.0" styleClass="button-warning" text="Déconnecter toutes les sessions" />
                   </VBox>
                   
                </VBox>
@@ -312,7 +247,7 @@
                      <VBox spacing="12.0">
                         <HBox alignment="CENTER_LEFT" spacing="15.0">
                            <Label prefWidth="120.0" text="Thème:" />
-                           <RadioButton text="🌞 Clair" toggleGroup="$toggleTheme" selected="true" />
+                           <RadioButton text="🌞 Clair" selected="true" toggleGroup="$toggleTheme" />
                            <RadioButton text="🌙 Sombre" toggleGroup="$toggleTheme" />
                            <RadioButton text="⚙️ Système" toggleGroup="$toggleTheme" />
                         </HBox>
@@ -368,7 +303,6 @@
 						        </FXCollections>
 						    </items>
 						</ComboBox>
-
                      </VBox>
                   </VBox>
                   

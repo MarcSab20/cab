@@ -60,7 +60,7 @@
             <Region HBox.hgrow="ALWAYS" />
             
             <TextField fx:id="champRecherche" prefWidth="250.0" promptText="🔍 Rechercher (objet, expéditeur...)" />
-            <Button styleClass="button-primary" text="Rechercher" />
+            <Button onAction="#handleRecherche" styleClass="button-primary" text="Rechercher" />
             <Button styleClass="button-secondary" text="Réinitialiser" />
          </HBox>
          
@@ -93,7 +93,6 @@
                   <TableColumn fx:id="colonneDate" prefWidth="100.0" text="Date" />
                   <TableColumn fx:id="colonnePriorite" prefWidth="80.0" text="Priorité" />
                   <TableColumn fx:id="colonneStatut" prefWidth="80.0" text="Statut" />
-                  <TableColumn fx:id="colonneActions" prefWidth="100.0" text="Actions" />
                </columns>
                
                <!-- Placeholder quand vide -->
@@ -105,25 +104,6 @@
                   </VBox>
                </placeholder>
             </TableView>
-            
-            <!-- Pagination -->
-            <HBox alignment="CENTER" spacing="10.0">
-               <Button text="« Précédent" />
-               <Label text="Page 1 sur 5" />
-               <Button text="Suivant »" />
-               <Region HBox.hgrow="ALWAYS" />
-               <Label text="Éléments par page:" />
-               <ComboBox fx:id="limitComboBox" prefWidth="60.0">
-				    <items>
-				        <FXCollections fx:factory="observableArrayList">
-				            <String fx:value="10" />
-				            <String fx:value="25" />
-				            <String fx:value="50" />
-				            <String fx:value="100" />
-				        </FXCollections>
-				    </items>
-				</ComboBox>
-            </HBox>
             
          </VBox>
          
@@ -214,46 +194,7 @@
                      </HBox>
                      
                      <VBox fx:id="listePiecesJointes" spacing="5.0">
-                        <!-- Exemple de pièce jointe -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 8; -fx-background-color: white; -fx-background-radius: 4;">
-                           <Label style="-fx-font-size: 16px;" text="📄" />
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="demande_devis.pdf" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="245 KB - PDF" />
-                           </VBox>
-                           <Button text="👁️" />
-                           <Button text="💾" />
-                           <Button styleClass="button-danger" text="🗑️" />
-                        </HBox>
-                     </VBox>
-                  </VBox>
-                  
-                  <!-- Historique -->
-                  <VBox spacing="10.0" styleClass="card">
-                     <Label style="-fx-font-weight: bold;" text="Historique" />
-                     
-                     <VBox spacing="8.0">
-                        <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 8; -fx-background-color: white; -fx-background-radius: 4;">
-                           <VBox alignment="CENTER">
-                              <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="15:00" />
-                              <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="04/11" />
-                           </VBox>
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="Courrier assigné" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Assigné à Jean Dupont" />
-                           </VBox>
-                        </HBox>
-                        
-                        <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 8; -fx-background-color: white; -fx-background-radius: 4;">
-                           <VBox alignment="CENTER">
-                              <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="14:30" />
-                              <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="04/11" />
-                           </VBox>
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="Courrier reçu" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Enregistré dans le système" />
-                           </VBox>
-                        </HBox>
+                        <!-- Les pièces jointes seront ajoutées dynamiquement -->
                      </VBox>
                   </VBox>
                   

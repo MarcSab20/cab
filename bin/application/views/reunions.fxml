@@ -8,7 +8,7 @@
 <?import javafx.collections.FXCollections?>
 
 
-<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"fx:controller="application.controllers.ReunionsController">
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.controllers.ReunionsController">
    
    <!-- Barre d'outils supérieure -->
    <top>
@@ -55,7 +55,7 @@
             <Region HBox.hgrow="ALWAYS" />
             
             <TextField fx:id="champRecherche" prefWidth="200.0" promptText="🔍 Rechercher..." />
-            <Button styleClass="button-primary" text="Rechercher" />
+            <Button onAction="#handleRecherche" styleClass="button-primary" text="Rechercher" />
          </HBox>
          
       </VBox>
@@ -68,65 +68,7 @@
          <!-- Liste des réunions -->
          <VBox spacing="15.0" style="-fx-padding: 20;">
             
-            <!-- Réunions du jour -->
-            <VBox spacing="10.0" styleClass="card">
-               <HBox alignment="CENTER_LEFT" spacing="10.0">
-                  <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="🕐 Réunions d'aujourd'hui" />
-                  <Label style="-fx-text-fill: #e74c3c; -fx-font-weight: bold;" text="(3)" />
-               </HBox>
-               
-               <VBox spacing="8.0">
-                  <!-- Réunion 1 -->
-                  <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 12; -fx-background-color: #e8f5e8; -fx-background-radius: 6;">
-                     <VBox alignment="CENTER" spacing="2.0">
-                        <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="09:00" />
-                        <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="1h" />
-                     </VBox>
-                     <VBox HBox.hgrow="ALWAYS">
-                        <Label style="-fx-font-weight: bold;" text="Réunion équipe développement" />
-                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Salle de conf A • 6 participants" />
-                     </VBox>
-                     <VBox alignment="CENTER_RIGHT" spacing="4.0">
-                        <Label style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 10; -fx-font-size: 10px;" text="EN COURS" />
-                        <Button prefWidth="60.0" styleClass="button-info" text="Rejoindre" />
-                     </VBox>
-                  </HBox>
-                  
-                  <!-- Réunion 2 -->
-                  <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 12; -fx-background-color: #fff3cd; -fx-background-radius: 6;">
-                     <VBox alignment="CENTER" spacing="2.0">
-                        <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="14:00" />
-                        <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="2h" />
-                     </VBox>
-                     <VBox HBox.hgrow="ALWAYS">
-                        <Label style="-fx-font-weight: bold;" text="Revue projet client XYZ" />
-                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Visio • 4 participants" />
-                     </VBox>
-                     <VBox alignment="CENTER_RIGHT" spacing="4.0">
-                        <Label style="-fx-background-color: #f39c12; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 10; -fx-font-size: 10px;" text="PROGRAMMÉE" />
-                        <Button prefWidth="60.0" styleClass="button-primary" text="Préparer" />
-                     </VBox>
-                  </HBox>
-                  
-                  <!-- Réunion 3 -->
-                  <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 12; -fx-background-color: #f8f9fa; -fx-background-radius: 6;">
-                     <VBox alignment="CENTER" spacing="2.0">
-                        <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="16:30" />
-                        <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="30min" />
-                     </VBox>
-                     <VBox HBox.hgrow="ALWAYS">
-                        <Label style="-fx-font-weight: bold;" text="Point hebdomadaire direction" />
-                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Bureau direction • 3 participants" />
-                     </VBox>
-                     <VBox alignment="CENTER_RIGHT" spacing="4.0">
-                        <Label style="-fx-background-color: #6c757d; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 10; -fx-font-size: 10px;" text="PROGRAMMÉE" />
-                        <Button prefWidth="60.0" styleClass="button-secondary" text="Détails" />
-                     </VBox>
-                  </HBox>
-               </VBox>
-            </VBox>
-            
-            <!-- Réunions à venir -->
+            <!-- Tableau des réunions -->
             <VBox spacing="10.0" styleClass="card" VBox.vgrow="ALWAYS">
                <HBox alignment="CENTER_LEFT" spacing="10.0">
                   <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="📅 Réunions à venir" />
@@ -144,7 +86,6 @@
                      <TableColumn fx:id="colonneLieu" prefWidth="120.0" text="Lieu" />
                      <TableColumn fx:id="colonneParticipants" prefWidth="80.0" text="Participants" />
                      <TableColumn fx:id="colonneStatutReunion" prefWidth="90.0" text="Statut" />
-                     <TableColumn fx:id="colonneActionsReunion" prefWidth="100.0" text="Actions" />
                   </columns>
                   
                   <placeholder>
@@ -219,63 +160,7 @@
                      </HBox>
                      
                      <VBox fx:id="listeParticipants" spacing="5.0">
-                        <!-- Participant 1 -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 8; -fx-background-color: white; -fx-background-radius: 4;">
-                           <Label style="-fx-font-size: 24px;" text="👤" />
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="Jean Dupont" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Chef de projet • Organisateur" />
-                           </VBox>
-                           <Label style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 10; -fx-font-size: 10px;" text="ACCEPTÉ" />
-                        </HBox>
-                        
-                        <!-- Participant 2 -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 8; -fx-background-color: white; -fx-background-radius: 4;">
-                           <Label style="-fx-font-size: 24px;" text="👤" />
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="Marie Martin" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Développeuse" />
-                           </VBox>
-                           <Label style="-fx-background-color: #f39c12; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 10; -fx-font-size: 10px;" text="EN ATTENTE" />
-                        </HBox>
-                        
-                        <!-- Participant 3 -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 8; -fx-background-color: white; -fx-background-radius: 4;">
-                           <Label style="-fx-font-size: 24px;" text="👤" />
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="Pierre Durand" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Testeur QA" />
-                           </VBox>
-                           <Label style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 10; -fx-font-size: 10px;" text="ACCEPTÉ" />
-                        </HBox>
-                     </VBox>
-                  </VBox>
-                  
-                  <!-- Ordre du jour -->
-                  <VBox spacing="10.0" styleClass="card">
-                     <HBox alignment="CENTER_LEFT" spacing="10.0">
-                        <Label style="-fx-font-weight: bold;" text="Ordre du jour" />
-                        <Region HBox.hgrow="ALWAYS" />
-                        <Button styleClass="button-secondary" text="✏️ Modifier" />
-                     </HBox>
-                     
-                     <VBox spacing="6.0">
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                           <Label style="-fx-font-weight: bold; -fx-text-fill: #3498db;" text="1." />
-                           <Label text="Point sur le sprint en cours (15 min)" />
-                        </HBox>
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                           <Label style="-fx-font-weight: bold; -fx-text-fill: #3498db;" text="2." />
-                           <Label text="Revue des blocages et difficultés (20 min)" />
-                        </HBox>
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                           <Label style="-fx-font-weight: bold; -fx-text-fill: #3498db;" text="3." />
-                           <Label text="Planification sprint suivant (20 min)" />
-                        </HBox>
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                           <Label style="-fx-font-weight: bold; -fx-text-fill: #3498db;" text="4." />
-                           <Label text="Questions diverses (5 min)" />
-                        </HBox>
+                        <!-- Les participants seront ajoutés dynamiquement -->
                      </VBox>
                   </VBox>
                   
@@ -288,27 +173,6 @@
                      </HBox>
                      
                      <TextArea fx:id="textAreaCompteRendu" prefRowCount="4" promptText="Le compte-rendu sera disponible après la réunion..." wrapText="true" />
-                  </VBox>
-                  
-                  <!-- Pièces jointes -->
-                  <VBox spacing="10.0" styleClass="card">
-                     <HBox alignment="CENTER_LEFT" spacing="10.0">
-                        <Label style="-fx-font-weight: bold;" text="Documents joints" />
-                        <Region HBox.hgrow="ALWAYS" />
-                        <Button styleClass="button-info" text="+ Ajouter" />
-                     </HBox>
-                     
-                     <VBox spacing="5.0">
-                        <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 8; -fx-background-color: white; -fx-background-radius: 4;">
-                           <Label style="-fx-font-size: 16px;" text="📄" />
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="Agenda_reunion.pdf" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="125 KB - PDF" />
-                           </VBox>
-                           <Button text="👁️" />
-                           <Button text="💾" />
-                        </HBox>
-                     </VBox>
                   </VBox>
                   
                </VBox>

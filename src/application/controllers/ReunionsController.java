@@ -25,6 +25,7 @@ public class ReunionsController implements Initializable {
     @FXML private DatePicker dateFiltre;
     @FXML private TextField champRecherche;
     @FXML private ToggleGroup vueToggle;
+
     
     // Tableau
     @FXML private TableView<Reunion> tableauReunions;

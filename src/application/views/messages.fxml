@@ -8,7 +8,7 @@
 <?import javafx.collections.FXCollections?>
 
 
-<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"fx:controller="application.controllers.MessagesController">
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.controllers.MessagesController">
    
    <!-- Barre d'outils supérieure -->
    <top>
@@ -69,7 +69,7 @@
             <Region HBox.hgrow="ALWAYS" />
             
             <TextField fx:id="champRechercheMsg" prefWidth="250.0" promptText="🔍 Rechercher (expéditeur, objet...)" />
-            <Button styleClass="button-primary" text="Rechercher" />
+            <Button onAction="#handleRecherche" styleClass="button-primary" text="Rechercher" />
          </HBox>
          
       </VBox>
@@ -104,112 +104,9 @@
             <!-- Liste des messages -->
             <ScrollPane VBox.vgrow="ALWAYS" fitToWidth="true">
                <VBox fx:id="listeMessages" spacing="2.0">
-                  
-                  <!-- Message 1 - Non lu, priorité haute -->
-                  <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 12; -fx-background-color: #fff3cd; -fx-background-radius: 6; -fx-cursor: hand;">
-                     <CheckBox />
-                     <VBox spacing="2.0">
-                        <Label style="-fx-font-size: 8px; -fx-text-fill: #e74c3c;" text="🔴" />
-                        <Label style="-fx-font-size: 8px; -fx-text-fill: #f39c12;" text="⭐" />
-                     </VBox>
-                     <VBox HBox.hgrow="ALWAYS" spacing="3.0">
-                        <HBox alignment="CENTER_LEFT" spacing="8.0">
-                           <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Direction Générale" />
-                           <Region HBox.hgrow="ALWAYS" />
-                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="Il y a 5 min" />
-                        </HBox>
-                        <Label style="-fx-font-weight: bold;" text="URGENT: Nouvelle procédure de sécurité" />
-                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Nouvelle procédure à appliquer immédiatement concernant..." />
-                     </VBox>
-                     <VBox alignment="CENTER">
-                        <Label style="-fx-font-size: 16px;" text="📎" />
-                     </VBox>
-                  </HBox>
-                  
-                  <!-- Message 2 - Lu -->
-                  <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 12; -fx-background-color: white; -fx-background-radius: 6; -fx-cursor: hand;">
-                     <CheckBox />
-                     <VBox spacing="2.0">
-                        <Label style="-fx-font-size: 8px; -fx-text-fill: transparent;" text="🔴" />
-                        <Label style="-fx-font-size: 8px; -fx-text-fill: transparent;" text="⭐" />
-                     </VBox>
-                     <VBox HBox.hgrow="ALWAYS" spacing="3.0">
-                        <HBox alignment="CENTER_LEFT" spacing="8.0">
-                           <Label style="-fx-text-fill: #7f8c8d;" text="Jean Dupont" />
-                           <Region HBox.hgrow="ALWAYS" />
-                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="Il y a 1h" />
-                        </HBox>
-                        <Label style="-fx-text-fill: #7f8c8d;" text="Rapport mensuel disponible" />
-                        <Label style="-fx-text-fill: #95a5a6; -fx-font-size: 12px;" text="Le rapport de novembre est maintenant disponible dans..." />
-                     </VBox>
-                  </HBox>
-                  
-                  <!-- Message 3 - Non lu -->
-                  <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 12; -fx-background-color: #e3f2fd; -fx-background-radius: 6; -fx-cursor: hand;">
-                     <CheckBox />
-                     <VBox spacing="2.0">
-                        <Label style="-fx-font-size: 8px; -fx-text-fill: transparent;" text="🔴" />
-                        <Label style="-fx-font-size: 8px; -fx-text-fill: transparent;" text="⭐" />
-                     </VBox>
-                     <VBox HBox.hgrow="ALWAYS" spacing="3.0">
-                        <HBox alignment="CENTER_LEFT" spacing="8.0">
-                           <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Marie Martin" />
-                           <Region HBox.hgrow="ALWAYS" />
-                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="Il y a 2h" />
-                        </HBox>
-                        <Label style="-fx-font-weight: bold;" text="Demande de validation" />
-                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Pourriez-vous valider le document joint s'il vous plaît..." />
-                     </VBox>
-                  </HBox>
-                  
-                  <!-- Message 4 - Lu, important -->
-                  <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 12; -fx-background-color: white; -fx-background-radius: 6; -fx-cursor: hand;">
-                     <CheckBox />
-                     <VBox spacing="2.0">
-                        <Label style="-fx-font-size: 8px; -fx-text-fill: transparent;" text="🔴" />
-                        <Label style="-fx-font-size: 8px; -fx-text-fill: #f39c12;" text="⭐" />
-                     </VBox>
-                     <VBox HBox.hgrow="ALWAYS" spacing="3.0">
-                        <HBox alignment="CENTER_LEFT" spacing="8.0">
-                           <Label style="-fx-text-fill: #7f8c8d;" text="Système" />
-                           <Region HBox.hgrow="ALWAYS" />
-                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="Hier 16:30" />
-                        </HBox>
-                        <Label style="-fx-text-fill: #7f8c8d;" text="Sauvegarde système terminée" />
-                        <Label style="-fx-text-fill: #95a5a6; -fx-font-size: 12px;" text="La sauvegarde automatique s'est terminée avec succès..." />
-                     </VBox>
-                     <VBox alignment="CENTER">
-                        <Label style="-fx-font-size: 16px;" text="⚙️" />
-                     </VBox>
-                  </HBox>
-                  
-                  <!-- Message 5 - Lu -->
-                  <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 12; -fx-background-color: white; -fx-background-radius: 6; -fx-cursor: hand;">
-                     <CheckBox />
-                     <VBox spacing="2.0">
-                        <Label style="-fx-font-size: 8px; -fx-text-fill: transparent;" text="🔴" />
-                        <Label style="-fx-font-size: 8px; -fx-text-fill: transparent;" text="⭐" />
-                     </VBox>
-                     <VBox HBox.hgrow="ALWAYS" spacing="3.0">
-                        <HBox alignment="CENTER_LEFT" spacing="8.0">
-                           <Label style="-fx-text-fill: #7f8c8d;" text="Pierre Durand" />
-                           <Region HBox.hgrow="ALWAYS" />
-                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px;" text="Hier 14:15" />
-                        </HBox>
-                        <Label style="-fx-text-fill: #7f8c8d;" text="Réunion reportée" />
-                        <Label style="-fx-text-fill: #95a5a6; -fx-font-size: 12px;" text="La réunion de demain est reportée à jeudi..." />
-                     </VBox>
-                  </HBox>
-                  
+                  <!-- Les messages seront ajoutés dynamiquement -->
                </VBox>
             </ScrollPane>
-            
-            <!-- Pagination -->
-            <HBox alignment="CENTER" spacing="10.0">
-               <Button text="‹ Précédent" />
-               <Label text="1-10 sur 25" />
-               <Button text="Suivant ›" />
-            </HBox>
             
          </VBox>
          
@@ -262,37 +159,9 @@
                
                <!-- Contenu du message -->
                <VBox spacing="10.0">
-                  <ScrollPane fitToWidth="true" prefHeight="300.0">
-                     <VBox spacing="10.0" style="-fx-padding: 15;">
-                        <Label style="-fx-font-weight: bold;" text="Chers collègues," />
-                        <Label text="Suite aux récents événements de sécurité informatique observés dans notre secteur d'activité, nous mettons en place immédiatement une nouvelle procédure de sécurité." wrapText="true" />
-                        <Label text="Les nouvelles mesures incluent :" wrapText="true" />
-                        <VBox spacing="5.0" style="-fx-padding: 0 0 0 20;">
-                           <Label text="• Changement obligatoire des mots de passe tous les 90 jours" />
-                           <Label text="• Activation de l'authentification à deux facteurs" />
-                           <Label text="• Formation sécurité obligatoire avant le 15 novembre" />
-                           <Label text="• Nouvelle politique d'accès aux données sensibles" />
-                        </VBox>
-                        <Label text="Merci de prendre connaissance du document joint et de confirmer votre lecture en répondant à ce message." wrapText="true" />
-                        <Label text="Pour toute question, n'hésitez pas à contacter le service informatique." wrapText="true" />
-                        <Label style="-fx-font-weight: bold;" text="Cordialement," />
-                        <Label text="La Direction" />
-                     </VBox>
+                  <ScrollPane fx:id="scrollPaneContenu" fitToWidth="true" prefHeight="300.0">
+                     <!-- Le contenu sera ajouté dynamiquement -->
                   </ScrollPane>
-               </VBox>
-               
-               <!-- Pièces jointes -->
-               <VBox spacing="8.0">
-                  <Label style="-fx-font-weight: bold;" text="Pièces jointes (1)" />
-                  <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 10; -fx-background-color: #f8f9fa; -fx-background-radius: 6;">
-                     <Label style="-fx-font-size: 20px;" text="📄" />
-                     <VBox HBox.hgrow="ALWAYS">
-                        <Label style="-fx-font-weight: bold;" text="Nouvelle_Procedure_Securite.pdf" />
-                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="358 KB - PDF" />
-                     </VBox>
-                     <Button text="👁️ Aperçu" />
-                     <Button styleClass="button-primary" text="💾 Télécharger" />
-                  </HBox>
                </VBox>
                
             </VBox>
@@ -346,12 +215,6 @@
                      <Button text="📎 Joindre" />
                   </HBox>
                   <TextArea fx:id="textAreaMessage" prefRowCount="12" promptText="Tapez votre message ici..." wrapText="true" />
-               </VBox>
-               
-               <!-- Pièces jointes à envoyer -->
-               <VBox fx:id="zonePiecesJointesComposition" spacing="5.0" visible="false">
-                  <Label style="-fx-font-weight: bold;" text="Pièces jointes" />
-                  <!-- Les pièces jointes seront ajoutées dynamiquement ici -->
                </VBox>
                
                <HBox alignment="CENTER_RIGHT" spacing="10.0">
