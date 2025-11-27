@@ -22,6 +22,10 @@ public class Courrier {
     private Document document;
     private User traitePar;
     private String notes;
+    private boolean workflowActif;
+    private String serviceActuel;
+    private int etapeActuelle;
+    private boolean workflowTermine;
     
     // Constructeurs
     public Courrier() {
@@ -150,6 +154,38 @@ public class Courrier {
         this.notes = notes; 
     }
     
+    public boolean isWorkflowActif() {
+        return workflowActif;
+    }
+
+    public void setWorkflowActif(boolean workflowActif) {
+        this.workflowActif = workflowActif;
+    }
+
+    public String getServiceActuel() {
+        return serviceActuel;
+    }
+
+    public void setServiceActuel(String serviceActuel) {
+        this.serviceActuel = serviceActuel;
+    }
+
+    public int getEtapeActuelle() {
+        return etapeActuelle;
+    }
+
+    public void setEtapeActuelle(int etapeActuelle) {
+        this.etapeActuelle = etapeActuelle;
+    }
+
+    public boolean isWorkflowTermine() {
+        return workflowTermine;
+    }
+
+    public void setWorkflowTermine(boolean workflowTermine) {
+        this.workflowTermine = workflowTermine;
+    }
+    
     // Méthodes utilitaires
     
     /**
@@ -224,6 +260,23 @@ public class Courrier {
             throw new IllegalStateException("Seuls les courriers traités peuvent être archivés");
         }
         this.statut = StatutCourrier.ARCHIVE;
+    }
+    
+    /**
+     * Démarre le workflow pour ce courrier
+     */
+    public void demarrerWorkflow(String serviceDestination) {
+        this.workflowActif = true;
+        this.serviceActuel = serviceDestination;
+        this.etapeActuelle = 1;
+        this.workflowTermine = false;
+    }
+
+    /**
+     * Vérifie si le courrier est dans le workflow
+     */
+    public boolean estEnWorkflow() {
+        return workflowActif && !workflowTermine;
     }
     
     @Override

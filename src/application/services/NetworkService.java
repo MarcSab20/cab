@@ -416,6 +416,42 @@ public class NetworkService {
             return false;
         }
         
+        /**
+         * Notifie une mise à jour du workflow d'un courrier
+         */
+        public void notifyWorkflowUpdate(int courrierId, String serviceCode) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("courrier_id", courrierId);
+            data.put("service_code", serviceCode);
+            data.put("type", "workflow_update");
+            data.put("timestamp", System.currentTimeMillis());
+            
+            NetworkMessage message = new NetworkMessage(
+                NetworkMessage.Type.DOCUMENT_SYNC,
+                JsonUtils.toJson(data)
+            );
+            
+            broadcastMessage(message);
+        }
+
+        /**
+         * Notifie la complétion d'un workflow
+         */
+        public void notifyWorkflowComplete(int courrierId) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("courrier_id", courrierId);
+            data.put("type", "workflow_complete");
+            data.put("timestamp", System.currentTimeMillis());
+            
+            NetworkMessage message = new NetworkMessage(
+                NetworkMessage.Type.DOCUMENT_SYNC,
+                JsonUtils.toJson(data)
+            );
+            
+            broadcastMessage(message);
+        }
+
+        
         public void close() {
             try {
                 if (socket != null && !socket.isClosed()) {
