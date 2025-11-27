@@ -5,8 +5,10 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.stage.Stage;
 import javafx.scene.Node;
 import application.models.User;
 import application.services.AuthenticationService;
@@ -325,6 +327,229 @@ public class MainController implements Initializable {
             e.printStackTrace();
             AlertUtils.showError("Erreur lors de la déconnexion: " + e.getMessage());
         }
+    }
+    
+    @FXML
+    private void handleOpenDashboard() {
+        try {
+            // Charger la vue FXML
+            FXMLLoader loader = new FXMLLoader(
+                getClass().getResource("/application/views/dashboard.fxml")
+            );
+            Parent root = loader.load();
+            
+            // Créer une nouvelle fenêtre
+            Stage stage = new Stage();
+            stage.setTitle("📊 Tableau de bord - Workflow des Courriers");
+            
+            // Créer la scène avec une taille adaptée
+            Scene scene = new Scene(root, 1400, 900);
+            
+            // Ajouter le fichier CSS
+            scene.getStylesheets().add(
+                getClass().getResource("/application/resources/css/workflow-dashboard.css")
+                    .toExternalForm()
+            );
+            
+            stage.setScene(scene);
+            stage.setMaximized(false); // Ou true pour maximiser automatiquement
+            stage.show();
+            
+            System.out.println("Dashboard ouvert avec succès");
+            
+        } catch (Exception e) {
+            System.err.println("Erreur lors de l'ouverture du tableau de bord: " + e.getMessage());
+            e.printStackTrace();
+            AlertUtils.showError(
+                "Erreur d'ouverture",
+                "Impossible d'ouvrir le tableau de bord.\n" +
+                "Erreur: " + e.getMessage()
+            );
+        }
+    }
+    
+    /**
+     * Ouvre l'interface d'administration de la hiérarchie
+     * Accessible uniquement aux utilisateurs de niveau 0 (CEMAA, CSP)
+     * 
+     * À ajouter dans votre MainController.java
+     */
+    @FXML
+    private void handleOpenAdminHierarchy() {
+        try {
+            // Vérifier les permissions de l'utilisateur
+            User currentUser = SessionManager.getInstance().getCurrentUser();
+            
+            if (currentUser == null) {
+                AlertUtils.showWarning(
+                    "Session invalide",
+                    "Aucun utilisateur connecté. Veuillez vous reconnecter."
+                );
+                return;
+            }
+            
+            // Seuls les utilisateurs de niveau 0 peuvent administrer
+            if (currentUser.getNiveauAutorite() > 0) {
+                AlertUtils.showWarning(
+                    "🔒 Accès refusé",
+                    "Vous n'avez pas les permissions nécessaires.\n\n" +
+                    "Seuls les utilisateurs de niveau 0 (CEMAA, CSP) " +
+                    "peuvent administrer la hiérarchie des services.\n\n" +
+                    "Votre niveau: " + currentUser.getNiveauAutorite() + "\n" +
+                    "Service: " + (currentUser.getServiceCode() != null ? 
+                                  currentUser.getServiceCode() : "Non défini")
+                );
+                return;
+            }
+            
+            // Charger la vue FXML
+            FXMLLoader loader = new FXMLLoader(
+                getClass().getResource("/application/views/admin_hierarchy.fxml")
+            );
+            Parent root = loader.load();
+            
+            // Créer une nouvelle fenêtre
+            Stage stage = new Stage();
+            stage.setTitle("⚙️ Administration - Hiérarchie des Services");
+            
+            // Créer la scène avec une taille adaptée
+            Scene scene = new Scene(root, 1600, 900);
+            
+            // Ajouter le fichier CSS
+            scene.getStylesheets().add(
+                getClass().getResource("/application/resources/css/workflow-dashboard.css")
+                    .toExternalForm()
+            );
+            
+            stage.setScene(scene);
+            stage.setMaximized(false);
+            stage.show();
+            
+            System.out.println("Interface d'administration ouverte avec succès");
+            
+        } catch (Exception e) {
+            System.err.println("Erreur lors de l'ouverture de l'administration: " + e.getMessage());
+            e.printStackTrace();
+            AlertUtils.showError(
+                "Erreur d'ouverture",
+                "Impossible d'ouvrir l'interface d'administration.\n" +
+                "Erreur: " + e.getMessage()
+            );
+        }
+    }
+    
+    /**
+     * Ouvre rapidement le workflow pour un courrier spécifique
+     * Utile pour ajouter un bouton "Voir workflow" dans la liste des courriers
+     * 
+     * À ajouter dans votre CourrierController.java ou similaire
+     */
+    @FXML
+    private void handleVoirWorkflowCourrier(int courrierId) {
+        try {
+            // Charger le dashboard
+            FXMLLoader loader = new FXMLLoader(
+                getClass().getResource("/application/views/dashboard.fxml")
+            );
+            Parent root = loader.load();
+            
+            // Récupérer le contrôleur
+            DashboardController controller = loader.getController();
+            
+            // Créer la fenêtre
+            Stage stage = new Stage();
+            stage.setTitle("📊 Workflow - Courrier #" + courrierId);
+            
+            Scene scene = new Scene(root, 1400, 900);
+            scene.getStylesheets().add(
+                getClass().getResource("/application/resources/css/workflow-dashboard.css")
+                    .toExternalForm()
+            );
+            
+            stage.setScene(scene);
+            stage.show();
+            
+            // TODO: Faire défiler jusqu'au courrier spécifique
+            // controller.scrollToCourrier(courrierId);
+            
+        } catch (Exception e) {
+            System.err.println("Erreur lors de l'ouverture du workflow: " + e.getMessage());
+            e.printStackTrace();
+            AlertUtils.showError("Erreur lors de l'ouverture du workflow du courrier");
+        }
+    }
+    
+    /**
+     * Démarre un workflow pour un courrier
+     * À appeler lors de l'enregistrement d'un nouveau courrier
+     * 
+     * À ajouter dans votre méthode de création de courrier
+     */
+    private void demarrerWorkflowPourCourrier(application.models.Courrier courrier) {
+        try {
+            application.services.WorkflowService workflowService = 
+                application.services.WorkflowService.getInstance();
+            
+            // Démarrer le workflow au Service Courrier
+            boolean success = workflowService.startWorkflow(courrier, "SERVICE_COURRIER");
+            
+            if (success) {
+                System.out.println("Workflow démarré avec succès pour le courrier #" + 
+                                 courrier.getNumeroCourrier());
+                
+                // Option: Afficher une notification
+                AlertUtils.showInfo(
+                    "Workflow démarré",
+                    "Le courrier a été enregistré et le workflow a démarré.\n" +
+                    "Numéro: " + courrier.getNumeroCourrier()
+                );
+            } else {
+                System.err.println("Échec du démarrage du workflow");
+                AlertUtils.showWarning(
+                    "Attention",
+                    "Le courrier a été créé mais le workflow n'a pas pu démarrer.\n" +
+                    "Veuillez le démarrer manuellement."
+                );
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Erreur lors du démarrage du workflow: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Vérifie si l'utilisateur peut accéder au workflow
+     * Utile pour activer/désactiver des boutons dans l'interface
+     * 
+     * @return true si l'utilisateur a accès au workflow
+     */
+    private boolean canAccessWorkflow() {
+        User currentUser = SessionManager.getInstance().getCurrentUser();
+        
+        if (currentUser == null) {
+            return false;
+        }
+        
+        // Vérifier que l'utilisateur a un service assigné
+        String serviceCode = currentUser.getServiceCode();
+        
+        return serviceCode != null && !serviceCode.isEmpty();
+    }
+    
+    /**
+     * Vérifie si l'utilisateur peut administrer la hiérarchie
+     * 
+     * @return true si l'utilisateur est de niveau 0
+     */
+    private boolean canAdministerHierarchy() {
+        User currentUser = SessionManager.getInstance().getCurrentUser();
+        
+        if (currentUser == null) {
+            return false;
+        }
+        
+        return currentUser.getNiveauAutorite() == 0;
     }
     
     /**

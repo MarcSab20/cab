@@ -18,6 +18,8 @@ public class User {
     private LocalDateTime dateCreation;
     private LocalDateTime dernierAcces;
     private String sessionToken;
+    private String serviceCode;
+    private int niveauAutorite;
     
     // Constructeurs
     public User() {}
@@ -31,6 +33,7 @@ public class User {
         this.role = role;
         this.actif = true;
         this.dateCreation = LocalDateTime.now();
+        this.niveauAutorite = 0;
     }
     
     // Getters et Setters
@@ -122,6 +125,22 @@ public class User {
         this.sessionToken = sessionToken;
     }
     
+    public String getServiceCode() {
+        return serviceCode;
+    }
+    
+    public void setServiceCode(String serviceCode) {
+        this.serviceCode = serviceCode;
+    }
+    
+    public int getNiveauAutorite() {
+        return niveauAutorite;
+    }
+    
+    public void setNiveauAutorite(int niveauAutorite) {
+        this.niveauAutorite = niveauAutorite;
+    }
+    
     public String getNomComplet() {
         return prenom + " " + nom;
     }
@@ -148,6 +167,8 @@ public class User {
                 ", prenom='" + prenom + '\'' +
                 ", email='" + email + '\'' +
                 ", role=" + role +
+                ", serviceCode='" + serviceCode + '\'' +
+                ", niveauAutorite=" + niveauAutorite +
                 ", actif=" + actif +
                 '}';
     }

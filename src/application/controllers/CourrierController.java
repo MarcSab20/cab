@@ -111,7 +111,7 @@ public class CourrierController implements Initializable {
         });
         colonnePriorite.setCellValueFactory(cellData -> 
             new javafx.beans.property.SimpleStringProperty(
-                cellData.getValue().getPriorite().getLibelle()
+                cellData.getValue().getPriorite()
             )
         );
         colonneStatut.setCellValueFactory(cellData -> 
@@ -211,7 +211,7 @@ public class CourrierController implements Initializable {
                 
                 // Filtre priorité
                 if (!prioriteFilter.equals("Toutes")) {
-                    if (!c.getPriorite().getLibelle().equals(prioriteFilter)) {
+                    if (!c.getPriorite().equals(prioriteFilter)) {
                         matches = false;
                     }
                 }
@@ -257,7 +257,7 @@ public class CourrierController implements Initializable {
         }
         
         if (labelPriorite != null) {
-            labelPriorite.setText(getPrioriteIcon(courrier.getPriorite()) + " " + courrier.getPriorite().getLibelle());
+            labelPriorite.setText(courrier.getPriorite() + " " + courrier.getPriorite());
         }
         
         if (labelStatut != null) {

@@ -62,7 +62,7 @@ public class SessionManager {
     public boolean hasPermission(Permission permission) {
         return currentUser != null && 
                currentUser.getRole() != null && 
-               currentUser.getRole().possedePermission(permission);
+               currentUser.getRole().hasPermission(permission);
     }
     
     /**
@@ -71,7 +71,7 @@ public class SessionManager {
     public boolean hasPermission(String permissionName) {
         return currentUser != null && 
                currentUser.getRole() != null && 
-               currentUser.getRole().possedePermission(permissionName);
+               currentUser.getRole().hasPermission(permissionName);
     }
     
     /**

@@ -1,14 +1,16 @@
 package application.models;
 
 /**
- * Énumération des statuts d'un courrier
+ * Énumération pour le statut d'un courrier
  */
 public enum StatutCourrier {
-    EN_ATTENTE("En attente", "🟡", "#f39c12"),
-    EN_COURS("En cours", "🟠", "#e67e22"),
+    NOUVEAU("Nouveau", "🆕", "#3498db"),
+    EN_ATTENTE("En attente", "⏸️", "#f39c12"),
+    EN_COURS("En cours", "⏳", "#3498db"),
     TRAITE("Traité", "✅", "#27ae60"),
-    ARCHIVE("Archivé", "📁", "#95a5a6"),
-    REJETE("Rejeté", "❌", "#e74c3c");
+    ARCHIVE("Archivé", "📦", "#95a5a6"),
+    URGENT("Urgent", "🚨", "#e74c3c"), 
+    REJETE("Rejété", "", "e74c3s");
     
     private final String libelle;
     private final String icone;
@@ -33,42 +35,33 @@ public enum StatutCourrier {
     }
     
     /**
-     * Retourne le statut à partir de son libellé
+     * Convertit un String en StatutCourrier
      */
-    public static StatutCourrier fromLibelle(String libelle) {
-        for (StatutCourrier statut : values()) {
-            if (statut.libelle.equalsIgnoreCase(libelle)) {
-                return statut;
+    public static StatutCourrier fromString(String value) {
+        if (value == null) {
+            return NOUVEAU;
+        }
+        
+        // Essayer de matcher directement
+        try {
+            return valueOf(value.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            // Essayer avec des variations communes
+            String normalized = value.toLowerCase().replace(" ", "_");
+            try {
+                return valueOf(normalized.toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                // Par défaut, retourner NOUVEAU
+                return NOUVEAU;
             }
         }
-        return null;
     }
     
     /**
-     * Retourne le statut à partir de la valeur de la base de données
+     * Retourne le nom pour la base de données (lowercase avec underscore)
      */
-    public static StatutCourrier fromDatabase(String dbValue) {
-        if (dbValue == null) return null;
-        
-        try {
-            return valueOf(dbValue.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
-    }
-    
-    /**
-     * Vérifie si le courrier est terminé (traité ou archivé)
-     */
-    public boolean isTermine() {
-        return this == TRAITE || this == ARCHIVE;
-    }
-    
-    /**
-     * Vérifie si le courrier nécessite une action
-     */
-    public boolean necessite_action() {
-        return this == EN_ATTENTE || this == EN_COURS;
+    public String toDbString() {
+        return name().toLowerCase();
     }
     
     @Override

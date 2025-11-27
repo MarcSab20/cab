@@ -1,26 +1,24 @@
 package application.services;
 
 import application.models.*;
+
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
- * Service pour gérer le workflow des courriers
+ * Service de gestion du workflow des courriers
  */
 public class WorkflowService {
-    
     private static WorkflowService instance;
-    private final DatabaseService databaseService;
-    
-    // Cache pour la hiérarchie
     private Map<String, ServiceHierarchy> hierarchyCache;
-    private LocalDateTime lastCacheUpdate;
-    private static final long CACHE_DURATION_MINUTES = 30;
+    private List<ServiceHierarchy> rootServices;
     
     private WorkflowService() {
-        this.databaseService = DatabaseService.getInstance();
-        this.hierarchyCache = new HashMap<>();
+        hierarchyCache = new ConcurrentHashMap<>();
+        rootServices = new ArrayList<>();
         loadHierarchyCache();
     }
     
@@ -31,58 +29,48 @@ public class WorkflowService {
         return instance;
     }
     
-    // ========================================
-    // GESTION DE LA HIÉRARCHIE
-    // ========================================
+    // ==================== GESTION DE LA HIÉRARCHIE ====================
     
     /**
-     * Charge la hiérarchie complète en cache
+     * Charge la hiérarchie complète des services en mémoire
      */
     public void loadHierarchyCache() {
-        String query = "SELECT * FROM service_hierarchy WHERE actif = TRUE ORDER BY niveau, ordre_affichage";
+        hierarchyCache.clear();
+        rootServices.clear();
         
-        try (Connection conn = databaseService.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
+        String sql = "SELECT service_code, service_name, parent_service_code, niveau, ordre_affichage, actif, date_creation " +
+                     "FROM service_hierarchy WHERE actif = 1 ORDER BY niveau, ordre_affichage";
+        
+        try (Connection conn = DatabaseService.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
             
-            hierarchyCache.clear();
-            Map<String, ServiceHierarchy> tempMap = new HashMap<>();
-            
-            // Première passe : créer tous les services
+            // Première passe : charger tous les services
             while (rs.next()) {
-                ServiceHierarchy service = mapResultSetToService(rs);
-                tempMap.put(service.getServiceCode(), service);
+                ServiceHierarchy service = DatabaseService.mapResultSetToServiceHierarchy(rs);
+                hierarchyCache.put(service.getServiceCode(), service);
             }
             
-            // Deuxième passe : établir les relations parent-enfant
-            for (ServiceHierarchy service : tempMap.values()) {
-                if (service.getParentServiceCode() != null) {
-                    ServiceHierarchy parent = tempMap.get(service.getParentServiceCode());
+            // Deuxième passe : construire les relations parent-enfant
+            for (ServiceHierarchy service : hierarchyCache.values()) {
+                String parentCode = service.getParentServiceCode();
+                
+                if (parentCode != null && !parentCode.isEmpty()) {
+                    ServiceHierarchy parent = hierarchyCache.get(parentCode);
                     if (parent != null) {
                         service.setParent(parent);
-                        parent.ajouterEnfant(service);
+                        parent.getEnfants().add(service);
                     }
+                } else {
+                    // Service racine (niveau 0)
+                    rootServices.add(service);
                 }
             }
             
-            hierarchyCache = tempMap;
-            lastCacheUpdate = LocalDateTime.now();
-            
-            System.out.println("Hiérarchie chargée en cache: " + hierarchyCache.size() + " services");
+            System.out.println("Hiérarchie chargée : " + hierarchyCache.size() + " services");
             
         } catch (SQLException e) {
-            System.err.println("Erreur lors du chargement de la hiérarchie: " + e.getMessage());
             e.printStackTrace();
-        }
-    }
-    
-    /**
-     * Rafraîchit le cache si nécessaire
-     */
-    private void refreshCacheIfNeeded() {
-        if (lastCacheUpdate == null || 
-            LocalDateTime.now().minusMinutes(CACHE_DURATION_MINUTES).isAfter(lastCacheUpdate)) {
-            loadHierarchyCache();
         }
     }
     
@@ -90,221 +78,246 @@ public class WorkflowService {
      * Récupère un service par son code
      */
     public ServiceHierarchy getServiceByCode(String serviceCode) {
-        refreshCacheIfNeeded();
+        if (serviceCode == null || serviceCode.isEmpty()) {
+            return null;
+        }
         return hierarchyCache.get(serviceCode);
     }
     
     /**
-     * Récupère tous les services
+     * Récupère tous les services actifs
      */
     public List<ServiceHierarchy> getAllServices() {
-        refreshCacheIfNeeded();
         return new ArrayList<>(hierarchyCache.values());
     }
     
     /**
-     * Récupère les services racines (sans parent)
+     * Récupère les services racines (niveau 0)
      */
     public List<ServiceHierarchy> getRootServices() {
-        refreshCacheIfNeeded();
-        List<ServiceHierarchy> roots = new ArrayList<>();
-        
-        for (ServiceHierarchy service : hierarchyCache.values()) {
-            if (service.getParentServiceCode() == null || service.getNiveau() == 0) {
-                roots.add(service);
-            }
-        }
-        
-        roots.sort(Comparator.comparingInt(ServiceHierarchy::getOrdreAffichage));
-        return roots;
+        return new ArrayList<>(rootServices);
     }
     
     /**
-     * Récupère les enfants directs d'un service
-     */
-    public List<ServiceHierarchy> getChildServices(String parentCode) {
-        ServiceHierarchy parent = getServiceByCode(parentCode);
-        if (parent == null) return new ArrayList<>();
-        
-        return new ArrayList<>(parent.getEnfants());
-    }
-    
-    /**
-     * Vérifie si un utilisateur peut transférer vers un service
-     */
-    public boolean canTransferTo(User user, String destinationCode) {
-        if (user.getServiceCode() == null) return false;
-        
-        ServiceHierarchy userService = getServiceByCode(user.getServiceCode());
-        ServiceHierarchy destination = getServiceByCode(destinationCode);
-        
-        if (userService == null || destination == null) return false;
-        
-        return userService.peutTransfererVers(destination);
-    }
-    
-    /**
-     * Récupère les services vers lesquels un utilisateur peut transférer
+     * Récupère les services vers lesquels un utilisateur peut transférer un courrier
      */
     public List<ServiceHierarchy> getTransferableServices(User user) {
-        if (user.getServiceCode() == null) return new ArrayList<>();
+        if (user.getServiceCode() == null || user.getServiceCode().isEmpty()) {
+            // Utilisateur sans service (admin/CEMAA) : peut transférer partout
+            return getAllServices();
+        }
         
-        ServiceHierarchy userService = getServiceByCode(user.getServiceCode());
-        if (userService == null) return new ArrayList<>();
+        ServiceHierarchy currentService = getServiceByCode(user.getServiceCode());
+        if (currentService == null) {
+            return new ArrayList<>();
+        }
         
-        List<ServiceHierarchy> transferable = new ArrayList<>();
+        List<ServiceHierarchy> transferables = new ArrayList<>();
         
-        for (ServiceHierarchy service : hierarchyCache.values()) {
-            if (userService.peutTransfererVers(service) && 
-                !service.getServiceCode().equals(user.getServiceCode())) {
-                transferable.add(service);
+        // Parcourir tous les services et vérifier les règles de transfert
+        for (ServiceHierarchy target : hierarchyCache.values()) {
+            if (currentService.peutTransfererVers(target)) {
+                transferables.add(target);
             }
         }
         
-        transferable.sort(Comparator.comparingInt(ServiceHierarchy::getNiveau)
-                                    .thenComparingInt(ServiceHierarchy::getOrdreAffichage));
+        // Trier par niveau puis par nom
+        transferables.sort((s1, s2) -> {
+            int niveauCompare = Integer.compare(s1.getNiveau(), s2.getNiveau());
+            if (niveauCompare != 0) return niveauCompare;
+            return s1.getServiceName().compareTo(s2.getServiceName());
+        });
         
-        return transferable;
+        return transferables;
     }
     
-    // ========================================
-    // GESTION DU WORKFLOW DES COURRIERS
-    // ========================================
+    // ==================== GESTION DU WORKFLOW ====================
     
     /**
-     * Démarre le workflow pour un courrier
+     * Récupère l'historique complet du workflow d'un courrier
      */
-    public boolean startWorkflow(Courrier courrier, String destinationInitiale) {
-        String query = "UPDATE courriers SET workflow_actif = TRUE, service_actuel = ?, etape_actuelle = 1 WHERE id = ?";
+    public List<WorkflowStep> getWorkflowHistory(int courrierId) {
+        List<WorkflowStep> steps = new ArrayList<>();
         
-        try (Connection conn = databaseService.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-            
-            stmt.setString(1, destinationInitiale);
-            stmt.setInt(2, courrier.getId());
-            
-            boolean success = stmt.executeUpdate() > 0;
-            
-            if (success) {
-                // Créer la première étape
-                createWorkflowStep(courrier.getId(), 1, destinationInitiale, "Réception du courrier", null);
-            }
-            
-            return success;
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur lors du démarrage du workflow: " + e.getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Crée une étape de workflow
-     */
-    public boolean createWorkflowStep(int courrierId, int etapeNumero, String serviceCode, 
-                                     String action, Integer delaiHeures) {
-        String query = """
-            INSERT INTO courrier_workflow (courrier_id, etape_numero, service_code, action, delai_traitement)
-            VALUES (?, ?, ?, ?, ?)
-        """;
+        String sql = "SELECT w.*, s.service_name, " +
+                     "CONCAT(u.prenom, ' ', u.nom) as user_name " +
+                     "FROM courrier_workflow w " +
+                     "LEFT JOIN service_hierarchy s ON w.service_code = s.service_code " +
+                     "LEFT JOIN users u ON w.user_id = u.id " +
+                     "WHERE w.courrier_id = ? " +
+                     "ORDER BY w.etape_numero, w.date_action";
         
-        try (Connection conn = databaseService.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+        try (Connection conn = DatabaseService.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
             
             stmt.setInt(1, courrierId);
-            stmt.setInt(2, etapeNumero);
-            stmt.setString(3, serviceCode);
-            stmt.setString(4, action);
             
-            if (delaiHeures != null) {
-                stmt.setInt(5, delaiHeures);
-            } else {
-                stmt.setNull(5, Types.INTEGER);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    WorkflowStep step = DatabaseService.mapResultSetToWorkflowStep(rs);
+                    steps.add(step);
+                }
             }
             
-            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        return steps;
+    }
+    
+    /**
+     * Récupère l'étape courante d'un courrier
+     */
+    public WorkflowStep getCurrentStep(int courrierId) {
+        String sql = "SELECT w.*, s.service_name, " +
+                     "CONCAT(u.prenom, ' ', u.nom) as user_name " +
+                     "FROM courrier_workflow w " +
+                     "LEFT JOIN service_hierarchy s ON w.service_code = s.service_code " +
+                     "LEFT JOIN users u ON w.user_id = u.id " +
+                     "WHERE w.courrier_id = ? AND w.statut_etape IN ('en_attente', 'en_cours') " +
+                     "ORDER BY w.etape_numero DESC LIMIT 1";
+        
+        try (Connection conn = DatabaseService.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, courrierId);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return DatabaseService.mapResultSetToWorkflowStep(rs);
+                }
+            }
             
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la création de l'étape: " + e.getMessage());
-            return false;
+            e.printStackTrace();
         }
+        
+        return null;
+    }
+    
+    /**
+     * Récupère les courriers visibles pour un utilisateur donné
+     */
+    public List<Courrier> getCourriersVisiblesPourUtilisateur(User user) {
+        List<Courrier> courriers = new ArrayList<>();
+        
+        // Si l'utilisateur n'a pas de service (CEMAA/CSP niveau 0), il voit tous les courriers
+        if (user.getServiceCode() == null || user.getServiceCode().isEmpty() || user.getNiveauAutorite() == 0) {
+            return CourrierService.getInstance().getAllCourriersEnWorkflow();
+        }
+        
+        // Sinon, récupérer uniquement les courriers où l'utilisateur a participé
+        String sql = "SELECT DISTINCT c.* " +
+                     "FROM courriers c " +
+                     "INNER JOIN courrier_workflow w ON c.id = w.courrier_id " +
+                     "WHERE c.workflow_actif = 1 " +
+                     "AND (w.user_id = ? OR w.service_code = ?) " +
+                     "ORDER BY c.date_reception DESC";
+        
+        try (Connection conn = DatabaseService.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, user.getId());
+            stmt.setString(2, user.getServiceCode());
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Courrier courrier = DatabaseService.mapResultSetToCourrier(rs);
+                    courriers.add(courrier);
+                }
+            }
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        return courriers;
     }
     
     /**
      * Transfère un courrier vers un autre service
      */
-    public boolean transferCourrier(Courrier courrier, User user, String destinationCode, 
-                                   String commentaire, Integer delaiHeures) {
+    public boolean transferCourrier(Courrier courrier, User user, String targetServiceCode, 
+                                    String commentaire, LocalDateTime echeance) {
         
-        // Vérifier les permissions
-        if (!canTransferTo(user, destinationCode)) {
-            System.err.println("L'utilisateur n'a pas l'autorité pour transférer vers ce service");
+        // Vérifier que l'utilisateur peut transférer vers ce service
+        ServiceHierarchy currentService = getServiceByCode(user.getServiceCode());
+        ServiceHierarchy targetService = getServiceByCode(targetServiceCode);
+        
+        if (currentService == null || targetService == null) {
+            System.err.println("Service source ou destination introuvable");
+            return false;
+        }
+        
+        if (!currentService.peutTransfererVers(targetService)) {
+            System.err.println("Transfert non autorisé selon les règles hiérarchiques");
             return false;
         }
         
         Connection conn = null;
         try {
-            conn = databaseService.getConnection();
+            conn = DatabaseService.getInstance().getConnection();
             conn.setAutoCommit(false);
             
-            // Mettre à jour l'étape actuelle
-            String updateCurrentQuery = """
-                UPDATE courrier_workflow 
-                SET statut_etape = 'transfere', user_id = ?, commentaire = ?, date_action = NOW()
-                WHERE courrier_id = ? AND etape_numero = ?
-            """;
-            
-            try (PreparedStatement stmt = conn.prepareStatement(updateCurrentQuery)) {
-                stmt.setInt(1, user.getId());
-                stmt.setString(2, commentaire);
-                stmt.setInt(3, courrier.getId());
-                stmt.setInt(4, courrier.getEtapeActuelle());
-                stmt.executeUpdate();
+            // 1. Terminer l'étape courante
+            WorkflowStep currentStep = getCurrentStep(courrier.getId());
+            if (currentStep != null) {
+                String updateCurrentSql = "UPDATE courrier_workflow SET " +
+                                         "statut_etape = 'transfere', " +
+                                         "user_id = ?, " +
+                                         "commentaire = ?, " +
+                                         "date_action = NOW() " +
+                                         "WHERE id = ?";
+                
+                try (PreparedStatement stmt = conn.prepareStatement(updateCurrentSql)) {
+                    stmt.setInt(1, user.getId());
+                    stmt.setString(2, commentaire != null ? commentaire : "Transfert vers " + targetService.getServiceName());
+                    stmt.setInt(3, currentStep.getId());
+                    stmt.executeUpdate();
+                }
             }
             
-            // Créer la nouvelle étape
-            int nouvelleEtape = courrier.getEtapeActuelle() + 1;
+            // 2. Créer une nouvelle étape
+            int nextEtapeNumero = getNextEtapeNumero(courrier.getId(), conn);
             
-            String insertNewQuery = """
-                INSERT INTO courrier_workflow 
-                (courrier_id, etape_numero, service_code, action, delai_traitement, date_echeance, statut_etape)
-                VALUES (?, ?, ?, 'Transfert reçu', ?, DATE_ADD(NOW(), INTERVAL ? HOUR), 'en_attente')
-            """;
+            String insertSql = "INSERT INTO courrier_workflow " +
+                              "(courrier_id, etape_numero, service_code, action, commentaire, " +
+                              "date_action, statut_etape, date_echeance) " +
+                              "VALUES (?, ?, ?, 'Réception', ?, NOW(), 'en_attente', ?)";
             
-            try (PreparedStatement stmt = conn.prepareStatement(insertNewQuery)) {
+            try (PreparedStatement stmt = conn.prepareStatement(insertSql)) {
                 stmt.setInt(1, courrier.getId());
-                stmt.setInt(2, nouvelleEtape);
-                stmt.setString(3, destinationCode);
+                stmt.setInt(2, nextEtapeNumero);
+                stmt.setString(3, targetServiceCode);
+                stmt.setString(4, "Transféré depuis " + currentService.getServiceName());
                 
-                if (delaiHeures != null) {
-                    stmt.setInt(4, delaiHeures);
-                    stmt.setInt(5, delaiHeures);
+                if (echeance != null) {
+                    stmt.setTimestamp(5, Timestamp.valueOf(echeance));
                 } else {
-                    stmt.setNull(4, Types.INTEGER);
-                    stmt.setNull(5, Types.INTEGER);
+                    stmt.setNull(5, Types.TIMESTAMP);
                 }
                 
                 stmt.executeUpdate();
             }
             
-            // Mettre à jour le courrier
-            String updateCourrierQuery = """
-                UPDATE courriers 
-                SET service_actuel = ?, etape_actuelle = ?, statut = 'en_cours'
-                WHERE id = ?
-            """;
+            // 3. Mettre à jour le courrier
+            String updateCourrierSql = "UPDATE courriers SET " +
+                                       "service_actuel = ?, " +
+                                       "etape_actuelle = ? " +
+                                       "WHERE id = ?";
             
-            try (PreparedStatement stmt = conn.prepareStatement(updateCourrierQuery)) {
-                stmt.setString(1, destinationCode);
-                stmt.setInt(2, nouvelleEtape);
+            try (PreparedStatement stmt = conn.prepareStatement(updateCourrierSql)) {
+                stmt.setString(1, targetServiceCode);
+                stmt.setInt(2, nextEtapeNumero);
                 stmt.setInt(3, courrier.getId());
                 stmt.executeUpdate();
             }
             
             conn.commit();
             
-            // Notifier via le réseau
-            NetworkService.getInstance().notifyWorkflowUpdate(courrier.getId(), destinationCode);
+            // 4. Notifier via le réseau
+            NetworkService.getInstance().notifyWorkflowUpdate(courrier.getId(), targetServiceCode);
             
             return true;
             
@@ -316,7 +329,6 @@ public class WorkflowService {
                     ex.printStackTrace();
                 }
             }
-            System.err.println("Erreur lors du transfert: " + e.getMessage());
             e.printStackTrace();
             return false;
             
@@ -333,45 +345,155 @@ public class WorkflowService {
     }
     
     /**
-     * Marque un courrier comme traité et termine le workflow
+     * Termine une étape de workflow
      */
-    public boolean terminerWorkflow(Courrier courrier, User user, String commentaire) {
-        String query = """
-            UPDATE courrier_workflow 
-            SET statut_etape = 'termine', user_id = ?, commentaire = ?, date_action = NOW()
-            WHERE courrier_id = ? AND etape_numero = ?
-        """;
+    public boolean terminerEtape(int workflowStepId, User user, String commentaire) {
+        String sql = "UPDATE courrier_workflow SET " +
+                     "statut_etape = 'termine', " +
+                     "user_id = ?, " +
+                     "commentaire = ?, " +
+                     "date_action = NOW() " +
+                     "WHERE id = ?";
         
-        String updateCourrierQuery = """
-            UPDATE courriers 
-            SET workflow_termine = TRUE, statut = 'archive', date_traitement = NOW()
-            WHERE id = ?
-        """;
+        try (Connection conn = DatabaseService.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, user.getId());
+            stmt.setString(2, commentaire);
+            stmt.setInt(3, workflowStepId);
+            
+            int updated = stmt.executeUpdate();
+            
+            if (updated > 0) {
+                // Vérifier si c'est la dernière étape et marquer le workflow comme terminé
+                checkAndCompleteWorkflow(workflowStepId, conn);
+                return true;
+            }
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         
+        return false;
+    }
+    
+    /**
+     * Vérifie si toutes les étapes sont terminées et marque le workflow comme complet
+     */
+    private void checkAndCompleteWorkflow(int workflowStepId, Connection conn) throws SQLException {
+        // Récupérer le courrier_id
+        String getCourrierSql = "SELECT courrier_id FROM courrier_workflow WHERE id = ?";
+        int courrierId;
+        
+        try (PreparedStatement stmt = conn.prepareStatement(getCourrierSql)) {
+            stmt.setInt(1, workflowStepId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) return;
+                courrierId = rs.getInt("courrier_id");
+            }
+        }
+        
+        // Vérifier si toutes les étapes sont terminées ou transférées
+        String checkSql = "SELECT COUNT(*) as pending " +
+                         "FROM courrier_workflow " +
+                         "WHERE courrier_id = ? " +
+                         "AND statut_etape IN ('en_attente', 'en_cours')";
+        
+        try (PreparedStatement stmt = conn.prepareStatement(checkSql)) {
+            stmt.setInt(1, courrierId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next() && rs.getInt("pending") == 0) {
+                    // Toutes les étapes sont terminées, marquer le workflow comme complet
+                    String updateSql = "UPDATE courriers SET " +
+                                      "workflow_termine = 1, " +
+                                      "workflow_actif = 0, " +
+                                      "statut = 'traite' " +
+                                      "WHERE id = ?";
+                    
+                    try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                        updateStmt.setInt(1, courrierId);
+                        updateStmt.executeUpdate();
+                    }
+                    
+                    // Notifier via le réseau
+                    NetworkService.getInstance().notifyWorkflowComplete(courrierId);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Rejette une étape de workflow
+     */
+    public boolean rejeterEtape(int workflowStepId, User user, String motif, String serviceRetour) {
         Connection conn = null;
         try {
-            conn = databaseService.getConnection();
+            conn = DatabaseService.getInstance().getConnection();
             conn.setAutoCommit(false);
             
-            // Mettre à jour l'étape
-            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            // 1. Marquer l'étape comme rejetée
+            String updateSql = "UPDATE courrier_workflow SET " +
+                              "statut_etape = 'rejete', " +
+                              "user_id = ?, " +
+                              "commentaire = ?, " +
+                              "date_action = NOW() " +
+                              "WHERE id = ?";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(updateSql)) {
                 stmt.setInt(1, user.getId());
-                stmt.setString(2, commentaire);
-                stmt.setInt(3, courrier.getId());
-                stmt.setInt(4, courrier.getEtapeActuelle());
+                stmt.setString(2, "REJET: " + motif);
+                stmt.setInt(3, workflowStepId);
                 stmt.executeUpdate();
             }
             
-            // Mettre à jour le courrier
-            try (PreparedStatement stmt = conn.prepareStatement(updateCourrierQuery)) {
-                stmt.setInt(1, courrier.getId());
+            // 2. Récupérer le courrier_id et créer une nouvelle étape de retour
+            String getCourrierSql = "SELECT courrier_id FROM courrier_workflow WHERE id = ?";
+            int courrierId;
+            
+            try (PreparedStatement stmt = conn.prepareStatement(getCourrierSql)) {
+                stmt.setInt(1, workflowStepId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (!rs.next()) {
+                        conn.rollback();
+                        return false;
+                    }
+                    courrierId = rs.getInt("courrier_id");
+                }
+            }
+            
+            // 3. Créer une étape de retour
+            int nextEtapeNumero = getNextEtapeNumero(courrierId, conn);
+            
+            String insertSql = "INSERT INTO courrier_workflow " +
+                              "(courrier_id, etape_numero, service_code, action, commentaire, " +
+                              "date_action, statut_etape) " +
+                              "VALUES (?, ?, ?, 'Retour après rejet', ?, NOW(), 'en_attente')";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(insertSql)) {
+                stmt.setInt(1, courrierId);
+                stmt.setInt(2, nextEtapeNumero);
+                stmt.setString(3, serviceRetour);
+                stmt.setString(4, "Rejeté - " + motif);
+                stmt.executeUpdate();
+            }
+            
+            // 4. Mettre à jour le courrier
+            String updateCourrierSql = "UPDATE courriers SET " +
+                                       "service_actuel = ?, " +
+                                       "etape_actuelle = ? " +
+                                       "WHERE id = ?";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(updateCourrierSql)) {
+                stmt.setString(1, serviceRetour);
+                stmt.setInt(2, nextEtapeNumero);
+                stmt.setInt(3, courrierId);
                 stmt.executeUpdate();
             }
             
             conn.commit();
             
-            // Notifier
-            NetworkService.getInstance().notifyWorkflowComplete(courrier.getId());
+            // Notifier via le réseau
+            NetworkService.getInstance().notifyWorkflowUpdate(courrierId, serviceRetour);
             
             return true;
             
@@ -383,7 +505,7 @@ public class WorkflowService {
                     ex.printStackTrace();
                 }
             }
-            System.err.println("Erreur lors de la terminaison du workflow: " + e.getMessage());
+            e.printStackTrace();
             return false;
             
         } finally {
@@ -399,274 +521,113 @@ public class WorkflowService {
     }
     
     /**
-     * Récupère l'historique du workflow d'un courrier
+     * Récupère le prochain numéro d'étape pour un courrier
      */
-    public List<WorkflowStep> getWorkflowHistory(int courrierId) {
-        List<WorkflowStep> steps = new ArrayList<>();
+    private int getNextEtapeNumero(int courrierId, Connection conn) throws SQLException {
+        String sql = "SELECT MAX(etape_numero) as max_etape FROM courrier_workflow WHERE courrier_id = ?";
         
-        String query = """
-            SELECT w.*, s.service_name, u.nom, u.prenom
-            FROM courrier_workflow w
-            LEFT JOIN service_hierarchy s ON w.service_code = s.service_code
-            LEFT JOIN users u ON w.user_id = u.id
-            WHERE w.courrier_id = ?
-            ORDER BY w.etape_numero
-        """;
-        
-        try (Connection conn = databaseService.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-            
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, courrierId);
             
             try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    WorkflowStep step = mapResultSetToWorkflowStep(rs);
-                    steps.add(step);
-                }
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur lors de la récupération de l'historique: " + e.getMessage());
-        }
-        
-        return steps;
-    }
-    
-    /**
-     * Récupère les courriers dans le workflow d'un service
-     */
-    public List<Courrier> getCourriersForService(String serviceCode) {
-        List<Courrier> courriers = new ArrayList<>();
-        
-        String query = """
-            SELECT c.*, w.etape_numero, w.statut_etape, w.date_action, w.date_echeance
-            FROM courriers c
-            INNER JOIN courrier_workflow w ON c.id = w.courrier_id AND c.etape_actuelle = w.etape_numero
-            WHERE c.service_actuel = ? AND c.workflow_actif = TRUE AND c.workflow_termine = FALSE
-            ORDER BY c.date_reception DESC
-        """;
-        
-        try (Connection conn = databaseService.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-            
-            stmt.setString(1, serviceCode);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    Courrier courrier = CourrierService.getInstance().mapResultSetToCourrier(rs);
-                    courriers.add(courrier);
-                }
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur lors de la récupération des courriers: " + e.getMessage());
-        }
-        
-        return courriers;
-    }
-    
-    /**
-     * Récupère les courriers visibles pour un utilisateur
-     */
-    public List<Courrier> getCourriersVisiblesPourUtilisateur(User user) {
-        if (user.getServiceCode() == null) {
-            return new ArrayList<>();
-        }
-        
-        ServiceHierarchy userService = getServiceByCode(user.getServiceCode());
-        if (userService == null) {
-            return new ArrayList<>();
-        }
-        
-        // Services de niveau 0 voient tout
-        if (userService.getNiveau() == 0) {
-            return getAllCourriersEnWorkflow();
-        }
-        
-        // Autres services voient leurs courriers + ceux des descendants
-        List<String> visibleServiceCodes = new ArrayList<>();
-        visibleServiceCodes.add(user.getServiceCode());
-        
-        for (ServiceHierarchy descendant : userService.getTousLesDescendants()) {
-            visibleServiceCodes.add(descendant.getServiceCode());
-        }
-        
-        return getCourriersForServices(visibleServiceCodes);
-    }
-    
-    /**
-     * Récupère tous les courriers en workflow
-     */
-    private List<Courrier> getAllCourriersEnWorkflow() {
-        List<Courrier> courriers = new ArrayList<>();
-        
-        String query = """
-            SELECT DISTINCT c.*
-            FROM courriers c
-            WHERE c.workflow_actif = TRUE
-            ORDER BY c.date_reception DESC
-        """;
-        
-        try (Connection conn = databaseService.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
-            
-            while (rs.next()) {
-                Courrier courrier = CourrierService.getInstance().mapResultSetToCourrier(rs);
-                courriers.add(courrier);
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur: " + e.getMessage());
-        }
-        
-        return courriers;
-    }
-    
-    /**
-     * Récupère les courriers pour plusieurs services
-     */
-    private List<Courrier> getCourriersForServices(List<String> serviceCodes) {
-        if (serviceCodes.isEmpty()) return new ArrayList<>();
-        
-        List<Courrier> courriers = new ArrayList<>();
-        
-        String placeholders = String.join(",", Collections.nCopies(serviceCodes.size(), "?"));
-        String query = String.format("""
-            SELECT DISTINCT c.*
-            FROM courriers c
-            INNER JOIN courrier_workflow w ON c.id = w.courrier_id
-            WHERE w.service_code IN (%s) AND c.workflow_actif = TRUE
-            ORDER BY c.date_reception DESC
-        """, placeholders);
-        
-        try (Connection conn = databaseService.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-            
-            for (int i = 0; i < serviceCodes.size(); i++) {
-                stmt.setString(i + 1, serviceCodes.get(i));
-            }
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    Courrier courrier = CourrierService.getInstance().mapResultSetToCourrier(rs);
-                    courriers.add(courrier);
-                }
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur: " + e.getMessage());
-        }
-        
-        return courriers;
-    }
-    
-    // ========================================
-    // STATISTIQUES
-    // ========================================
-    
-    /**
-     * Récupère les statistiques de workflow pour un service
-     */
-    public Map<String, Integer> getWorkflowStats(String serviceCode) {
-        Map<String, Integer> stats = new HashMap<>();
-        
-        String query = """
-            SELECT 
-                COUNT(*) as total,
-                SUM(CASE WHEN w.statut_etape = 'en_attente' THEN 1 ELSE 0 END) as en_attente,
-                SUM(CASE WHEN w.statut_etape = 'en_cours' THEN 1 ELSE 0 END) as en_cours,
-                SUM(CASE WHEN w.date_echeance < NOW() AND w.statut_etape NOT IN ('termine', 'transfere') THEN 1 ELSE 0 END) as en_retard
-            FROM courrier_workflow w
-            INNER JOIN courriers c ON w.courrier_id = c.id
-            WHERE w.service_code = ? AND c.workflow_termine = FALSE
-        """;
-        
-        try (Connection conn = databaseService.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-            
-            stmt.setString(1, serviceCode);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    stats.put("total", rs.getInt("total"));
-                    stats.put("en_attente", rs.getInt("en_attente"));
-                    stats.put("en_cours", rs.getInt("en_cours"));
-                    stats.put("en_retard", rs.getInt("en_retard"));
+                    return rs.getInt("max_etape") + 1;
                 }
             }
+        }
+        
+        return 1;
+    }
+    
+    /**
+     * Démarre le workflow pour un courrier
+     */
+    public boolean startWorkflow(Courrier courrier, String serviceInitial) {
+        Connection conn = null;
+        try {
+            conn = DatabaseService.getInstance().getConnection();
+            conn.setAutoCommit(false);
+            
+            // 1. Créer la première étape du workflow
+            String insertSql = "INSERT INTO courrier_workflow " +
+                              "(courrier_id, etape_numero, service_code, action, commentaire, " +
+                              "date_action, statut_etape) " +
+                              "VALUES (?, 1, ?, 'Initialisation', 'Workflow démarré', NOW(), 'en_attente')";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(insertSql)) {
+                stmt.setInt(1, courrier.getId());
+                stmt.setString(2, serviceInitial);
+                stmt.executeUpdate();
+            }
+            
+            // 2. Mettre à jour le courrier
+            String updateSql = "UPDATE courriers SET " +
+                              "workflow_actif = 1, " +
+                              "service_actuel = ?, " +
+                              "etape_actuelle = 1, " +
+                              "statut = 'en_cours' " +
+                              "WHERE id = ?";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(updateSql)) {
+                stmt.setString(1, serviceInitial);
+                stmt.setInt(2, courrier.getId());
+                stmt.executeUpdate();
+            }
+            
+            // 3. Mettre à jour l'objet courrier
+            courrier.activerWorkflow(serviceInitial);
+            
+            conn.commit();
+            
+            // 4. Notifier via le réseau
+            NetworkService.getInstance().notifyWorkflowUpdate(courrier.getId(), serviceInitial);
+            
+            return true;
             
         } catch (SQLException e) {
-            System.err.println("Erreur lors du calcul des statistiques: " + e.getMessage());
-        }
-        
-        return stats;
-    }
-    
-    // ========================================
-    // MÉTHODES UTILITAIRES
-    // ========================================
-    
-    private ServiceHierarchy mapResultSetToService(ResultSet rs) throws SQLException {
-        ServiceHierarchy service = new ServiceHierarchy();
-        service.setId(rs.getInt("id"));
-        service.setServiceCode(rs.getString("service_code"));
-        service.setServiceName(rs.getString("service_name"));
-        service.setParentServiceCode(rs.getString("parent_service_code"));
-        service.setNiveau(rs.getInt("niveau"));
-        service.setOrdreAffichage(rs.getInt("ordre_affichage"));
-        service.setActif(rs.getBoolean("actif"));
-        
-        Timestamp dateCreation = rs.getTimestamp("date_creation");
-        if (dateCreation != null) {
-            service.setDateCreation(dateCreation.toLocalDateTime());
-        }
-        
-        return service;
-    }
-    
-    private WorkflowStep mapResultSetToWorkflowStep(ResultSet rs) throws SQLException {
-        WorkflowStep step = new WorkflowStep();
-        step.setId(rs.getInt("id"));
-        step.setCourrierId(rs.getInt("courrier_id"));
-        step.setEtapeNumero(rs.getInt("etape_numero"));
-        step.setServiceCode(rs.getString("service_code"));
-        step.setServiceName(rs.getString("service_name"));
-        
-        int userId = rs.getInt("user_id");
-        if (!rs.wasNull()) {
-            step.setUserId(userId);
-            String nom = rs.getString("nom");
-            String prenom = rs.getString("prenom");
-            if (nom != null && prenom != null) {
-                step.setUserName(prenom + " " + nom);
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            e.printStackTrace();
+            return false;
+            
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
             }
         }
-        
-        step.setAction(rs.getString("action"));
-        step.setCommentaire(rs.getString("commentaire"));
-        
-        Timestamp dateAction = rs.getTimestamp("date_action");
-        if (dateAction != null) {
-            step.setDateAction(dateAction.toLocalDateTime());
+    }
+    
+    /**
+     * Termine le workflow d'un courrier
+     */
+    public boolean terminerWorkflow(Courrier courrier, User user, String commentaire) {
+        WorkflowStep currentStep = getCurrentStep(courrier.getId());
+        if (currentStep == null) {
+            return false;
         }
         
-        String statutStr = rs.getString("statut_etape");
-        if (statutStr != null) {
-            // Conversion correcte de l'enum
-            step.setStatutEtape(StatutEtapeWorkflow.fromString(statutStr));
+        return terminerEtape(currentStep.getId(), user, commentaire);
+    }
+    
+    /**
+     * Transfère un courrier vers un autre service (surcharge avec délai en heures)
+     */
+    public boolean transferCourrier(Courrier courrier, User user, String targetServiceCode, 
+                                    String commentaire, Integer delaiHeures) {
+        LocalDateTime echeance = null;
+        if (delaiHeures != null && delaiHeures > 0) {
+            echeance = LocalDateTime.now().plusHours(delaiHeures);
         }
-        
-        int delai = rs.getInt("delai_traitement");
-        if (!rs.wasNull()) {
-            step.setDelaiTraitement(delai);
-        }
-        
-        Timestamp dateEcheance = rs.getTimestamp("date_echeance");
-        if (dateEcheance != null) {
-            step.setDateEcheance(dateEcheance.toLocalDateTime());
-        }
-        
-        return step;
+        return transferCourrier(courrier, user, targetServiceCode, commentaire, echeance);
     }
 }

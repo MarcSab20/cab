@@ -2,6 +2,7 @@ package application.services;
 
 import application.models.User;
 import application.models.Role;
+import application.utils.PermissionHelper;
 import application.models.Permission;
 import application.models.LogActivity;
 import application.utils.PasswordUtils;

@@ -89,15 +89,32 @@ public enum Permission {
     }
     
     /**
-     * Retourne la permission par son nom
+     * Retourne la permission par son nom (nom complet)
      */
     public static Permission getByName(String nom) {
+        if (nom == null) return null;
+        
         for (Permission permission : values()) {
             if (permission.getNom().equals(nom)) {
                 return permission;
             }
         }
         return null;
+    }
+    
+    /**
+     * Retourne la permission par son nom enum ou son nom complet
+     */
+    public static Permission fromString(String value) {
+        if (value == null) return null;
+        
+        // Essayer d'abord par le nom enum
+        try {
+            return valueOf(value.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            // Essayer par le nom complet
+            return getByName(value);
+        }
     }
     
     /**
@@ -113,10 +130,71 @@ public enum Permission {
     }
     
     /**
-     * Vérifie si une permission existe
+     * Retourne toutes les permissions enum
+     */
+    public static Permission[] getAllPermissions() {
+        return values();
+    }
+    
+    /**
+     * Vérifie si une permission existe par son nom
      */
     public static boolean exists(String nom) {
         return getByName(nom) != null;
+    }
+    
+    /**
+     * Vérifie si une permission existe par son enum
+     */
+    public static boolean existsByEnum(String enumName) {
+        try {
+            valueOf(enumName.toUpperCase());
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Retourne une icône pour la permission
+     */
+    public String getIcone() {
+        String name = this.name();
+        
+        if (name.startsWith("COURRIER_")) return "📧";
+        if (name.startsWith("DOCUMENT_")) return "📄";
+        if (name.startsWith("REUNIONS_")) return "👥";
+        if (name.startsWith("MESSAGES_")) return "💬";
+        if (name.startsWith("ADMIN_")) return "⚙️";
+        if (name.startsWith("RECHERCHE")) return "🔍";
+        if (name.startsWith("ARCHIVAGE_")) return "📦";
+        if (name.startsWith("PARAMETRES_")) return "🔧";
+        if (name.startsWith("RAPPORTS_") || name.equals("STATISTIQUES")) return "📊";
+        if (name.startsWith("WORKFLOW_")) return "🔄";
+        if (name.equals("ACCUEIL")) return "🏠";
+        if (name.equals("DASHBOARD")) return "📈";
+        
+        return "🔹";
+    }
+    
+    /**
+     * Retourne la catégorie de la permission
+     */
+    public String getCategorie() {
+        String name = this.name();
+        
+        if (name.startsWith("COURRIER_")) return "Courrier";
+        if (name.startsWith("DOCUMENT_")) return "Document";
+        if (name.startsWith("REUNIONS_")) return "Réunions";
+        if (name.startsWith("MESSAGES_")) return "Messages";
+        if (name.startsWith("ADMIN_")) return "Administration";
+        if (name.startsWith("RECHERCHE")) return "Recherche";
+        if (name.startsWith("ARCHIVAGE_")) return "Archivage";
+        if (name.startsWith("PARAMETRES_")) return "Paramètres";
+        if (name.startsWith("RAPPORTS_") || name.equals("STATISTIQUES")) return "Rapports";
+        if (name.startsWith("WORKFLOW_")) return "Workflow";
+        
+        return "Général";
     }
     
     @Override

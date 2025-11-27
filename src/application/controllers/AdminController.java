@@ -917,6 +917,6 @@ public class AdminController implements Initializable {
     private boolean hasAdminPermission() {
         return currentUser != null && 
                currentUser.getRole() != null && 
-               currentUser.getRole().possedePermission(Permission.ADMIN_UTILISATEURS);
+               currentUser.getRole().hasPermission(Permission.ADMIN_UTILISATEURS);
     }
 }

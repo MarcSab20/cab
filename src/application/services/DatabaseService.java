@@ -3,6 +3,10 @@ package application.services;
 import application.models.User;
 import application.models.Role;
 import application.models.Permission;
+import application.models.Courrier;
+import application.models.WorkflowStep;
+import application.models.ServiceHierarchy;
+import application.models.StatutEtapeWorkflow;
 import application.utils.PasswordUtils;
 
 import java.sql.*;
@@ -11,7 +15,7 @@ import java.util.*;
 
 /**
  * Service de base de données utilisant MySQL pour la persistance
- * VERSION AMÉLIORÉE : Gestion correcte du pool de connexions
+ * VERSION AMÉLIORÉE : Gestion correcte du pool de connexions + Support Workflow
  */
 public class DatabaseService {
     
@@ -146,13 +150,16 @@ public class DatabaseService {
                     prenom VARCHAR(100) NOT NULL,
                     email VARCHAR(100) UNIQUE NOT NULL,
                     role_id INT,
+                    service_code VARCHAR(50),
+                    niveau_autorite INT DEFAULT 0,
                     actif BOOLEAN DEFAULT TRUE,
                     date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     dernier_acces TIMESTAMP NULL,
                     session_token VARCHAR(255),
                     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL,
                     INDEX idx_code (code),
-                    INDEX idx_session_token (session_token)
+                    INDEX idx_session_token (session_token),
+                    INDEX idx_service_code (service_code)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """;
             stmt.executeUpdate(createUsersTable);
@@ -239,8 +246,8 @@ public class DatabaseService {
      */
     private void createDefaultAdmin() throws SQLException {
         String insertUserQuery = """
-            INSERT INTO users (code, password, nom, prenom, email, role_id) 
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO users (code, password, nom, prenom, email, role_id, service_code, niveau_autorite) 
+            VALUES (?, ?, ?, ?, ?, ?, NULL, 0)
         """;
         
         try (PreparedStatement stmt = mainConnection.prepareStatement(insertUserQuery)) {
@@ -283,6 +290,8 @@ public class DatabaseService {
     private String getGuestPermissionsJson() {
         return "[\"ACCUEIL\",\"COURRIER_LECTURE\",\"DOCUMENT_LECTURE\",\"REUNIONS_LECTURE\"]";
     }
+    
+    // ==================== MÉTHODES UTILISATEURS ====================
     
     /**
      * Récupère un utilisateur par son code
@@ -346,7 +355,8 @@ public class DatabaseService {
         String query = """
             UPDATE users SET 
                 password = ?, nom = ?, prenom = ?, email = ?, 
-                dernier_acces = ?, session_token = ? 
+                dernier_acces = ?, session_token = ?,
+                service_code = ?, niveau_autorite = ?
             WHERE id = ?
         """;
         
@@ -360,7 +370,9 @@ public class DatabaseService {
             stmt.setTimestamp(5, user.getDernierAcces() != null ? 
                 Timestamp.valueOf(user.getDernierAcces()) : null);
             stmt.setString(6, user.getSessionToken());
-            stmt.setInt(7, user.getId());
+            stmt.setString(7, user.getServiceCode());
+            stmt.setInt(8, user.getNiveauAutorite());
+            stmt.setInt(9, user.getId());
             
             stmt.executeUpdate();
         }
@@ -407,6 +419,135 @@ public class DatabaseService {
         }
     }
     
+    // ==================== MÉTHODES WORKFLOW (NOUVELLES) ====================
+    
+    /**
+     * Mappe un ResultSet vers un objet Courrier
+     * Méthode PUBLIQUE et STATIQUE pour être accessible depuis WorkflowService
+     */
+    public static Courrier mapResultSetToCourrier(ResultSet rs) throws SQLException {
+        Courrier courrier = new Courrier();
+        
+        courrier.setId(rs.getInt("id"));
+        courrier.setNumeroCourrier(rs.getString("numero_courrier"));
+        
+        // Type courrier avec gestion String/Enum
+        String typeStr = rs.getString("type_courrier");
+        courrier.setTypeCourrierFromString(typeStr);
+        
+        courrier.setObjet(rs.getString("objet"));
+        courrier.setExpediteur(rs.getString("expediteur"));
+        courrier.setDestinataire(rs.getString("destinataire"));
+        
+        Timestamp dateReception = rs.getTimestamp("date_reception");
+        if (dateReception != null) {
+            courrier.setDateReception(dateReception.toLocalDateTime());
+        }
+        
+        Timestamp dateDocument = rs.getTimestamp("date_document");
+        if (dateDocument != null) {
+            courrier.setDateDocument(dateDocument.toLocalDateTime());
+        }
+        
+        // Statut avec gestion String/Enum
+        String statutStr = rs.getString("statut");
+        courrier.setStatutFromString(statutStr);
+        
+        courrier.setPriorite(rs.getString("priorite"));
+        courrier.setWorkflowActif(rs.getBoolean("workflow_actif"));
+        courrier.setServiceActuel(rs.getString("service_actuel"));
+        
+        int etapeActuelle = rs.getInt("etape_actuelle");
+        if (!rs.wasNull()) {
+            courrier.setEtapeActuelle(etapeActuelle);
+        }
+        
+        courrier.setWorkflowTermine(rs.getBoolean("workflow_termine"));
+        
+        Timestamp dateCreation = rs.getTimestamp("date_creation");
+        if (dateCreation != null) {
+            courrier.setDateCreation(dateCreation.toLocalDateTime());
+        }
+        
+        return courrier;
+    }
+    
+    /**
+     * Mappe un ResultSet vers un objet WorkflowStep
+     */
+    public static WorkflowStep mapResultSetToWorkflowStep(ResultSet rs) throws SQLException {
+        WorkflowStep step = new WorkflowStep();
+        
+        step.setId(rs.getInt("id"));
+        step.setCourrierId(rs.getInt("courrier_id"));
+        step.setEtapeNumero(rs.getInt("etape_numero"));
+        step.setServiceCode(rs.getString("service_code"));
+        
+        // Service name si présent dans le JOIN
+        try {
+            step.setServiceName(rs.getString("service_name"));
+        } catch (SQLException e) {
+            // Colonne non présente, ignorer
+        }
+        
+        int userId = rs.getInt("user_id");
+        if (!rs.wasNull()) {
+            step.setUserId(userId);
+        }
+        
+        try {
+            step.setUserName(rs.getString("user_name"));
+        } catch (SQLException e) {
+            // Colonne non présente, ignorer
+        }
+        
+        step.setAction(rs.getString("action"));
+        step.setCommentaire(rs.getString("commentaire"));
+        
+        Timestamp dateAction = rs.getTimestamp("date_action");
+        if (dateAction != null) {
+            step.setDateAction(dateAction.toLocalDateTime());
+        }
+        
+        String statutStr = rs.getString("statut_etape");
+        step.setStatutEtape(StatutEtapeWorkflow.fromString(statutStr));
+        
+        int delai = rs.getInt("delai_traitement");
+        if (!rs.wasNull()) {
+            step.setDelaiTraitement(delai);
+        }
+        
+        Timestamp dateEcheance = rs.getTimestamp("date_echeance");
+        if (dateEcheance != null) {
+            step.setDateEcheance(dateEcheance.toLocalDateTime());
+        }
+        
+        return step;
+    }
+    
+    /**
+     * Mappe un ResultSet vers un objet ServiceHierarchy
+     */
+    public static ServiceHierarchy mapResultSetToServiceHierarchy(ResultSet rs) throws SQLException {
+        ServiceHierarchy service = new ServiceHierarchy();
+        
+        service.setServiceCode(rs.getString("service_code"));
+        service.setServiceName(rs.getString("service_name"));
+        service.setParentServiceCode(rs.getString("parent_service_code"));
+        service.setNiveau(rs.getInt("niveau"));
+        service.setOrdreAffichage(rs.getInt("ordre_affichage"));
+        service.setActif(rs.getBoolean("actif"));
+        
+        Timestamp dateCreation = rs.getTimestamp("date_creation");
+        if (dateCreation != null) {
+            service.setDateCreation(dateCreation.toLocalDateTime());
+        }
+        
+        return service;
+    }
+    
+    // ==================== MAPPING UTILISATEURS/ROLES ====================
+    
     /**
      * Mappe un ResultSet vers un objet User
      */
@@ -419,6 +560,10 @@ public class DatabaseService {
         user.setPrenom(rs.getString("prenom"));
         user.setEmail(rs.getString("email"));
         user.setActif(rs.getBoolean("actif"));
+        
+        // Nouveaux champs pour le workflow
+        user.setServiceCode(rs.getString("service_code"));
+        user.setNiveauAutorite(rs.getInt("niveau_autorite"));
         
         Timestamp dateCreation = rs.getTimestamp("date_creation");
         if (dateCreation != null) {
@@ -501,6 +646,8 @@ public class DatabaseService {
         
         return permissions;
     }
+    
+    // ==================== MÉTHODES DE FERMETURE ====================
     
     /**
      * Ferme la connexion principale d'initialisation

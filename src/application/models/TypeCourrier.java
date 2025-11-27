@@ -1,11 +1,13 @@
 package application.models;
 
 /**
- * Énumération des types de courrier
+ * Énumération pour le type de courrier
  */
 public enum TypeCourrier {
-    ENTRANT("Entrant", "📨"),
-    SORTANT("Sortant", "📤");
+    ENTRANT("Entrant", "📥"),
+    SORTANT("Sortant", "📤"),
+    INTERNE("Interne", "🔄"),
+    URGENT("Urgent", "🚨");
     
     private final String libelle;
     private final String icone;
@@ -24,28 +26,33 @@ public enum TypeCourrier {
     }
     
     /**
-     * Retourne le type à partir de son libellé
+     * Convertit un String en TypeCourrier
      */
-    public static TypeCourrier fromLibelle(String libelle) {
-        for (TypeCourrier type : values()) {
-            if (type.libelle.equalsIgnoreCase(libelle)) {
-                return type;
+    public static TypeCourrier fromString(String value) {
+        if (value == null) {
+            return ENTRANT;
+        }
+        
+        // Essayer de matcher directement
+        try {
+            return valueOf(value.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            // Essayer avec des variations communes
+            String normalized = value.toLowerCase().replace(" ", "_");
+            try {
+                return valueOf(normalized.toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                // Par défaut, retourner ENTRANT
+                return ENTRANT;
             }
         }
-        return null;
     }
     
     /**
-     * Retourne le type à partir de la valeur de la base de données
+     * Retourne le nom pour la base de données (lowercase)
      */
-    public static TypeCourrier fromDatabase(String dbValue) {
-        if (dbValue == null) return null;
-        
-        try {
-            return valueOf(dbValue.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
+    public String toDbString() {
+        return name().toLowerCase();
     }
     
     @Override
