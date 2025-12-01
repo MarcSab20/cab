@@ -135,7 +135,7 @@ public class MainController implements Initializable {
             }
             
             if (btnWorkflowDashboard != null) {
-                btnWorkflowDashboard.setOnAction(e -> loadView("dashboard")); // Utilise le même dashboard
+                btnWorkflowDashboard.setOnAction(e -> loadView("workflow_suivi")); // Utilise le même dashboard
             }
             
             if (btnCourrier != null) {
@@ -249,8 +249,31 @@ public class MainController implements Initializable {
             
             // Remplacement du contenu
             if (contentArea != null) {
+                // CORRECTION: Forcer les dimensions minimales de la vue
+                if (view instanceof Region) {
+                    Region region = (Region) view;
+                    region.setMinWidth(800);
+                    region.setMinHeight(600);
+                    region.setPrefWidth(Region.USE_COMPUTED_SIZE);
+                    region.setPrefHeight(Region.USE_COMPUTED_SIZE);
+                    region.setMaxWidth(Double.MAX_VALUE);
+                    region.setMaxHeight(Double.MAX_VALUE);
+                }
+                
                 contentArea.setCenter(view);
                 currentView = viewName;
+                
+                // CORRECTION: Forcer le rafraîchissement du layout
+                Platform.runLater(() -> {
+                    try {
+                        contentArea.layout();
+                        if (view instanceof Region) {
+                            ((Region) view).layout();
+                        }
+                    } catch (Exception e) {
+                        System.err.println("⚠ Erreur rafraîchissement layout: " + e.getMessage());
+                    }
+                });
                 
                 // Mise à jour du statut
                 if (statusLabel != null) {

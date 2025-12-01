@@ -16,7 +16,7 @@ import application.models.*;
 import application.services.*;
 import application.utils.SessionManager;
 import application.utils.AlertUtils;
-
+import javafx.application.Platform;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -89,6 +89,28 @@ public class DashboardController implements Initializable {
             // Actualisation automatique toutes les 30 secondes
             startAutoRefresh();
             
+            // CORRECTION: Forcer les dimensions minimales des conteneurs
+            Platform.runLater(() -> {
+                try {
+                    if (workflowContainer != null) {
+                        workflowContainer.setMinHeight(300);
+                        workflowContainer.setPrefHeight(Region.USE_COMPUTED_SIZE);
+                        workflowContainer.setMaxHeight(Region.USE_COMPUTED_SIZE);
+                    }
+                    if (workflowScrollPane != null) {
+                        workflowScrollPane.setMinHeight(300);
+                        workflowScrollPane.setPrefHeight(400);
+                    }
+                    if (activitesRecentesContainer != null) {
+                        activitesRecentesContainer.setMinHeight(150);
+                        activitesRecentesContainer.setPrefHeight(Region.USE_COMPUTED_SIZE);
+                    }
+                    System.out.println("✓ Dimensions des conteneurs configurées");
+                } catch (Exception e) {
+                    System.err.println("⚠ Erreur configuration dimensions: " + e.getMessage());
+                }
+            });
+
             System.out.println("=== DashboardController.initialize() - SUCCÈS ===");
             
         } catch (Exception e) {

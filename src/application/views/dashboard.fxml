@@ -7,7 +7,8 @@
 <?import javafx.scene.text.Font?>
 
 <ScrollPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.controllers.DashboardController"
-            styleClass="main-container" fitToWidth="true">
+            styleClass="main-container" fitToWidth="true" fitToHeight="true"
+            style="-fx-min-width: 800; -fx-min-height: 600; -fx-background-color: #f5f6fa;">
    <content>
       <VBox spacing="20.0" style="-fx-padding: 30; -fx-background-color: #f5f6fa;">
          

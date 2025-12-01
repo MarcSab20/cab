@@ -7,7 +7,8 @@
 
 /* ===== PAGE DE LOGIN ===== */
 .login-container {
-    -fx-background-color: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* CORRECTION: Syntaxe JavaFX pour les gradients */
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #667eea 0%, #764ba2 100%);
 }
 
 .login-box {
@@ -462,6 +463,25 @@
 
 .scroll-bar .thumb:hover {
     -fx-background-color: #adb5bd;
+}
+
+/* ===== SCROLLPANE - CORRECTIONS CRITIQUES ===== */
+.scroll-pane {
+    -fx-background-color: #f8f9fa;
+    -fx-border-width: 0;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: #f8f9fa;
+}
+
+.scroll-pane > .corner {
+    -fx-background-color: #f8f9fa;
+}
+
+/* ===== MAIN CONTAINER - CORRECTIONS ===== */
+.main-container {
+    -fx-background-color: #f8f9fa;
 }
 
 /* ===== ANIMATIONS ===== */

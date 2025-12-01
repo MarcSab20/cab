@@ -14,7 +14,7 @@ import application.models.*;
 import application.services.*;
 import application.utils.SessionManager;
 import application.utils.AlertUtils;
-
+import javafx.application.Platform;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -105,7 +105,26 @@ public class WorkflowSuiviController implements Initializable {
             
             // Configuration des listeners
             setupListeners();
-            
+            Platform.runLater(() -> {
+                try {
+                    if (tableWorkflow != null) {
+                        tableWorkflow.setMinHeight(400);
+                        tableWorkflow.setPrefHeight(Region.USE_COMPUTED_SIZE);
+                        tableWorkflow.setMaxHeight(Double.MAX_VALUE);
+                    }
+                    if (detailsContainer != null) {
+                        detailsContainer.setMinHeight(500);
+                        detailsContainer.setPrefHeight(Region.USE_COMPUTED_SIZE);
+                    }
+                    if (timelineContainer != null) {
+                        timelineContainer.setMinHeight(200);
+                        timelineContainer.setPrefHeight(Region.USE_COMPUTED_SIZE);
+                    }
+                    System.out.println("✓ Dimensions des composants workflow configurées");
+                } catch (Exception e) {
+                    System.err.println("⚠ Erreur configuration dimensions workflow: " + e.getMessage());
+                }
+            });
             System.out.println("=== WorkflowSuiviController.initialize() - SUCCÈS ===");
             
         } catch (Exception e) {
