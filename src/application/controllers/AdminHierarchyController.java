@@ -8,51 +8,59 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
+import javafx.stage.FileChooser;
 import application.models.*;
 import application.services.WorkflowService;
 import application.utils.AlertUtils;
 import application.utils.SessionManager;
 
+import java.io.File;
 import java.net.URL;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
  * Contrôleur pour la gestion de la hiérarchie administrative
- * Permet de configurer l'organigramme et les relations entre services
+ * VERSION CORRIGÉE avec toutes les méthodes du FXML
  */
 public class AdminHierarchyController implements Initializable {
     
     // TreeView pour la hiérarchie
-    @FXML private TreeView<ServiceHierarchy> treeHierarchie;
+    @FXML private TreeView<ServiceHierarchy> hierarchyTreeView;
     
-    // Détails du service sélectionné
-    @FXML private TextField champServiceCode;
-    @FXML private TextField champServiceName;
-    @FXML private ComboBox<ServiceHierarchy> comboParent;
-    @FXML private Spinner<Integer> spinnerNiveau;
-    @FXML private Spinner<Integer> spinnerOrdre;
-    @FXML private CheckBox checkActif;
-    @FXML private Label labelDateCreation;
-    @FXML private Label labelNombreEnfants;
+    // Tableau des services
+    @FXML private TableView<ServiceHierarchy> servicesTable;
+    @FXML private TableColumn<ServiceHierarchy, String> colServiceCode;
+    @FXML private TableColumn<ServiceHierarchy, String> colServiceName;
+    @FXML private TableColumn<ServiceHierarchy, String> colParent;
+    @FXML private TableColumn<ServiceHierarchy, String> colNiveau;
+    @FXML private TableColumn<ServiceHierarchy, String> colActif;
     
-    // Boutons d'action
-    @FXML private Button btnSauvegarder;
-    @FXML private Button btnAnnuler;
-    @FXML private Button btnSupprimer;
-    @FXML private Button btnNouveauService;
+    // Champs du formulaire
+    @FXML private TextField tfServiceCode;
+    @FXML private TextField tfServiceName;
+    @FXML private ComboBox<ServiceHierarchy> cbParentService;
+    @FXML private ComboBox<String> cbNiveau;
+    @FXML private TextField tfOrdreAffichage;
+    @FXML private CheckBox chkActif;
     
-    // Tableau des utilisateurs du service
-    @FXML private TableView<User> tableauUtilisateurs;
-    @FXML private TableColumn<User, String> colonneCode;
-    @FXML private TableColumn<User, String> colonneNom;
-    @FXML private TableColumn<User, String> colonnePrenom;
-    @FXML private TableColumn<User, String> colonneRole;
+    // Recherche et filtres
+    @FXML private TextField tfSearch;
+    @FXML private ComboBox<String> cbFilterNiveau;
+    @FXML private CheckBox chkFilterActifs;
+    
+    // Boutons
+    @FXML private Button btnSaveService;
+    @FXML private Button btnDeleteService;
+    @FXML private Button btnNewService;
     
     // Statistiques
     @FXML private Label statTotalServices;
     @FXML private Label statServicesActifs;
     @FXML private Label statNiveaux;
+    
+    // Visualisation
+    @FXML private VBox hierarchyVisualization;
     
     // Services
     private WorkflowService workflowService;
@@ -61,7 +69,6 @@ public class AdminHierarchyController implements Initializable {
     // Données
     private ObservableList<ServiceHierarchy> servicesData;
     private ServiceHierarchy selectedService;
-    private boolean isEditing = false;
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -80,8 +87,9 @@ public class AdminHierarchyController implements Initializable {
             
             // Configuration de l'interface
             setupTreeView();
-            setupDetailsForm();
-            setupTableUtilisateurs();
+            setupTableView();
+            setupForm();
+            setupFilters();
             
             // Chargement des données
             loadHierarchy();
@@ -100,8 +108,9 @@ public class AdminHierarchyController implements Initializable {
      * Configure le TreeView de la hiérarchie
      */
     private void setupTreeView() {
-        // Configuration du rendu des cellules
-        treeHierarchie.setCellFactory(tv -> new TreeCell<>() {
+        if (hierarchyTreeView == null) return;
+        
+        hierarchyTreeView.setCellFactory(tv -> new TreeCell<>() {
             @Override
             protected void updateItem(ServiceHierarchy service, boolean empty) {
                 super.updateItem(service, empty);
@@ -112,15 +121,12 @@ public class AdminHierarchyController implements Initializable {
                 } else {
                     setText(service.getIcone() + " " + service.getServiceName() + 
                            " (" + service.getServiceCode() + ")");
-                    
-                    // Style selon le niveau
                     setStyle("-fx-text-fill: " + service.getCouleur() + ";");
                 }
             }
         });
         
-        // Listener pour la sélection
-        treeHierarchie.getSelectionModel().selectedItemProperty().addListener(
+        hierarchyTreeView.getSelectionModel().selectedItemProperty().addListener(
             (obs, oldVal, newVal) -> {
                 if (newVal != null && newVal.getValue() != null) {
                     loadServiceDetails(newVal.getValue());
@@ -130,17 +136,53 @@ public class AdminHierarchyController implements Initializable {
     }
     
     /**
-     * Configure le formulaire de détails
+     * Configure le TableView
      */
-    private void setupDetailsForm() {
-        // Configuration du spinner de niveau
-        if (spinnerNiveau != null) {
-            spinnerNiveau.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 10, 0));
-        }
+    private void setupTableView() {
+        if (servicesTable == null) return;
         
-        // Configuration du spinner d'ordre
-        if (spinnerOrdre != null) {
-            spinnerOrdre.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 0));
+        colServiceCode.setCellValueFactory(new PropertyValueFactory<>("serviceCode"));
+        colServiceName.setCellValueFactory(new PropertyValueFactory<>("serviceName"));
+        
+        colParent.setCellValueFactory(cellData -> {
+            String parentCode = cellData.getValue().getParentServiceCode();
+            return new SimpleStringProperty(parentCode != null ? parentCode : "Racine");
+        });
+        
+        colNiveau.setCellValueFactory(cellData -> 
+            new SimpleStringProperty("Niveau " + cellData.getValue().getNiveau())
+        );
+        
+        colActif.setCellValueFactory(cellData -> 
+            new SimpleStringProperty(cellData.getValue().isActif() ? "✅ Oui" : "❌ Non")
+        );
+        
+        servicesTable.setItems(servicesData);
+        
+        servicesTable.getSelectionModel().selectedItemProperty().addListener(
+            (obs, oldVal, newVal) -> {
+                if (newVal != null) {
+                    loadServiceDetails(newVal);
+                }
+            }
+        );
+    }
+    
+    /**
+     * Configure le formulaire
+     */
+    private void setupForm() {
+        // Niveaux hiérarchiques
+        if (cbNiveau != null) {
+            cbNiveau.setItems(FXCollections.observableArrayList(
+                "Niveau -1: Service Courrier",
+                "Niveau 0: CEMAA, CSP",
+                "Niveau 1: MAGE, CSA",
+                "Niveau 2: Sous-directions",
+                "Niveau 3: Cellules",
+                "Niveau 4: Chefs d'Équipe",
+                "Niveau 5: Chefs d'Équipe Adjoints"
+            ));
         }
         
         // Désactiver les champs par défaut
@@ -148,23 +190,20 @@ public class AdminHierarchyController implements Initializable {
     }
     
     /**
-     * Configure le tableau des utilisateurs
+     * Configure les filtres
      */
-    private void setupTableUtilisateurs() {
-        if (colonneCode != null) {
-            colonneCode.setCellValueFactory(new PropertyValueFactory<>("code"));
+    private void setupFilters() {
+        if (cbFilterNiveau != null) {
+            cbFilterNiveau.setItems(FXCollections.observableArrayList(
+                "Tous les niveaux",
+                "Niveau -1", "Niveau 0", "Niveau 1", "Niveau 2", 
+                "Niveau 3", "Niveau 4", "Niveau 5"
+            ));
+            cbFilterNiveau.setValue("Tous les niveaux");
         }
-        if (colonneNom != null) {
-            colonneNom.setCellValueFactory(new PropertyValueFactory<>("nom"));
-        }
-        if (colonnePrenom != null) {
-            colonnePrenom.setCellValueFactory(new PropertyValueFactory<>("prenom"));
-        }
-        if (colonneRole != null) {
-            colonneRole.setCellValueFactory(cellData -> {
-                Role role = cellData.getValue().getRole();
-                return new SimpleStringProperty(role != null ? role.getNom() : "");
-            });
+        
+        if (chkFilterActifs != null) {
+            chkFilterActifs.setSelected(true);
         }
     }
     
@@ -173,30 +212,42 @@ public class AdminHierarchyController implements Initializable {
      */
     private void loadHierarchy() {
         try {
-            // Charger la hiérarchie depuis le cache
+            // Charger depuis le cache
             workflowService.loadHierarchyCache();
             
-            // Créer la racine du TreeView
-            TreeItem<ServiceHierarchy> root = new TreeItem<>(null);
-            root.setExpanded(true);
+            // Charger le TreeView
+            loadTreeView();
             
-            // Récupérer les services racines
-            List<ServiceHierarchy> rootServices = workflowService.getRootServices();
+            // Charger le tableau
+            loadTableView();
             
-            for (ServiceHierarchy service : rootServices) {
-                TreeItem<ServiceHierarchy> item = createTreeItem(service);
-                root.getChildren().add(item);
-            }
-            
-            treeHierarchie.setRoot(root);
-            treeHierarchie.setShowRoot(false);
-            
-            System.out.println("Hiérarchie chargée: " + rootServices.size() + " services racines");
+            System.out.println("Hiérarchie chargée avec succès");
             
         } catch (Exception e) {
             System.err.println("Erreur lors du chargement de la hiérarchie: " + e.getMessage());
             e.printStackTrace();
+            AlertUtils.showError("Erreur", "Impossible de charger la hiérarchie: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Charge le TreeView
+     */
+    private void loadTreeView() {
+        if (hierarchyTreeView == null) return;
+        
+        TreeItem<ServiceHierarchy> root = new TreeItem<>(null);
+        root.setExpanded(true);
+        
+        List<ServiceHierarchy> rootServices = workflowService.getRootServices();
+        
+        for (ServiceHierarchy service : rootServices) {
+            TreeItem<ServiceHierarchy> item = createTreeItem(service);
+            root.getChildren().add(item);
+        }
+        
+        hierarchyTreeView.setRoot(root);
+        hierarchyTreeView.setShowRoot(false);
     }
     
     /**
@@ -206,7 +257,6 @@ public class AdminHierarchyController implements Initializable {
         TreeItem<ServiceHierarchy> item = new TreeItem<>(service);
         item.setExpanded(false);
         
-        // Ajouter les enfants récursivement
         for (ServiceHierarchy enfant : service.getEnfants()) {
             TreeItem<ServiceHierarchy> childItem = createTreeItem(enfant);
             item.getChildren().add(childItem);
@@ -216,80 +266,69 @@ public class AdminHierarchyController implements Initializable {
     }
     
     /**
+     * Charge le tableau
+     */
+    private void loadTableView() {
+        if (servicesTable == null) return;
+        
+        List<ServiceHierarchy> allServices = workflowService.getAllServices();
+        servicesData.clear();
+        servicesData.addAll(allServices);
+        
+        applyFilters();
+    }
+    
+    /**
      * Charge les détails d'un service
      */
     private void loadServiceDetails(ServiceHierarchy service) {
         selectedService = service;
-        isEditing = false;
         
-        if (champServiceCode != null) {
-            champServiceCode.setText(service.getServiceCode());
-        }
-        if (champServiceName != null) {
-            champServiceName.setText(service.getServiceName());
-        }
+        if (tfServiceCode != null) tfServiceCode.setText(service.getServiceCode());
+        if (tfServiceName != null) tfServiceName.setText(service.getServiceName());
         
         // Parent
-        if (comboParent != null) {
+        if (cbParentService != null) {
             List<ServiceHierarchy> allServices = workflowService.getAllServices();
-            allServices.remove(service); // Ne peut pas être son propre parent
-            comboParent.setItems(FXCollections.observableArrayList(allServices));
+            allServices.remove(service);
+            cbParentService.setItems(FXCollections.observableArrayList(allServices));
             
             if (service.getParent() != null) {
-                comboParent.setValue(service.getParent());
+                cbParentService.setValue(service.getParent());
             }
         }
         
-        if (spinnerNiveau != null) {
-            spinnerNiveau.getValueFactory().setValue(service.getNiveau());
-        }
-        if (spinnerOrdre != null) {
-            spinnerOrdre.getValueFactory().setValue(service.getOrdreAffichage());
-        }
-        if (checkActif != null) {
-            checkActif.setSelected(service.isActif());
+        // Niveau
+        if (cbNiveau != null) {
+            cbNiveau.setValue("Niveau " + service.getNiveau() + ": ...");
         }
         
-        if (labelDateCreation != null && service.getDateCreation() != null) {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-            labelDateCreation.setText(service.getDateCreation().format(formatter));
+        if (tfOrdreAffichage != null) {
+            tfOrdreAffichage.setText(String.valueOf(service.getOrdreAffichage()));
         }
         
-        if (labelNombreEnfants != null) {
-            labelNombreEnfants.setText(service.getEnfants().size() + " service(s) enfant(s)");
+        if (chkActif != null) {
+            chkActif.setSelected(service.isActif());
         }
         
-        // Charger les utilisateurs de ce service
-        loadUtilisateursService(service.getServiceCode());
+        // Activer le bouton supprimer
+        if (btnDeleteService != null) {
+            btnDeleteService.setDisable(false);
+        }
         
-        // Désactiver l'édition par défaut
         setFieldsEditable(false);
-    }
-    
-    /**
-     * Charge les utilisateurs d'un service
-     */
-    private void loadUtilisateursService(String serviceCode) {
-        // À implémenter: récupérer les utilisateurs depuis la base de données
-        // Pour l'instant, on laisse vide
-        if (tableauUtilisateurs != null) {
-            tableauUtilisateurs.setItems(FXCollections.observableArrayList());
-        }
     }
     
     /**
      * Active/désactive l'édition des champs
      */
     private void setFieldsEditable(boolean editable) {
-        if (champServiceCode != null) champServiceCode.setEditable(editable);
-        if (champServiceName != null) champServiceName.setEditable(editable);
-        if (comboParent != null) comboParent.setDisable(!editable);
-        if (spinnerNiveau != null) spinnerNiveau.setDisable(!editable);
-        if (spinnerOrdre != null) spinnerOrdre.setDisable(!editable);
-        if (checkActif != null) checkActif.setDisable(!editable);
-        
-        if (btnSauvegarder != null) btnSauvegarder.setDisable(!editable);
-        if (btnAnnuler != null) btnAnnuler.setDisable(!editable);
+        if (tfServiceCode != null) tfServiceCode.setEditable(editable);
+        if (tfServiceName != null) tfServiceName.setEditable(editable);
+        if (cbParentService != null) cbParentService.setDisable(!editable);
+        if (cbNiveau != null) cbNiveau.setDisable(!editable);
+        if (tfOrdreAffichage != null) tfOrdreAffichage.setDisable(!editable);
+        if (chkActif != null) chkActif.setDisable(!editable);
     }
     
     /**
@@ -316,117 +355,138 @@ public class AdminHierarchyController implements Initializable {
         }
     }
     
-    /**
-     * Gère la création d'un nouveau service
-     */
-    @FXML
-    private void handleNouveauService() {
-        // Créer un dialogue pour saisir les informations
-        Dialog<ServiceHierarchy> dialog = new Dialog<>();
-        dialog.setTitle("Nouveau service");
-        dialog.setHeaderText("Créer un nouveau service");
-        
-        // Champs du dialogue
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        
-        TextField codeField = new TextField();
-        codeField.setPromptText("Code du service");
-        TextField nameField = new TextField();
-        nameField.setPromptText("Nom du service");
-        
-        ComboBox<ServiceHierarchy> parentCombo = new ComboBox<>();
-        parentCombo.setItems(FXCollections.observableArrayList(workflowService.getAllServices()));
-        parentCombo.setPromptText("Service parent (optionnel)");
-        
-        Spinner<Integer> niveauSpinner = new Spinner<>(0, 10, 0);
-        Spinner<Integer> ordreSpinner = new Spinner<>(0, 100, 0);
-        
-        grid.add(new Label("Code:"), 0, 0);
-        grid.add(codeField, 1, 0);
-        grid.add(new Label("Nom:"), 0, 1);
-        grid.add(nameField, 1, 1);
-        grid.add(new Label("Parent:"), 0, 2);
-        grid.add(parentCombo, 1, 2);
-        grid.add(new Label("Niveau:"), 0, 3);
-        grid.add(niveauSpinner, 1, 3);
-        grid.add(new Label("Ordre:"), 0, 4);
-        grid.add(ordreSpinner, 1, 4);
-        
-        dialog.getDialogPane().setContent(grid);
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == ButtonType.OK) {
-                ServiceHierarchy newService = new ServiceHierarchy();
-                newService.setServiceCode(codeField.getText());
-                newService.setServiceName(nameField.getText());
-                if (parentCombo.getValue() != null) {
-                    newService.setParentServiceCode(parentCombo.getValue().getServiceCode());
-                }
-                newService.setNiveau(niveauSpinner.getValue());
-                newService.setOrdreAffichage(ordreSpinner.getValue());
-                return newService;
-            }
-            return null;
-        });
-        
-        Optional<ServiceHierarchy> result = dialog.showAndWait();
-        result.ifPresent(service -> {
-            // Enregistrer dans la base de données
-            // À implémenter
-            AlertUtils.showInfo("Service créé", "Le service a été créé avec succès");
-            loadHierarchy();
-        });
-    }
+    // ==================== HANDLERS POUR LES BOUTONS ====================
     
     /**
-     * Gère la sauvegarde des modifications
+     * CORRECTION: Renommer en handleRefresh pour correspondre au FXML
      */
     @FXML
-    private void handleSauvegarder() {
-        if (selectedService == null) {
-            AlertUtils.showWarning("Aucun service sélectionné");
-            return;
-        }
-        
-        // Récupérer les valeurs des champs
-        selectedService.setServiceCode(champServiceCode.getText());
-        selectedService.setServiceName(champServiceName.getText());
-        
-        if (comboParent.getValue() != null) {
-            selectedService.setParentServiceCode(comboParent.getValue().getServiceCode());
-        }
-        
-        selectedService.setNiveau(spinnerNiveau.getValue());
-        selectedService.setOrdreAffichage(spinnerOrdre.getValue());
-        selectedService.setActif(checkActif.isSelected());
-        
-        // Enregistrer dans la base de données
-        // À implémenter
-        
-        AlertUtils.showInfo("Service sauvegardé avec succès");
-        setFieldsEditable(false);
+    private void handleRefresh() {
         loadHierarchy();
+        updateStatistics();
+        AlertUtils.showInfo("Hiérarchie actualisée avec succès");
     }
     
-    /**
-     * Gère l'annulation des modifications
-     */
     @FXML
-    private void handleAnnuler() {
-        if (selectedService != null) {
-            loadServiceDetails(selectedService);
+    private void handleExportHierarchy() {
+        AlertUtils.showInfo("Fonction d'export en cours de développement");
+    }
+    
+    @FXML
+    private void handleImportHierarchy() {
+        AlertUtils.showInfo("Fonction d'import en cours de développement");
+    }
+    
+    @FXML
+    private void handleShowVisualization() {
+        AlertUtils.showInfo("Fonction de visualisation en cours de développement");
+    }
+    
+    @FXML
+    private void handleSearch() {
+        applyFilters();
+    }
+    
+    @FXML
+    private void handleClearFilters() {
+        if (tfSearch != null) tfSearch.clear();
+        if (cbFilterNiveau != null) cbFilterNiveau.setValue("Tous les niveaux");
+        if (chkFilterActifs != null) chkFilterActifs.setSelected(true);
+        applyFilters();
+    }
+    
+    @FXML
+    private void handleNewService() {
+        selectedService = null;
+        
+        // Vider les champs
+        if (tfServiceCode != null) tfServiceCode.clear();
+        if (tfServiceName != null) tfServiceName.clear();
+        if (cbParentService != null) cbParentService.setValue(null);
+        if (cbNiveau != null) cbNiveau.setValue(null);
+        if (tfOrdreAffichage != null) tfOrdreAffichage.setText("1");
+        if (chkActif != null) chkActif.setSelected(true);
+        
+        // Charger la liste des services parents
+        if (cbParentService != null) {
+            List<ServiceHierarchy> allServices = workflowService.getAllServices();
+            cbParentService.setItems(FXCollections.observableArrayList(allServices));
         }
-        setFieldsEditable(false);
+        
+        setFieldsEditable(true);
+        
+        if (btnSaveService != null) {
+            btnSaveService.setText("💾 Créer le Service");
+        }
+        
+        if (btnDeleteService != null) {
+            btnDeleteService.setDisable(true);
+        }
     }
     
-    /**
-     * Gère la suppression d'un service
-     */
     @FXML
-    private void handleSupprimer() {
+    private void handleSaveService() {
+        try {
+            // Validation
+            if (tfServiceCode == null || tfServiceCode.getText().trim().isEmpty()) {
+                AlertUtils.showWarning("Le code du service est obligatoire");
+                return;
+            }
+            
+            if (tfServiceName == null || tfServiceName.getText().trim().isEmpty()) {
+                AlertUtils.showWarning("Le nom du service est obligatoire");
+                return;
+            }
+            
+            if (cbNiveau == null || cbNiveau.getValue() == null) {
+                AlertUtils.showWarning("Le niveau hiérarchique est obligatoire");
+                return;
+            }
+            
+            // Extraire le numéro de niveau
+            String niveauStr = cbNiveau.getValue();
+            int niveau = Integer.parseInt(niveauStr.substring(niveauStr.indexOf("Niveau ") + 7, 
+                                         niveauStr.indexOf(":")));
+            
+            // Créer ou mettre à jour
+            if (selectedService == null) {
+                // Nouveau service
+                AlertUtils.showInfo("Création de service", 
+                    "La création de service nécessite une implémentation en base de données.\n" +
+                    "Fonctionnalité en cours de développement.");
+            } else {
+                // Mise à jour
+                selectedService.setServiceCode(tfServiceCode.getText().trim());
+                selectedService.setServiceName(tfServiceName.getText().trim());
+                selectedService.setNiveau(niveau);
+                
+                if (cbParentService.getValue() != null) {
+                    selectedService.setParentServiceCode(cbParentService.getValue().getServiceCode());
+                }
+                
+                if (tfOrdreAffichage.getText() != null && !tfOrdreAffichage.getText().trim().isEmpty()) {
+                    selectedService.setOrdreAffichage(Integer.parseInt(tfOrdreAffichage.getText().trim()));
+                }
+                
+                selectedService.setActif(chkActif.isSelected());
+                
+                AlertUtils.showInfo("Service sauvegardé", 
+                    "La sauvegarde en base de données nécessite une implémentation.\n" +
+                    "Fonctionnalité en cours de développement.");
+                
+                loadHierarchy();
+                setFieldsEditable(false);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la sauvegarde: " + e.getMessage());
+            e.printStackTrace();
+            AlertUtils.showError("Erreur", "Erreur lors de la sauvegarde: " + e.getMessage());
+        }
+    }
+    
+    @FXML
+    private void handleDeleteService() {
         if (selectedService == null) {
             AlertUtils.showWarning("Aucun service sélectionné");
             return;
@@ -444,28 +504,56 @@ public class AdminHierarchyController implements Initializable {
         );
         
         if (confirm) {
-            // Supprimer de la base de données
-            // À implémenter
-            AlertUtils.showInfo("Service supprimé avec succès");
+            AlertUtils.showInfo("Suppression de service", 
+                "La suppression en base de données nécessite une implémentation.\n" +
+                "Fonctionnalité en cours de développement.");
             loadHierarchy();
         }
     }
     
     /**
-     * Active le mode édition
+     * Applique les filtres
      */
-    @FXML
-    private void handleModifier() {
-        setFieldsEditable(true);
-        isEditing = true;
-    }
-    
-    /**
-     * Actualise la hiérarchie
-     */
-    @FXML
-    private void handleActualiser() {
-        loadHierarchy();
-        updateStatistics();
+    private void applyFilters() {
+        if (servicesTable == null) return;
+        
+        List<ServiceHierarchy> allServices = workflowService.getAllServices();
+        List<ServiceHierarchy> filtered = new ArrayList<>();
+        
+        String searchText = tfSearch != null ? tfSearch.getText().toLowerCase() : "";
+        String niveauFilter = cbFilterNiveau != null ? cbFilterNiveau.getValue() : "Tous les niveaux";
+        boolean onlyActifs = chkFilterActifs != null && chkFilterActifs.isSelected();
+        
+        for (ServiceHierarchy service : allServices) {
+            boolean matches = true;
+            
+            // Filtre recherche
+            if (!searchText.isEmpty()) {
+                if (!service.getServiceCode().toLowerCase().contains(searchText) &&
+                    !service.getServiceName().toLowerCase().contains(searchText)) {
+                    matches = false;
+                }
+            }
+            
+            // Filtre niveau
+            if (niveauFilter != null && !niveauFilter.equals("Tous les niveaux")) {
+                int niveau = Integer.parseInt(niveauFilter.replace("Niveau ", ""));
+                if (service.getNiveau() != niveau) {
+                    matches = false;
+                }
+            }
+            
+            // Filtre actifs uniquement
+            if (onlyActifs && !service.isActif()) {
+                matches = false;
+            }
+            
+            if (matches) {
+                filtered.add(service);
+            }
+        }
+        
+        servicesData.clear();
+        servicesData.addAll(filtered);
     }
 }

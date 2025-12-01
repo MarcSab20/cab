@@ -7,7 +7,8 @@ public enum PrioriteCourrier {
     BASSE("Basse", 1, "🔵", "#3498db"),
     NORMALE("Normale", 2, "🟢", "#27ae60"),
     HAUTE("Haute", 3, "🟠", "#e67e22"),
-    URGENTE("Urgente", 4, "🔴", "#e74c3c");
+    URGENTE("Urgente", 4, "🔴", "#e74c3c"),
+    TRES_URGENTE("Très urgente", 5, "🔴", "#e74c3c");
     
     private final String libelle;
     private final int niveau;
