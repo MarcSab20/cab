@@ -9,7 +9,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
-import javafx.scene.Node;
 import application.models.User;
 import application.services.AuthenticationService;
 import application.utils.SessionManager;
@@ -22,7 +21,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ResourceBundle;
 
 /**
- * Contrôleur principal de l'application
+ * Contrôleur principal de l'application - VERSION INTÉGRÉE avec Workflow et Admin Hiérarchie
  */
 public class MainController implements Initializable {
     
@@ -34,13 +33,11 @@ public class MainController implements Initializable {
     @FXML private Label userRoleLabel;
     @FXML private Label currentTimeLabel;
     @FXML private Label statusLabel;
-    @FXML private ToggleGroup vueToggle;
-    @FXML private ToggleGroup toggleAffichage;
-    @FXML private ToggleGroup toggleTheme;
     
     // Boutons de navigation
     @FXML private Button btnAccueil;
     @FXML private Button btnDashboard;
+    @FXML private Button btnWorkflowDashboard;
     @FXML private Button btnCourrier;
     @FXML private Button btnDocuments;
     @FXML private Button btnReunions;
@@ -48,6 +45,7 @@ public class MainController implements Initializable {
     @FXML private Button btnRecherche;
     @FXML private Button btnParametres;
     @FXML private Button btnAdmin;
+    @FXML private Button btnAdminHierarchy;
     @FXML private Button btnDeconnexion;
     
     // Services et données
@@ -136,6 +134,10 @@ public class MainController implements Initializable {
                 btnDashboard.setOnAction(e -> loadView("dashboard"));
             }
             
+            if (btnWorkflowDashboard != null) {
+                btnWorkflowDashboard.setOnAction(e -> loadView("dashboard")); // Utilise le même dashboard
+            }
+            
             if (btnCourrier != null) {
                 btnCourrier.setOnAction(e -> loadView("courrier"));
             }
@@ -164,6 +166,10 @@ public class MainController implements Initializable {
                 btnAdmin.setOnAction(e -> loadView("admin"));
             }
             
+            if (btnAdminHierarchy != null) {
+                btnAdminHierarchy.setOnAction(e -> loadView("admin_hierarchy"));
+            }
+            
             if (btnDeconnexion != null) {
                 btnDeconnexion.setOnAction(e -> handleDeconnexion());
             }
@@ -182,20 +188,35 @@ public class MainController implements Initializable {
     private void setupPermissions() {
         try {
             String roleName = currentUser.getRole().getNom().toLowerCase();
+            int niveauAutorite = currentUser.getNiveauAutorite();
             
             // Masquer les fonctions d'administration pour les non-administrateurs
+            boolean isAdmin = roleName.contains("admin") || roleName.contains("administrateur");
+            boolean isNiveauZero = niveauAutorite == 0;
+            
             if (btnAdmin != null) {
-                boolean isAdmin = roleName.contains("admin") || roleName.contains("administrateur");
-                btnAdmin.setVisible(isAdmin);
-                btnAdmin.setManaged(isAdmin);
+                btnAdmin.setVisible(isAdmin || isNiveauZero);
+                btnAdmin.setManaged(isAdmin || isNiveauZero);
+            }
+            
+            // La hiérarchie est accessible uniquement aux utilisateurs de niveau 0
+            if (btnAdminHierarchy != null) {
+                btnAdminHierarchy.setVisible(isNiveauZero);
+                btnAdminHierarchy.setManaged(isNiveauZero);
                 
-                if (!isAdmin) {
-                    System.out.println("Fonctions d'administration masquées pour l'utilisateur: " + currentUser.getNomComplet());
+                if (!isNiveauZero) {
+                    System.out.println("Fonctions d'administration de hiérarchie masquées pour l'utilisateur: " + 
+                                     currentUser.getNomComplet() + " (niveau " + niveauAutorite + ")");
                 }
             }
             
-            // Autres restrictions selon les permissions...
-            // TODO: Implémenter la logique de permissions détaillée
+            // Le workflow dashboard est visible pour tous
+            if (btnWorkflowDashboard != null) {
+                boolean hasService = currentUser.getServiceCode() != null && !currentUser.getServiceCode().isEmpty();
+                if (!hasService) {
+                    System.out.println("ATTENTION: L'utilisateur n'a pas de service assigné");
+                }
+            }
             
         } catch (Exception e) {
             System.err.println("Erreur lors de la configuration des permissions: " + e.getMessage());
@@ -255,8 +276,8 @@ public class MainController implements Initializable {
     private void updateNavigationButtons(String activeView) {
         try {
             // Réinitialiser tous les boutons
-            Button[] buttons = {btnAccueil, btnDashboard, btnCourrier, btnDocuments, 
-                              btnReunions, btnMessages, btnRecherche, btnParametres, btnAdmin};
+            Button[] buttons = {btnAccueil, btnDashboard, btnWorkflowDashboard, btnCourrier, btnDocuments, 
+                              btnReunions, btnMessages, btnRecherche, btnParametres, btnAdmin, btnAdminHierarchy};
             
             for (Button btn : buttons) {
                 if (btn != null) {
@@ -284,6 +305,7 @@ public class MainController implements Initializable {
         switch (viewName.toLowerCase()) {
             case "accueil": return btnAccueil;
             case "dashboard": return btnDashboard;
+            case "workflow_dashboard": return btnWorkflowDashboard;
             case "courrier": return btnCourrier;
             case "documents": return btnDocuments;
             case "reunions": return btnReunions;
@@ -291,6 +313,7 @@ public class MainController implements Initializable {
             case "recherche": return btnRecherche;
             case "parametres": return btnParametres;
             case "admin": return btnAdmin;
+            case "admin_hierarchy": return btnAdminHierarchy;
             default: return null;
         }
     }
@@ -313,9 +336,6 @@ public class MainController implements Initializable {
                 // Nettoyage de la session
                 SessionManager.getInstance().clearSession();
                 
-                // Log de déconnexion
-                // authService.logDisconnection(currentUser.getCode());
-                
                 // Retour à l'écran de connexion
                 returnToLogin();
                 
@@ -329,229 +349,6 @@ public class MainController implements Initializable {
         }
     }
     
-    @FXML
-    private void handleOpenDashboard() {
-        try {
-            // Charger la vue FXML
-            FXMLLoader loader = new FXMLLoader(
-                getClass().getResource("/application/views/dashboard.fxml")
-            );
-            Parent root = loader.load();
-            
-            // Créer une nouvelle fenêtre
-            Stage stage = new Stage();
-            stage.setTitle("📊 Tableau de bord - Workflow des Courriers");
-            
-            // Créer la scène avec une taille adaptée
-            Scene scene = new Scene(root, 1400, 900);
-            
-            // Ajouter le fichier CSS
-            scene.getStylesheets().add(
-                getClass().getResource("/application/resources/css/workflow-dashboard.css")
-                    .toExternalForm()
-            );
-            
-            stage.setScene(scene);
-            stage.setMaximized(false); // Ou true pour maximiser automatiquement
-            stage.show();
-            
-            System.out.println("Dashboard ouvert avec succès");
-            
-        } catch (Exception e) {
-            System.err.println("Erreur lors de l'ouverture du tableau de bord: " + e.getMessage());
-            e.printStackTrace();
-            AlertUtils.showError(
-                "Erreur d'ouverture",
-                "Impossible d'ouvrir le tableau de bord.\n" +
-                "Erreur: " + e.getMessage()
-            );
-        }
-    }
-    
-    /**
-     * Ouvre l'interface d'administration de la hiérarchie
-     * Accessible uniquement aux utilisateurs de niveau 0 (CEMAA, CSP)
-     * 
-     * À ajouter dans votre MainController.java
-     */
-    @FXML
-    private void handleOpenAdminHierarchy() {
-        try {
-            // Vérifier les permissions de l'utilisateur
-            User currentUser = SessionManager.getInstance().getCurrentUser();
-            
-            if (currentUser == null) {
-                AlertUtils.showWarning(
-                    "Session invalide",
-                    "Aucun utilisateur connecté. Veuillez vous reconnecter."
-                );
-                return;
-            }
-            
-            // Seuls les utilisateurs de niveau 0 peuvent administrer
-            if (currentUser.getNiveauAutorite() > 0) {
-                AlertUtils.showWarning(
-                    "🔒 Accès refusé",
-                    "Vous n'avez pas les permissions nécessaires.\n\n" +
-                    "Seuls les utilisateurs de niveau 0 (CEMAA, CSP) " +
-                    "peuvent administrer la hiérarchie des services.\n\n" +
-                    "Votre niveau: " + currentUser.getNiveauAutorite() + "\n" +
-                    "Service: " + (currentUser.getServiceCode() != null ? 
-                                  currentUser.getServiceCode() : "Non défini")
-                );
-                return;
-            }
-            
-            // Charger la vue FXML
-            FXMLLoader loader = new FXMLLoader(
-                getClass().getResource("/application/views/admin_hierarchy.fxml")
-            );
-            Parent root = loader.load();
-            
-            // Créer une nouvelle fenêtre
-            Stage stage = new Stage();
-            stage.setTitle("⚙️ Administration - Hiérarchie des Services");
-            
-            // Créer la scène avec une taille adaptée
-            Scene scene = new Scene(root, 1600, 900);
-            
-            // Ajouter le fichier CSS
-            scene.getStylesheets().add(
-                getClass().getResource("/application/resources/css/workflow-dashboard.css")
-                    .toExternalForm()
-            );
-            
-            stage.setScene(scene);
-            stage.setMaximized(false);
-            stage.show();
-            
-            System.out.println("Interface d'administration ouverte avec succès");
-            
-        } catch (Exception e) {
-            System.err.println("Erreur lors de l'ouverture de l'administration: " + e.getMessage());
-            e.printStackTrace();
-            AlertUtils.showError(
-                "Erreur d'ouverture",
-                "Impossible d'ouvrir l'interface d'administration.\n" +
-                "Erreur: " + e.getMessage()
-            );
-        }
-    }
-    
-    /**
-     * Ouvre rapidement le workflow pour un courrier spécifique
-     * Utile pour ajouter un bouton "Voir workflow" dans la liste des courriers
-     * 
-     * À ajouter dans votre CourrierController.java ou similaire
-     */
-    @FXML
-    private void handleVoirWorkflowCourrier(int courrierId) {
-        try {
-            // Charger le dashboard
-            FXMLLoader loader = new FXMLLoader(
-                getClass().getResource("/application/views/dashboard.fxml")
-            );
-            Parent root = loader.load();
-            
-            // Récupérer le contrôleur
-            DashboardController controller = loader.getController();
-            
-            // Créer la fenêtre
-            Stage stage = new Stage();
-            stage.setTitle("📊 Workflow - Courrier #" + courrierId);
-            
-            Scene scene = new Scene(root, 1400, 900);
-            scene.getStylesheets().add(
-                getClass().getResource("/application/resources/css/workflow-dashboard.css")
-                    .toExternalForm()
-            );
-            
-            stage.setScene(scene);
-            stage.show();
-            
-            // TODO: Faire défiler jusqu'au courrier spécifique
-            // controller.scrollToCourrier(courrierId);
-            
-        } catch (Exception e) {
-            System.err.println("Erreur lors de l'ouverture du workflow: " + e.getMessage());
-            e.printStackTrace();
-            AlertUtils.showError("Erreur lors de l'ouverture du workflow du courrier");
-        }
-    }
-    
-    /**
-     * Démarre un workflow pour un courrier
-     * À appeler lors de l'enregistrement d'un nouveau courrier
-     * 
-     * À ajouter dans votre méthode de création de courrier
-     */
-    private void demarrerWorkflowPourCourrier(application.models.Courrier courrier) {
-        try {
-            application.services.WorkflowService workflowService = 
-                application.services.WorkflowService.getInstance();
-            
-            // Démarrer le workflow au Service Courrier
-            boolean success = workflowService.startWorkflow(courrier, "SERVICE_COURRIER");
-            
-            if (success) {
-                System.out.println("Workflow démarré avec succès pour le courrier #" + 
-                                 courrier.getNumeroCourrier());
-                
-                // Option: Afficher une notification
-                AlertUtils.showInfo(
-                    "Workflow démarré",
-                    "Le courrier a été enregistré et le workflow a démarré.\n" +
-                    "Numéro: " + courrier.getNumeroCourrier()
-                );
-            } else {
-                System.err.println("Échec du démarrage du workflow");
-                AlertUtils.showWarning(
-                    "Attention",
-                    "Le courrier a été créé mais le workflow n'a pas pu démarrer.\n" +
-                    "Veuillez le démarrer manuellement."
-                );
-            }
-            
-        } catch (Exception e) {
-            System.err.println("Erreur lors du démarrage du workflow: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-    
-    /**
-     * Vérifie si l'utilisateur peut accéder au workflow
-     * Utile pour activer/désactiver des boutons dans l'interface
-     * 
-     * @return true si l'utilisateur a accès au workflow
-     */
-    private boolean canAccessWorkflow() {
-        User currentUser = SessionManager.getInstance().getCurrentUser();
-        
-        if (currentUser == null) {
-            return false;
-        }
-        
-        // Vérifier que l'utilisateur a un service assigné
-        String serviceCode = currentUser.getServiceCode();
-        
-        return serviceCode != null && !serviceCode.isEmpty();
-    }
-    
-    /**
-     * Vérifie si l'utilisateur peut administrer la hiérarchie
-     * 
-     * @return true si l'utilisateur est de niveau 0
-     */
-    private boolean canAdministerHierarchy() {
-        User currentUser = SessionManager.getInstance().getCurrentUser();
-        
-        if (currentUser == null) {
-            return false;
-        }
-        
-        return currentUser.getNiveauAutorite() == 0;
-    }
-    
     /**
      * Retourne à l'écran de connexion
      */
@@ -560,7 +357,7 @@ public class MainController implements Initializable {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/application/views/login.fxml"));
             Parent loginRoot = loader.load();
             
-            javafx.scene.Scene loginScene = new javafx.scene.Scene(loginRoot);
+            Scene loginScene = new Scene(loginRoot);
             
             // Chargement du CSS
             URL cssUrl = getClass().getResource("/application/styles/application.css");
@@ -568,7 +365,7 @@ public class MainController implements Initializable {
                 loginScene.getStylesheets().add(cssUrl.toExternalForm());
             }
             
-            javafx.stage.Stage currentStage = (javafx.stage.Stage) mainContainer.getScene().getWindow();
+            Stage currentStage = (Stage) mainContainer.getScene().getWindow();
             currentStage.setScene(loginScene);
             currentStage.centerOnScreen();
             
