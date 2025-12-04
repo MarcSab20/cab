@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" 
+            fx:controller="application.controllers.AccueilController"
+            style="-fx-background-color: #ecf0f1;">
+   
+   <center>
+      <VBox alignment="CENTER" spacing="30.0" style="-fx-padding: 50;">
+         
+         <!-- Message de bienvenue -->
+         <VBox alignment="CENTER" spacing="15.0">
+            <Label style="-fx-font-size: 48px;" text="📋" />
+            <Label style="-fx-font-size: 28px; -fx-text-fill: #2c3e50; -fx-font-weight: bold;" 
+                   text="Système de Gestion Documentaire" />
+            <Label fx:id="labelBienvenue" style="-fx-font-size: 16px; -fx-text-fill: #7f8c8d;" 
+                   text="Bienvenue dans votre espace de travail" />
+         </VBox>
+         
+         <!-- Statistiques rapides -->
+         <HBox alignment="CENTER" spacing="20.0" style="-fx-padding: 20 0;">
+            
+            <VBox alignment="CENTER" spacing="10.0" styleClass="stat-card"
+                  style="-fx-background-color: white; -fx-padding: 25; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-min-width: 180;">
+               <Label style="-fx-font-size: 36px;" text="📧" />
+               <Label fx:id="statCourriersTotal" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #3498db;" text="0" />
+               <Label style="-fx-text-fill: #7f8c8d;" text="Courriers actifs" />
+            </VBox>
+            
+            <VBox alignment="CENTER" spacing="10.0" styleClass="stat-card"
+                  style="-fx-background-color: white; -fx-padding: 25; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-min-width: 180;">
+               <Label style="-fx-font-size: 36px;" text="⏳" />
+               <Label fx:id="statCourriersEnCours" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #f39c12;" text="0" />
+               <Label style="-fx-text-fill: #7f8c8d;" text="En cours" />
+            </VBox>
+            
+            <VBox alignment="CENTER" spacing="10.0" styleClass="stat-card"
+                  style="-fx-background-color: white; -fx-padding: 25; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-min-width: 180;">
+               <Label style="-fx-font-size: 36px;" text="📄" />
+               <Label fx:id="statDocuments" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #27ae60;" text="0" />
+               <Label style="-fx-text-fill: #7f8c8d;" text="Documents" />
+            </VBox>
+            
+            <VBox alignment="CENTER" spacing="10.0" styleClass="stat-card"
+                  style="-fx-background-color: white; -fx-padding: 25; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-min-width: 180;">
+               <Label style="-fx-font-size: 36px;" text="💬" />
+               <Label fx:id="statMessages" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #e74c3c;" text="0" />
+               <Label style="-fx-text-fill: #7f8c8d;" text="Messages" />
+            </VBox>
+         </HBox>
+         
+         <!-- Actions rapides -->
+         <VBox alignment="CENTER" spacing="15.0">
+            <Label style="-fx-font-size: 18px; -fx-text-fill: #2c3e50; -fx-font-weight: bold;" 
+                   text="Actions rapides" />
+            
+            <HBox alignment="CENTER" spacing="20.0">
+               <VBox alignment="CENTER" spacing="10.0" styleClass="card" 
+                     style="-fx-background-color: white; -fx-cursor: hand; -fx-padding: 20; -fx-min-width: 150; -fx-background-radius: 8; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);"
+                     onMouseClicked="#handleNouveauCourrier">
+                  <Label style="-fx-font-size: 32px;" text="📧" />
+                  <Label style="-fx-font-weight: bold;" text="Nouveau courrier" />
+                  <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Créer un courrier" />
+               </VBox>
+               
+               <VBox alignment="CENTER" spacing="10.0" styleClass="card" 
+                     style="-fx-background-color: white; -fx-cursor: hand; -fx-padding: 20; -fx-min-width: 150; -fx-background-radius: 8; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);"
+                     onMouseClicked="#handleTableauBord">
+                  <Label style="-fx-font-size: 32px;" text="📊" />
+                  <Label style="-fx-font-weight: bold;" text="Tableau de bord" />
+                  <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Voir les statistiques" />
+               </VBox>
+               
+               <VBox alignment="CENTER" spacing="10.0" styleClass="card" 
+                     style="-fx-background-color: white; -fx-cursor: hand; -fx-padding: 20; -fx-min-width: 150; -fx-background-radius: 8; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);"
+                     onMouseClicked="#handleGestionCourriers">
+                  <Label style="-fx-font-size: 32px;" text="📁" />
+                  <Label style="-fx-font-weight: bold;" text="Mes courriers" />
+                  <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Gérer les courriers" />
+               </VBox>
+               
+               <VBox alignment="CENTER" spacing="10.0" styleClass="card" 
+                     style="-fx-background-color: white; -fx-cursor: hand; -fx-padding: 20; -fx-min-width: 150; -fx-background-radius: 8; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);"
+                     onMouseClicked="#handleRecherche">
+                  <Label style="-fx-font-size: 32px;" text="🔍" />
+                  <Label style="-fx-font-weight: bold;" text="Rechercher" />
+                  <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Trouver un document" />
+               </VBox>
+            </HBox>
+         </VBox>
+         
+         <!-- Activités récentes -->
+         <VBox spacing="15.0" style="-fx-padding: 20; -fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-min-width: 600;">
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
+               <Label style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" 
+                      text="📋 Activités récentes" />
+               <Region HBox.hgrow="ALWAYS" />
+               <Hyperlink text="Voir tout" />
+            </HBox>
+            
+            <ScrollPane fitToWidth="true" prefHeight="150" style="-fx-background-color: transparent;">
+               <VBox fx:id="activitesContainer" spacing="10.0">
+                  <!-- Les activités seront chargées dynamiquement -->
+               </VBox>
+            </ScrollPane>
+         </VBox>
+         
+         <!-- Informations système -->
+         <VBox alignment="CENTER" spacing="8.0" 
+               style="-fx-padding: 20; -fx-background-color: rgba(52, 152, 219, 0.1); -fx-background-radius: 8; -fx-min-width: 500;">
+            <Label style="-fx-text-fill: #3498db; -fx-font-weight: bold;" text="ℹ️ Information" />
+            <Label style="-fx-text-fill: #2c3e50; -fx-text-alignment: center;" 
+                   text="Utilisez le menu de gauche pour accéder aux différentes fonctionnalités." 
+                   wrapText="true" />
+            <Label fx:id="labelInfoSysteme" style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" 
+                   text="Système opérationnel" />
+         </VBox>
+         
+      </VBox>
+   </center>
+   
+</BorderPane>

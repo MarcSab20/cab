@@ -7,8 +7,8 @@
 <?import javafx.collections.FXCollections?>
 <?import java.lang.String?>
 
-
-<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.controllers.CourrierController">
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" 
+            fx:controller="application.controllers.CourrierController">
    
    <!-- Barre d'outils supérieure -->
    <top>
@@ -16,43 +16,45 @@
          
          <!-- En-tête -->
          <HBox alignment="CENTER_LEFT" spacing="20.0">
-            <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="Gestion du Courrier">
+            <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="📧 Gestion du Courrier">
                <font>
                   <Font size="24.0" />
                </font>
             </Label>
             <Region HBox.hgrow="ALWAYS" />
-            <Button styleClass="button-success" text="+ Nouveau courrier" />
-            <Button styleClass="button-primary" text="📧 Courrier entrant" />
-            <Button styleClass="button-secondary" text="📤 Courrier sortant" />
+            <Button onAction="#handleNouveauCourrier" styleClass="button-success" text="+ Nouveau courrier" />
+            <Button onAction="#handleCourrierEntrant" styleClass="button-primary" text="📥 Courrier entrant" />
+            <Button onAction="#handleCourrierSortant" styleClass="button-secondary" text="📤 Courrier sortant" />
+            <Button onAction="#handleActualiser" styleClass="button-info" text="🔄 Actualiser" />
          </HBox>
          
          <!-- Filtres et recherche -->
          <HBox alignment="CENTER_LEFT" spacing="15.0">
             <Label text="Filtrer par:" />
             <ComboBox fx:id="filtreStatut" prefWidth="120.0" promptText="Statut">
-			    <items>
-			        <FXCollections fx:factory="observableArrayList">
-			            <String fx:value="Tous" />
-			            <String fx:value="En attente" />
-			            <String fx:value="En cours" />
-			            <String fx:value="Traité" />
-			            <String fx:value="Archivé" />
-			        </FXCollections>
-			    </items>
-			</ComboBox>
+                <items>
+                    <FXCollections fx:factory="observableArrayList">
+                        <String fx:value="Tous" />
+                        <String fx:value="Nouveau" />
+                        <String fx:value="En attente" />
+                        <String fx:value="En cours" />
+                        <String fx:value="Traité" />
+                        <String fx:value="Archivé" />
+                    </FXCollections>
+                </items>
+            </ComboBox>
             
             <ComboBox fx:id="filtrePriorite" prefWidth="120.0" promptText="Priorité">
-			    <items>
-			        <FXCollections fx:factory="observableArrayList">
-			            <String fx:value="Toutes" />
-			            <String fx:value="Urgente" />
-			            <String fx:value="Haute" />
-			            <String fx:value="Normale" />
-			            <String fx:value="Basse" />
-			        </FXCollections>
-			    </items>
-			</ComboBox>
+                <items>
+                    <FXCollections fx:factory="observableArrayList">
+                        <String fx:value="Toutes" />
+                        <String fx:value="Urgente" />
+                        <String fx:value="Haute" />
+                        <String fx:value="Normale" />
+                        <String fx:value="Basse" />
+                    </FXCollections>
+                </items>
+            </ComboBox>
             
             <DatePicker fx:id="dateDebut" promptText="Date début" />
             <DatePicker fx:id="dateFin" promptText="Date fin" />
@@ -61,7 +63,6 @@
             
             <TextField fx:id="champRecherche" prefWidth="250.0" promptText="🔍 Rechercher (objet, expéditeur...)" />
             <Button onAction="#handleRecherche" styleClass="button-primary" text="Rechercher" />
-            <Button styleClass="button-secondary" text="Réinitialiser" />
          </HBox>
          
       </VBox>
@@ -77,22 +78,20 @@
             <!-- En-tête du tableau -->
             <HBox alignment="CENTER_LEFT" spacing="10.0">
                <Label style="-fx-font-weight: bold;" text="Liste des courriers" />
-               <Label fx:id="nombreCourriers" style="-fx-text-fill: #7f8c8d;" text="(125 courriers)" />
+               <Label fx:id="nombreCourriers" style="-fx-text-fill: #7f8c8d;" text="(0 courriers)" />
                <Region HBox.hgrow="ALWAYS" />
-               <Button text="📊 Exporter" />
-               <Button text="🔄 Actualiser" />
             </HBox>
             
             <!-- Tableau des courriers -->
             <TableView fx:id="tableauCourriers" VBox.vgrow="ALWAYS">
                <columns>
-                  <TableColumn fx:id="colonneNumero" prefWidth="80.0" text="N°" />
-                  <TableColumn fx:id="colonneType" prefWidth="60.0" text="Type" />
-                  <TableColumn fx:id="colonneObjet" prefWidth="200.0" text="Objet" />
+                  <TableColumn fx:id="colonneNumero" prefWidth="100.0" text="N° Courrier" />
+                  <TableColumn fx:id="colonneType" prefWidth="80.0" text="Type" />
+                  <TableColumn fx:id="colonneObjet" prefWidth="220.0" text="Objet" />
                   <TableColumn fx:id="colonneExpediteur" prefWidth="150.0" text="Expéditeur" />
-                  <TableColumn fx:id="colonneDate" prefWidth="100.0" text="Date" />
-                  <TableColumn fx:id="colonnePriorite" prefWidth="80.0" text="Priorité" />
-                  <TableColumn fx:id="colonneStatut" prefWidth="80.0" text="Statut" />
+                  <TableColumn fx:id="colonneDate" prefWidth="120.0" text="Date" />
+                  <TableColumn fx:id="colonnePriorite" prefWidth="100.0" text="Priorité" />
+                  <TableColumn fx:id="colonneStatut" prefWidth="100.0" text="Statut" />
                </columns>
                
                <!-- Placeholder quand vide -->
@@ -100,7 +99,8 @@
                   <VBox alignment="CENTER" spacing="10.0">
                      <Label style="-fx-font-size: 48px; -fx-text-fill: #bdc3c7;" text="📧" />
                      <Label style="-fx-text-fill: #7f8c8d;" text="Aucun courrier trouvé" />
-                     <Label style="-fx-text-fill: #95a5a6; -fx-font-size: 12px;" text="Modifiez vos critères de recherche ou ajoutez un nouveau courrier" />
+                     <Label style="-fx-text-fill: #95a5a6; -fx-font-size: 12px;" 
+                            text="Modifiez vos critères de recherche ou ajoutez un nouveau courrier" />
                   </VBox>
                </placeholder>
             </TableView>
@@ -114,8 +114,8 @@
             <HBox alignment="CENTER_LEFT" spacing="10.0">
                <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Détails du courrier" />
                <Region HBox.hgrow="ALWAYS" />
-               <Button fx:id="btnModifier" styleClass="button-primary" text="✏️ Modifier" />
-               <Button fx:id="btnSupprimer" styleClass="button-danger" text="🗑️ Supprimer" />
+               <Button fx:id="btnModifier" styleClass="button-primary" text="✏️" />
+               <Button fx:id="btnSupprimer" styleClass="button-danger" text="🗑️" />
             </HBox>
             
             <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
@@ -132,70 +132,38 @@
                         </columnConstraints>
                         
                         <Label text="Numéro:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                        <Label fx:id="labelNumero" style="-fx-font-weight: bold;" text="CRR-2025-001" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        <Label fx:id="labelNumero" style="-fx-font-weight: bold;" text="--" 
+                               GridPane.columnIndex="1" GridPane.rowIndex="0" />
                         
                         <Label text="Type:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                        <Label fx:id="labelType" text="Entrant" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <Label fx:id="labelType" text="--" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                         
                         <Label text="Objet:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                        <Label fx:id="labelObjet" text="Demande de devis" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        <Label fx:id="labelObjet" text="--" wrapText="true" 
+                               GridPane.columnIndex="1" GridPane.rowIndex="2" />
                         
                         <Label text="Expéditeur:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-                        <Label fx:id="labelExpediteur" text="Société ABC" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                        <Label fx:id="labelExpediteur" text="--" 
+                               GridPane.columnIndex="1" GridPane.rowIndex="3" />
                         
                         <Label text="Date:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
-                        <Label fx:id="labelDate" text="04/11/2025 14:30" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                        <Label fx:id="labelDate" text="--" GridPane.columnIndex="1" GridPane.rowIndex="4" />
                         
                         <Label text="Priorité:" GridPane.columnIndex="0" GridPane.rowIndex="5" />
-                        <Label fx:id="labelPriorite" style="-fx-text-fill: #e74c3c; -fx-font-weight: bold;" text="🔴 Haute" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+                        <Label fx:id="labelPriorite" style="-fx-font-weight: bold;" text="--" 
+                               GridPane.columnIndex="1" GridPane.rowIndex="5" />
                         
                         <Label text="Statut:" GridPane.columnIndex="0" GridPane.rowIndex="6" />
-                        <Label fx:id="labelStatut" style="-fx-text-fill: #f39c12; -fx-font-weight: bold;" text="🟡 En cours" GridPane.columnIndex="1" GridPane.rowIndex="6" />
-                     </GridPane>
-                  </VBox>
-                  
-                  <!-- Traitement -->
-                  <VBox spacing="10.0" styleClass="card">
-                     <Label style="-fx-font-weight: bold;" text="Traitement" />
-                     
-                     <GridPane hgap="10.0" vgap="8.0">
-                        <columnConstraints>
-                           <ColumnConstraints hgrow="NEVER" minWidth="100.0" />
-                           <ColumnConstraints hgrow="ALWAYS" />
-                        </columnConstraints>
-                        
-                        <Label text="Traité par:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                        <Label fx:id="labelTraitePar" text="Jean Dupont" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-                        
-                        <Label text="Date début:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                        <Label fx:id="labelDateDebut" text="04/11/2025 15:00" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                        
-                        <Label text="Échéance:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                        <Label fx:id="labelEcheance" style="-fx-text-fill: #e74c3c;" text="06/11/2025" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        <Label fx:id="labelStatut" style="-fx-font-weight: bold;" text="--" 
+                               GridPane.columnIndex="1" GridPane.rowIndex="6" />
                      </GridPane>
                   </VBox>
                   
                   <!-- Notes et commentaires -->
                   <VBox spacing="10.0" styleClass="card">
                      <Label style="-fx-font-weight: bold;" text="Notes et commentaires" />
-                     <TextArea fx:id="textAreaNotes" prefRowCount="4" promptText="Ajouter des notes..." wrapText="true" />
-                     <HBox alignment="CENTER_RIGHT" spacing="10.0">
-                        <Button styleClass="button-secondary" text="Annuler" />
-                        <Button styleClass="button-primary" text="Sauvegarder" />
-                     </HBox>
-                  </VBox>
-                  
-                  <!-- Pièces jointes -->
-                  <VBox spacing="10.0" styleClass="card">
-                     <HBox alignment="CENTER_LEFT" spacing="10.0">
-                        <Label style="-fx-font-weight: bold;" text="Pièces jointes" />
-                        <Region HBox.hgrow="ALWAYS" />
-                        <Button styleClass="button-info" text="+ Ajouter" />
-                     </HBox>
-                     
-                     <VBox fx:id="listePiecesJointes" spacing="5.0">
-                        <!-- Les pièces jointes seront ajoutées dynamiquement -->
-                     </VBox>
+                     <TextArea fx:id="textAreaNotes" prefRowCount="4" editable="false"
+                              promptText="Aucune note" wrapText="true" />
                   </VBox>
                   
                </VBox>
@@ -205,11 +173,14 @@
             <VBox spacing="8.0">
                <Label style="-fx-font-weight: bold;" text="Actions rapides" />
                <HBox spacing="8.0">
-                  <Button fx:id="btnMarquerTraite" styleClass="button-success" text="✅ Marquer traité" />
+                  <Button fx:id="btnMarquerTraite" styleClass="button-success" text="✅ Traiter" />
+                  <Button fx:id="btnCoter" styleClass="button-warning" text="📌 Coter" />
+               </HBox>
+               <HBox spacing="8.0">
+                  <Button fx:id="btnTransferer" styleClass="button-info" text="➡️ Transférer" />
                   <Button fx:id="btnArchiver" styleClass="button-secondary" text="📁 Archiver" />
                </HBox>
                <HBox spacing="8.0">
-                  <Button fx:id="btnTransferer" styleClass="button-info" text="↗️ Transférer" />
                   <Button fx:id="btnImprimer" styleClass="button-secondary" text="🖨️ Imprimer" />
                </HBox>
             </VBox>
