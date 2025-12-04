@@ -5,109 +5,91 @@
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.text.Font?>
 
-<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.controllers.LoginController">
-   
-   <!-- Arrière-plan -->
-   <center>
-      <HBox alignment="CENTER" style="-fx-background-color: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-         
-         <!-- Conteneur principal de login -->
-         <VBox alignment="CENTER" maxHeight="500.0" maxWidth="400.0" spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 20, 0, 0, 5);">
+<AnchorPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" 
+            fx:controller="application.controllers.LoginController"
+            prefHeight="720" prefWidth="1280" 
+            style="-fx-background-color: #F5F1E8;">
+
+    <!-- Container principal -->
+    <HBox alignment="CENTER" spacing="0" AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0" 
+          AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0">
+        
+        <!-- Partie gauche - Illustration militaire -->
+        <VBox alignment="CENTER" prefWidth="640" 
+              style="-fx-background-color: #F5F1E8;">
+            <ImageView fitHeight="900" fitWidth="500" preserveRatio="true">
+                <image>
+                    <Image url="@../images/militaire.png" />
+                </image>
+            </ImageView>
+        </VBox>
+        
+        <!-- Partie droite - Formulaire de connexion -->
+        <VBox alignment="CENTER" prefWidth="640" spacing="30" 
+              style="-fx-background-color: #F5F1E8;">
             <padding>
-               <Insets bottom="40.0" left="40.0" right="40.0" top="40.0" />
+                <Insets top="60" right="80" bottom="60" left="80"/>
             </padding>
             
-            <!-- En-tête avec logo -->
-            <VBox alignment="CENTER" spacing="10.0">
-               <ImageView fitHeight="60.0" fitWidth="60.0" preserveRatio="true">
-                  <image>
-                     <Image url="@../images/logo.png" />
-                  </image>
-               </ImageView>
-               <Label style="-fx-text-fill: #333333; -fx-font-weight: bold;" text="Gestion Documentaire">
-                  <font>
-                     <Font size="24.0" />
-                  </font>
-               </Label>
-               <Label style="-fx-text-fill: #666666;" text="Connectez-vous à votre compte">
-                  <font>
-                     <Font size="14.0" />
-                  </font>
-               </Label>
+            <!-- Logo et en-tête -->
+            <VBox alignment="CENTER" spacing="15">
+                <ImageView fitHeight="250" fitWidth="250" preserveRatio="true">
+                    <image>
+                        <Image url="@../images/logo.png" />
+                    </image>
+                </ImageView>
+                
+                <Label text="GECEMAA" style="-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;"/>
+                
+                <Label text="Bienvenue à GECEMAA" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;"/>
+                
+                <Label text="Système de gestion électronique du courier EMAA" 
+                       style="-fx-font-size: 18px; -fx-text-fill: #7A7A7A;"
+                       wrapText="true" alignment="CENTER" maxWidth="400"/>
             </VBox>
             
             <!-- Formulaire de connexion -->
-            <VBox spacing="15.0">
-               
-               <!-- Champ Code utilisateur -->
-               <VBox spacing="5.0">
-                  <Label style="-fx-text-fill: #333333; -fx-font-weight: bold;" text="Code utilisateur:" />
-                  <TextField fx:id="codeField" promptText="Saisissez votre code" style="-fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-padding: 12;">
-                     <font>
-                        <Font size="14.0" />
-                     </font>
-                  </TextField>
-               </VBox>
-               
-               <!-- Champ Mot de passe -->
-               <VBox spacing="5.0">
-                  <Label style="-fx-text-fill: #333333; -fx-font-weight: bold;" text="Mot de passe:" />
-                  <PasswordField fx:id="passwordField" promptText="Saisissez votre mot de passe" style="-fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-padding: 12;">
-                     <font>
-                        <Font size="14.0" />
-                     </font>
-                  </PasswordField>
-               </VBox>
-               
-               <!-- Sélection du rôle -->
-               <VBox spacing="5.0">
-                  <Label style="-fx-text-fill: #333333; -fx-font-weight: bold;" text="Rôle:" />
-                  <ComboBox fx:id="roleComboBox" maxWidth="1.7976931348623157E308" promptText="Sélectionnez votre rôle" style="-fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
-                     <VBox.margin>
-                        <Insets />
-                     </VBox.margin>
-                  </ComboBox>
-               </VBox>
-               
-               <!-- Messages de statut -->
-               <Label fx:id="statusLabel" style="-fx-text-fill: #d32f2f;" textAlignment="CENTER" wrapText="true">
-                  <font>
-                     <Font size="12.0" />
-                  </font>
-               </Label>
-               
-               <!-- Indicateur de chargement -->
-               <HBox alignment="CENTER">
-                  <ProgressIndicator fx:id="loadingIndicator" maxHeight="30.0" maxWidth="30.0" />
-               </HBox>
-               
-               <!-- Bouton de connexion -->
-               <Button fx:id="loginButton" maxWidth="1.7976931348623157E308" onAction="#handleLogin" style="-fx-background-color: #667eea; -fx-text-fill: white; -fx-background-radius: 8; -fx-font-weight: bold; -fx-padding: 12;" text="Se connecter">
-                  <font>
-                     <Font size="16.0" />
-                  </font>
-               </Button>
-               
-               <!-- Lien mot de passe oublié -->
-               <HBox alignment="CENTER">
-                  <Hyperlink onAction="#handleForgotPassword" style="-fx-text-fill: #667eea;" text="Mot de passe oublié ?" />
-               </HBox>
-               
+            <VBox spacing="20" maxWidth="400">
+                
+                <!-- Champ Code -->
+                <VBox spacing="8">
+                    <Label text="Code" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;"/>
+                    <TextField fx:id="codeField" promptText="Entrez votre code" 
+                               style="-fx-background-color: white; -fx-border-color: #D0D0D0; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 12; -fx-font-size: 14px;"
+                               prefHeight="45"/>
+                </VBox>
+                
+                <!-- Champ Mot de passe -->
+                <VBox spacing="8">
+                    <Label text="Mot de passe" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;"/>
+                    <PasswordField fx:id="passwordField" promptText="••••••••" 
+                                   style="-fx-background-color: white; -fx-border-color: #D0D0D0; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 12; -fx-font-size: 14px;"
+                                   prefHeight="45"/>
+                </VBox>
+                
+                <!-- Champ Rôle -->
+                <VBox spacing="8">
+                    <Label text="Rôle" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;"/>
+                    <ComboBox fx:id="roleComboBox" promptText="Sélectionnez votre rôle" 
+                              style="-fx-background-color: white; -fx-border-color: #D0D0D0; -fx-border-radius: 8; -fx-background-radius: 8; -fx-font-size: 14px;"
+                              prefHeight="45" maxWidth="Infinity"/>
+                </VBox>
+                
+                <!-- Indicateur de chargement et message de statut -->
+                <HBox alignment="CENTER" spacing="10" minHeight="30">
+                    <ProgressIndicator fx:id="loadingIndicator" prefHeight="25" prefWidth="25" visible="false"/>
+                    <Label fx:id="statusLabel" style="-fx-font-size: 13px;" wrapText="true" maxWidth="350"/>
+                </HBox>
+                
+                <!-- Bouton de connexion -->
+                <Button fx:id="loginButton" text="Connexion" onAction="#handleLogin"
+                        style="-fx-background-color: #FF8551; -fx-text-fill: white; -fx-font-size: 18px; -fx-font-weight: bold; -fx-background-radius: 10; -fx-cursor: hand;"
+                        prefHeight="55" maxWidth="Infinity"/>
+                
             </VBox>
             
-         </VBox>
-         
-      </HBox>
-   </center>
-   
-   <!-- Pied de page avec informations -->
-   <bottom>
-      <VBox alignment="CENTER" style="-fx-background-color: rgba(255,255,255,0.1); -fx-padding: 15;">
-         <Label style="-fx-text-fill: white; -fx-font-size: 12px;" text="Système de Gestion Documentaire v1.0" />
-         <Label style="-fx-text-fill: rgba(255,255,255,0.8); -fx-font-size: 10px;" text="© 2025 - Tous droits réservés" />
-      </VBox>
-   </bottom>
-   
-</BorderPane>
+        </VBox>
+    </HBox>
+    
+</AnchorPane>

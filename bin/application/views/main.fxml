@@ -66,7 +66,7 @@
       <HBox>
          
          <!-- Sidebar de navigation -->
-         <VBox fx:id="sidebar" prefWidth="250.0" style="-fx-background-color: #34495e; -fx-padding: 0;">
+         <VBox fx:id="sidebar" minWidth="180" prefWidth="250.0" style="-fx-background-color: #34495e; -fx-padding: 0;">
             
             <!-- Menu de navigation -->
             <VBox spacing="2.0" style="-fx-padding: 20 0;">

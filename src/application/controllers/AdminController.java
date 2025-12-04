@@ -210,9 +210,9 @@ public class AdminController implements Initializable {
         
         // Colonne d'actions avec boutons
         colonneActionsUtilisateur.setCellFactory(param -> new TableCell<>() {
-            private final Button btnModifier = new Button("✏️");
-            private final Button btnSupprimer = new Button("🗑️");
-            private final Button btnSuspendre = new Button("⏸️");
+            private final Button btnModifier = new Button("modifier");
+            private final Button btnSupprimer = new Button("supprimer");
+            private final Button btnSuspendre = new Button("suspendre");
             private final HBox pane = new HBox(5, btnModifier, btnSuspendre, btnSupprimer);
             
             {

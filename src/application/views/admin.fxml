@@ -30,7 +30,7 @@
          <TabPane fx:id="tabsAdmin" tabClosingPolicy="UNAVAILABLE">
             
             <!-- Onglet Utilisateurs -->
-            <Tab text="👤 Utilisateurs">
+            <Tab text="Utilisateurs">
                <VBox spacing="15.0" style="-fx-padding: 20;">
                   
                   <!-- Filtres utilisateurs -->
@@ -47,7 +47,7 @@
                         </items>
                      </ComboBox>
                      
-                     <ComboBox fx:id="filtreRoleUtilisateur" prefWidth="120.0" promptText="Rôle">
+                     <ComboBox fx:id="filtreRoleUtilisateur" prefWidth="150.0" promptText="Rôle">
                         <items>
                            <FXCollections fx:factory="observableArrayList">
                               <String fx:value="Tous les rôles" />
@@ -71,7 +71,7 @@
                         <TableColumn fx:id="colonneRoleUtilisateur" prefWidth="100.0" text="Rôle" />
                         <TableColumn fx:id="colonneStatutUtilisateur" prefWidth="80.0" text="Statut" />
                         <TableColumn fx:id="colonneDernierAcces" prefWidth="120.0" text="Dernier accès" />
-                        <TableColumn fx:id="colonneActionsUtilisateur" prefWidth="120.0" text="Actions" />
+                        <TableColumn fx:id="colonneActionsUtilisateur" prefWidth="320.0" text="Actions" />
                      </columns>
                      
                      <placeholder>
@@ -87,7 +87,7 @@
             </Tab>
             
             <!-- Onglet Rôles -->
-            <Tab text="🛡️ Rôles">
+            <Tab text="Rôles">
                <VBox spacing="15.0" style="-fx-padding: 20;">
                   
                   <!-- Liste des rôles -->
@@ -272,7 +272,7 @@
             </Tab>
             
             <!-- Onglet Logs d'activité -->
-            <Tab text="📋 Logs d'activité">
+            <Tab text="Logs d'activité">
                <VBox spacing="15.0" style="-fx-padding: 20;">
                   
                   <!-- Filtres des logs -->
@@ -333,7 +333,7 @@
             </Tab>
             
             <!-- Onglet Statistiques -->
-            <Tab text="📊 Statistiques">
+            <Tab text="Statistiques">
                <VBox spacing="10.0" style="-fx-padding: 10;">
                   
                   <!-- Statistiques générales -->
