@@ -665,4 +665,90 @@ public class AdminService {
         
         return permissions;
     }
+    
+    /**
+     * Récupère les statistiques générales
+     */
+    public Map<String, Integer> getStatistiquesGenerales() {
+        Map<String, Integer> stats = new HashMap<>();
+        
+        try (Connection conn = databaseService.getConnection()) {
+            // Total utilisateurs
+            String queryTotal = "SELECT COUNT(*) FROM users";
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(queryTotal)) {
+                stats.put("totalUtilisateurs", rs.next() ? rs.getInt(1) : 0);
+            }
+            
+            // Utilisateurs actifs
+            String queryActifs = "SELECT COUNT(*) FROM users WHERE actif = 1";
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(queryActifs)) {
+                stats.put("utilisateursActifs", rs.next() ? rs.getInt(1) : 0);
+            }
+            
+            // Connexions aujourd'hui
+            String queryConnexions = """
+                SELECT COUNT(*) FROM logs_activite 
+                WHERE action LIKE '%CONNEXION%' 
+                AND DATE(timestamp) = CURDATE()
+            """;
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(queryConnexions)) {
+                stats.put("connexionsAujourdhui", rs.next() ? rs.getInt(1) : 0);
+            }
+            
+            // Rôles configurés
+            String queryRoles = "SELECT COUNT(*) FROM roles WHERE actif = 1";
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(queryRoles)) {
+                stats.put("rolesConfigures", rs.next() ? rs.getInt(1) : 0);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération statistiques: " + e.getMessage());
+            e.printStackTrace();
+            // Retourner des valeurs par défaut
+            stats.put("totalUtilisateurs", 0);
+            stats.put("utilisateursActifs", 0);
+            stats.put("connexionsAujourdhui", 0);
+            stats.put("rolesConfigures", 0);
+        }
+        
+        return stats;
+    }
+    
+    /**
+     * Récupère la répartition des utilisateurs par rôle
+     */
+    public Map<String, Integer> getRepartitionParRole() {
+        Map<String, Integer> repartition = new LinkedHashMap<>();
+        
+        String query = """
+            SELECT r.nom, COUNT(u.id) as nb_users
+            FROM roles r
+            LEFT JOIN users u ON u.role_id = r.id
+            WHERE r.actif = 1
+            GROUP BY r.id, r.nom
+            ORDER BY nb_users DESC
+        """;
+        
+        try (Connection conn = databaseService.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+            
+            while (rs.next()) {
+                String roleName = rs.getString("nom");
+                int count = rs.getInt("nb_users");
+                repartition.put(roleName, count);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération répartition: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return repartition;
+    }
+
 }

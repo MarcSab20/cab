@@ -391,4 +391,99 @@ public class NetworkService {
          */
         void onRefreshRequest();
     }
+    
+    /**
+     * NOUVEAU : Récupère l'adresse IP locale de la machine
+     * 
+     * @return L'adresse IP locale ou "IP inconnue" si erreur
+     */
+    public String getLocalIPAddress() {
+        try {
+            // Essayer de récupérer l'adresse IP locale
+            InetAddress localHost = InetAddress.getLocalHost();
+            String ipAddress = localHost.getHostAddress();
+            
+            // Vérifier qu'on n'a pas l'adresse de loopback
+            if ("127.0.0.1".equals(ipAddress) || "localhost".equals(ipAddress)) {
+                // Essayer de trouver une meilleure IP
+                Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+                
+                while (interfaces.hasMoreElements()) {
+                    NetworkInterface networkInterface = interfaces.nextElement();
+                    
+                    // Ignorer les interfaces down et loopback
+                    if (!networkInterface.isUp() || networkInterface.isLoopback()) {
+                        continue;
+                    }
+                    
+                    Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+                    while (addresses.hasMoreElements()) {
+                        InetAddress address = addresses.nextElement();
+                        
+                        // Prendre la première IPv4 qui n'est pas loopback
+                        if (address instanceof java.net.Inet4Address && !address.isLoopbackAddress()) {
+                            return address.getHostAddress();
+                        }
+                    }
+                }
+            }
+            
+            return ipAddress;
+            
+        } catch (UnknownHostException e) {
+            System.err.println("Impossible de récupérer l'adresse IP locale: " + e.getMessage());
+            return "IP inconnue";
+        } catch (SocketException e) {
+            System.err.println("Erreur lors de l'énumération des interfaces réseau: " + e.getMessage());
+            return "IP inconnue";
+        }
+    }
+    
+    /**
+     * NOUVEAU : Récupère le nom de la machine
+     * 
+     * @return Le nom de la machine ou "Machine inconnue" si erreur
+     */
+    public String getLocalHostName() {
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            System.err.println("Impossible de récupérer le nom de la machine: " + e.getMessage());
+            return "Machine inconnue";
+        }
+    }
+    
+    /**
+     * NOUVEAU : Récupère des informations complètes sur la machine
+     * 
+     * @return Une Map avec hostname, ip, et mac address
+     */
+    public Map<String, String> getLocalMachineInfo() {
+        Map<String, String> info = new HashMap<>();
+        
+        try {
+            InetAddress localHost = InetAddress.getLocalHost();
+            info.put("hostname", localHost.getHostName());
+            info.put("ip", localHost.getHostAddress());
+            
+            // Essayer de récupérer l'adresse MAC
+            NetworkInterface network = NetworkInterface.getByInetAddress(localHost);
+            if (network != null) {
+                byte[] mac = network.getHardwareAddress();
+                if (mac != null) {
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < mac.length; i++) {
+                        sb.append(String.format("%02X%s", mac[i], (i < mac.length - 1) ? "-" : ""));
+                    }
+                    info.put("mac", sb.toString());
+                }
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Erreur récupération informations machine: " + e.getMessage());
+        }
+        
+        return info;
+    }
+    
 }

@@ -15,6 +15,7 @@ import javafx.stage.FileChooser;
 import application.models.*;
 import application.services.AdminService;
 import application.services.UserService;
+import application.services.NetworkService;
 import application.utils.AlertUtils;
 import application.utils.SessionManager;
 
@@ -26,8 +27,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Contrôleur pour la page d'administration
- * Gère les utilisateurs, rôles, permissions, logs et statistiques
+ * Contrôleur amélioré pour la page d'administration
+ * NOUVELLES FONCTIONNALITÉS :
+ * - Édition complète des rôles avec permissions
+ * - Statistiques réelles dynamiques
+ * - Logs d'activité avec IP réelle
  */
 public class AdminController implements Initializable {
     
@@ -57,6 +61,7 @@ public class AdminController implements Initializable {
     @FXML private Button btnSauvegarderRole;
     @FXML private Button btnAnnulerRole;
     @FXML private Button btnSupprimerRole;
+    @FXML private Button btnModifierRole;  // NOUVEAU
     
     // Permissions - Accès général
     @FXML private CheckBox permAccueil;
@@ -122,9 +127,18 @@ public class AdminController implements Initializable {
     @FXML private TableColumn<LogActivity, String> colonneIPLog;
     @FXML private TableColumn<LogActivity, String> colonneStatutLog;
     
+    // === SECTION STATISTIQUES (NOUVEAUX ÉLÉMENTS) ===
+    @FXML private Label statTotalUtilisateurs;
+    @FXML private Label statUtilisateursActifs;
+    @FXML private Label statConnexionsAujourdhui;
+    @FXML private Label statRolesConfigures;
+    @FXML private VBox repartitionRolesContainer;
+    @FXML private VBox activiteRecenteContainer;
+    
     // Services
     private AdminService adminService;
     private UserService userService;
+    private NetworkService networkService;
     private User currentUser;
     
     // Données observables
@@ -149,6 +163,7 @@ public class AdminController implements Initializable {
             // Initialisation des services
             adminService = AdminService.getInstance();
             userService = UserService.getInstance();
+            networkService = NetworkService.getInstance();
             currentUser = SessionManager.getInstance().getCurrentUser();
             
             if (currentUser == null) {
@@ -210,9 +225,9 @@ public class AdminController implements Initializable {
         
         // Colonne d'actions avec boutons
         colonneActionsUtilisateur.setCellFactory(param -> new TableCell<>() {
-            private final Button btnModifier = new Button("modifier");
-            private final Button btnSupprimer = new Button("supprimer");
-            private final Button btnSuspendre = new Button("suspendre");
+            private final Button btnModifier = new Button("Modifier");
+            private final Button btnSupprimer = new Button("Supprimer");
+            private final Button btnSuspendre = new Button("Suspendre");
             private final HBox pane = new HBox(5, btnModifier, btnSuspendre, btnSupprimer);
             
             {
@@ -249,7 +264,6 @@ public class AdminController implements Initializable {
         ));
         filtreStatutUtilisateur.setValue("Tous");
         
-        // Les rôles seront chargés dynamiquement
         filtreRoleUtilisateur.setItems(FXCollections.observableArrayList("Tous les rôles"));
         filtreRoleUtilisateur.setValue("Tous les rôles");
         
@@ -357,7 +371,6 @@ public class AdminController implements Initializable {
         ));
         filtreTypeAction.setValue("Toutes");
         
-        // Les utilisateurs seront chargés dynamiquement
         filtreUtilisateurLog.setItems(FXCollections.observableArrayList("Tous"));
         filtreUtilisateurLog.setValue("Tous");
         
@@ -372,8 +385,12 @@ public class AdminController implements Initializable {
         filtreUtilisateurLog.setOnAction(e -> applyLogFilters());
     }
     
+    /**
+     * NOUVEAU : Initialise les statistiques avec des données réelles
+     */
     private void initializeStatisticsSection() {
-        // Les statistiques seront chargées dans loadAllData()
+        // Les statistiques seront chargées dynamiquement dans loadAllData()
+        System.out.println("Section statistiques initialisée");
     }
     
     // ===== CHARGEMENT DES DONNÉES =====
@@ -382,7 +399,7 @@ public class AdminController implements Initializable {
         loadUsers();
         loadRoles();
         loadLogs();
-        updateStatistics();
+        updateStatistics();  // AMÉLIORÉ
     }
     
     private void loadUsers() {
@@ -399,7 +416,7 @@ public class AdminController implements Initializable {
             roleItems.addAll(roleNames);
             filtreRoleUtilisateur.setItems(roleItems);
             
-            System.out.println("Utilisateurs chargés: " + users.size());
+            System.out.println("✅ Utilisateurs chargés: " + users.size());
             
         } catch (Exception e) {
             System.err.println("Erreur lors du chargement des utilisateurs: " + e.getMessage());
@@ -412,7 +429,7 @@ public class AdminController implements Initializable {
             List<Role> roles = adminService.getAllRoles();
             rolesData.setAll(roles);
             
-            System.out.println("Rôles chargés: " + roles.size());
+            System.out.println("✅ Rôles chargés: " + roles.size());
             
         } catch (Exception e) {
             System.err.println("Erreur lors du chargement des rôles: " + e.getMessage());
@@ -435,7 +452,7 @@ public class AdminController implements Initializable {
             userItems.addAll(userCodes);
             filtreUtilisateurLog.setItems(userItems);
             
-            System.out.println("Logs chargés: " + logs.size());
+            System.out.println("✅ Logs chargés: " + logs.size());
             
         } catch (Exception e) {
             System.err.println("Erreur lors du chargement des logs: " + e.getMessage());
@@ -443,16 +460,139 @@ public class AdminController implements Initializable {
         }
     }
     
+    /**
+     * AMÉLIORATION MAJEURE : Met à jour les statistiques avec des données RÉELLES
+     */
     private void updateStatistics() {
         try {
-            // Cette méthode sera appelée pour mettre à jour les statistiques
-            // Les statistiques sont déjà dans le FXML comme contenu statique
-            System.out.println("Statistiques mises à jour");
+            // 1. STATISTIQUES GÉNÉRALES
+            Map<String, Integer> stats = adminService.getStatistiquesGenerales();
+            
+            if (statTotalUtilisateurs != null) {
+                statTotalUtilisateurs.setText(String.valueOf(stats.get("totalUtilisateurs")));
+            }
+            
+            if (statUtilisateursActifs != null) {
+                statUtilisateursActifs.setText(String.valueOf(stats.get("utilisateursActifs")));
+            }
+            
+            if (statConnexionsAujourdhui != null) {
+                statConnexionsAujourdhui.setText(String.valueOf(stats.get("connexionsAujourdhui")));
+            }
+            
+            if (statRolesConfigures != null) {
+                statRolesConfigures.setText(String.valueOf(stats.get("rolesConfigures")));
+            }
+            
+            // 2. RÉPARTITION PAR RÔLE
+            updateRepartitionRoles();
+            
+            // 3. ACTIVITÉ RÉCENTE
+            updateActiviteRecente();
+            
+            System.out.println("✅ Statistiques mises à jour");
             
         } catch (Exception e) {
             System.err.println("Erreur lors de la mise à jour des statistiques: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+    
+    /**
+     * NOUVEAU : Met à jour la répartition des utilisateurs par rôle
+     */
+    private void updateRepartitionRoles() {
+        if (repartitionRolesContainer == null) return;
+        
+        try {
+            Map<String, Integer> repartition = adminService.getRepartitionParRole();
+            int total = usersData.size();
+            
+            repartitionRolesContainer.getChildren().clear();
+            
+            for (Map.Entry<String, Integer> entry : repartition.entrySet()) {
+                String roleName = entry.getKey();
+                int count = entry.getValue();
+                double pourcentage = total > 0 ? (double) count / total : 0;
+                
+                // Créer une barre de progression
+                HBox roleBar = new HBox(15);
+                roleBar.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                
+                Label roleLabel = new Label(roleName + ":");
+                roleLabel.setPrefWidth(120);
+                
+                ProgressBar progressBar = new ProgressBar(pourcentage);
+                progressBar.setPrefWidth(200);
+                
+                Label countLabel = new Label(String.format("%d (%.0f%%)", count, pourcentage * 100));
+                countLabel.setStyle("-fx-font-weight: bold;");
+                
+                roleBar.getChildren().addAll(roleLabel, progressBar, countLabel);
+                repartitionRolesContainer.getChildren().add(roleBar);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Erreur répartition rôles: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * NOUVEAU : Met à jour l'activité récente avec IP réelle
+     */
+    private void updateActiviteRecente() {
+        if (activiteRecenteContainer == null) return;
+        
+        try {
+            List<LogActivity> recentLogs = adminService.getRecentLogs(5);
+            
+            activiteRecenteContainer.getChildren().clear();
+            
+            for (LogActivity log : recentLogs) {
+                VBox logItem = createLogItem(log);
+                activiteRecenteContainer.getChildren().add(logItem);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Erreur activité récente: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * NOUVEAU : Crée un élément visuel pour un log
+     */
+    private VBox createLogItem(LogActivity log) {
+        HBox logBox = new HBox(15);
+        logBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        logBox.setStyle("-fx-padding: 10; -fx-background-color: #f8f9fa; -fx-background-radius: 5;");
+        
+        // Icône
+        Label icon = new Label(log.getActionIcon());
+        icon.setStyle("-fx-font-size: 16px;");
+        
+        // Détails
+        VBox details = new VBox();
+        HBox.setHgrow(details, javafx.scene.layout.Priority.ALWAYS);
+        
+        Label action = new Label(log.getUserCode() + " - " + log.getAction());
+        action.setStyle("-fx-font-weight: bold;");
+        
+        String ipInfo = log.getIpAddress() != null ? log.getIpAddress() : "IP non disponible";
+        Label info = new Label("IP: " + ipInfo + " • " + log.getDetails());
+        info.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 12px;");
+        
+        details.getChildren().addAll(action, info);
+        
+        // Temps
+        Label time = new Label(log.getTimeAgo());
+        time.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 11px;");
+        
+        logBox.getChildren().addAll(icon, details, time);
+        
+        VBox container = new VBox(logBox);
+        container.setSpacing(8);
+        
+        return container;
     }
     
     // ===== GESTION DES UTILISATEURS =====
@@ -467,8 +607,12 @@ public class AdminController implements Initializable {
                 if (adminService.createUser(user)) {
                     AlertUtils.showInfo("Utilisateur créé avec succès");
                     loadUsers();
+                    updateStatistics();  // Rafraîchir les stats
+                    
+                    // Logger l'action avec IP
+                    String ip = networkService.getLocalIPAddress();
                     adminService.logAction(currentUser.getId(), "CREATION_UTILISATEUR", 
-                        "Création de l'utilisateur: " + user.getCode());
+                        "Création de l'utilisateur: " + user.getCode(), ip);
                 } else {
                     AlertUtils.showError("Erreur lors de la création de l'utilisateur");
                 }
@@ -490,8 +634,11 @@ public class AdminController implements Initializable {
                 if (adminService.updateUser(modifiedUser)) {
                     AlertUtils.showInfo("Utilisateur modifié avec succès");
                     loadUsers();
+                    updateStatistics();
+                    
+                    String ip = networkService.getLocalIPAddress();
                     adminService.logAction(currentUser.getId(), "MODIFICATION_UTILISATEUR", 
-                        "Modification de l'utilisateur: " + user.getCode());
+                        "Modification de l'utilisateur: " + user.getCode(), ip);
                 } else {
                     AlertUtils.showError("Erreur lors de la modification de l'utilisateur");
                 }
@@ -506,7 +653,6 @@ public class AdminController implements Initializable {
     
     private void handleSupprimerUtilisateur(User user) {
         try {
-            // Ne pas permettre la suppression de l'admin ou de soi-même
             if (user.getCode().equals("admin")) {
                 AlertUtils.showWarning("Impossible de supprimer le compte administrateur principal");
                 return;
@@ -526,8 +672,11 @@ public class AdminController implements Initializable {
                 if (adminService.deleteUser(user.getId())) {
                     AlertUtils.showInfo("Utilisateur supprimé avec succès");
                     loadUsers();
+                    updateStatistics();
+                    
+                    String ip = networkService.getLocalIPAddress();
                     adminService.logAction(currentUser.getId(), "SUPPRESSION_UTILISATEUR", 
-                        "Suppression de l'utilisateur: " + user.getCode());
+                        "Suppression de l'utilisateur: " + user.getCode(), ip);
                 } else {
                     AlertUtils.showError("Erreur lors de la suppression de l'utilisateur");
                 }
@@ -555,8 +704,11 @@ public class AdminController implements Initializable {
                 if (adminService.updateUser(user)) {
                     AlertUtils.showInfo("Statut de l'utilisateur modifié avec succès");
                     loadUsers();
+                    updateStatistics();
+                    
+                    String ip = networkService.getLocalIPAddress();
                     adminService.logAction(currentUser.getId(), "MODIFICATION_STATUT_UTILISATEUR", 
-                        action.toUpperCase() + " de l'utilisateur: " + user.getCode());
+                        action.toUpperCase() + " de l'utilisateur: " + user.getCode(), ip);
                 } else {
                     AlertUtils.showError("Erreur lors de la modification du statut");
                 }
@@ -576,25 +728,17 @@ public class AdminController implements Initializable {
     
     private void applyUserFilters() {
         filteredUsers.setPredicate(user -> {
-            // Filtre par statut
             String statut = filtreStatutUtilisateur.getValue();
             if (statut != null && !statut.equals("Tous")) {
                 boolean match = false;
                 switch (statut) {
-                    case "Actifs":
-                        match = user.isActif();
-                        break;
-                    case "Inactifs":
-                        match = !user.isActif();
-                        break;
-                    case "Suspendus":
-                        match = !user.isActif();
-                        break;
+                    case "Actifs": match = user.isActif(); break;
+                    case "Inactifs": match = !user.isActif(); break;
+                    case "Suspendus": match = !user.isActif(); break;
                 }
                 if (!match) return false;
             }
             
-            // Filtre par rôle
             String role = filtreRoleUtilisateur.getValue();
             if (role != null && !role.equals("Tous les rôles")) {
                 if (user.getRole() == null || !user.getRole().getNom().equals(role)) {
@@ -602,7 +746,6 @@ public class AdminController implements Initializable {
                 }
             }
             
-            // Filtre par recherche
             String recherche = champRechercheUtilisateur.getText();
             if (recherche != null && !recherche.trim().isEmpty()) {
                 String search = recherche.toLowerCase();
@@ -632,8 +775,10 @@ public class AdminController implements Initializable {
             if (file != null) {
                 if (adminService.exportUsersToCSV(file, new ArrayList<>(filteredUsers))) {
                     AlertUtils.showInfo("Rapport généré avec succès: " + file.getName());
+                    
+                    String ip = networkService.getLocalIPAddress();
                     adminService.logAction(currentUser.getId(), "EXPORT_RAPPORT", 
-                        "Export du rapport utilisateurs");
+                        "Export du rapport utilisateurs", ip);
                 } else {
                     AlertUtils.showError("Erreur lors de la génération du rapport");
                 }
@@ -646,7 +791,7 @@ public class AdminController implements Initializable {
         }
     }
     
-    // ===== GESTION DES RÔLES =====
+    // ===== GESTION DES RÔLES - AMÉLIORÉE =====
     
     @FXML
     private void handleNouveauRole() {
@@ -658,8 +803,11 @@ public class AdminController implements Initializable {
                 if (adminService.createRole(role)) {
                     AlertUtils.showInfo("Rôle créé avec succès");
                     loadRoles();
+                    updateStatistics();
+                    
+                    String ip = networkService.getLocalIPAddress();
                     adminService.logAction(currentUser.getId(), "CREATION_ROLE", 
-                        "Création du rôle: " + role.getNom());
+                        "Création du rôle: " + role.getNom(), ip);
                 } else {
                     AlertUtils.showError("Erreur lors de la création du rôle");
                 }
@@ -672,6 +820,9 @@ public class AdminController implements Initializable {
         }
     }
     
+    /**
+     * AMÉLIORATION : Charge les détails d'un rôle en mode lecture seule
+     */
     private void loadRoleDetails(Role role) {
         selectedRole = role;
         isEditingRole = false;
@@ -693,10 +844,41 @@ public class AdminController implements Initializable {
             checkBox.setSelected(permissions.contains(perm));
         });
         
-        // Désactiver les champs en mode lecture seule
+        // Mode lecture seule
         setRoleFieldsEditable(false);
+        
+        // Activer le bouton Modifier
+        if (btnModifierRole != null) {
+            btnModifierRole.setDisable(false);
+        }
     }
     
+    /**
+     * NOUVEAU : Active le mode édition pour le rôle
+     */
+    @FXML
+    private void handleModifierRole() {
+        if (selectedRole == null) {
+            AlertUtils.showWarning("Veuillez sélectionner un rôle");
+            return;
+        }
+        
+        // Activer l'édition
+        isEditingRole = true;
+        setRoleFieldsEditable(true);
+        
+        // Le nom reste immuable
+        champNomRole.setEditable(false);
+        champNomRole.setStyle("-fx-background-color: #f0f0f0;");
+        
+        AlertUtils.showInfo("Mode édition", 
+            "Vous pouvez maintenant modifier la description et les permissions.\n" +
+            "Le nom du rôle ne peut pas être modifié.");
+    }
+    
+    /**
+     * AMÉLIORATION : Sauvegarde les modifications du rôle
+     */
     @FXML
     private void handleSauvegarderRole() {
         try {
@@ -705,8 +887,7 @@ public class AdminController implements Initializable {
                 return;
             }
             
-            // Récupérer les valeurs des champs
-            selectedRole.setNom(champNomRole.getText().trim());
+            // Récupérer les valeurs des champs (nom immuable)
             selectedRole.setDescription(textAreaDescriptionRole.getText().trim());
             selectedRole.setActif(checkRoleActif.isSelected());
             
@@ -724,8 +905,12 @@ public class AdminController implements Initializable {
                 AlertUtils.showInfo("Rôle sauvegardé avec succès");
                 loadRoles();
                 setRoleFieldsEditable(false);
+                isEditingRole = false;
+                
+                String ip = networkService.getLocalIPAddress();
                 adminService.logAction(currentUser.getId(), "MODIFICATION_ROLE", 
-                    "Modification du rôle: " + selectedRole.getNom());
+                    "Modification du rôle: " + selectedRole.getNom() + 
+                    " (" + permissions.size() + " permissions)", ip);
             } else {
                 AlertUtils.showError("Erreur lors de la sauvegarde du rôle");
             }
@@ -742,6 +927,7 @@ public class AdminController implements Initializable {
         if (selectedRole != null) {
             loadRoleDetails(selectedRole);
         }
+        isEditingRole = false;
         setRoleFieldsEditable(false);
     }
     
@@ -774,8 +960,11 @@ public class AdminController implements Initializable {
                     AlertUtils.showInfo("Rôle supprimé avec succès");
                     loadRoles();
                     clearRoleDetails();
+                    updateStatistics();
+                    
+                    String ip = networkService.getLocalIPAddress();
                     adminService.logAction(currentUser.getId(), "SUPPRESSION_ROLE", 
-                        "Suppression du rôle: " + selectedRole.getNom());
+                        "Suppression du rôle: " + selectedRole.getNom(), ip);
                 } else {
                     AlertUtils.showError("Erreur lors de la suppression du rôle");
                 }
@@ -798,14 +987,23 @@ public class AdminController implements Initializable {
         permissionCheckBoxes.values().forEach(cb -> cb.setSelected(false));
     }
     
+    /**
+     * Active/désactive l'édition des champs du rôle
+     */
     private void setRoleFieldsEditable(boolean editable) {
-        champNomRole.setEditable(editable);
+        // Description éditable
         textAreaDescriptionRole.setEditable(editable);
+        
+        // Statut actif éditable
         checkRoleActif.setDisable(!editable);
+        
+        // Permissions éditables
         permissionCheckBoxes.values().forEach(cb -> cb.setDisable(!editable));
         
-        btnSauvegarderRole.setDisable(!editable);
-        btnAnnulerRole.setDisable(!editable);
+        // Boutons
+        if (btnSauvegarderRole != null) btnSauvegarderRole.setDisable(!editable);
+        if (btnAnnulerRole != null) btnAnnulerRole.setDisable(!editable);
+        if (btnModifierRole != null) btnModifierRole.setDisable(editable);
     }
     
     private void clearRoleDetails() {
@@ -816,23 +1014,18 @@ public class AdminController implements Initializable {
         labelNombreUtilisateurs.setText("0 utilisateur(s) assigné(s)");
         permissionCheckBoxes.values().forEach(cb -> cb.setSelected(false));
         setRoleFieldsEditable(false);
+        isEditingRole = false;
     }
     
-    // Double-clic pour éditer un rôle
     @FXML
     private void handleRoleDoubleClick(javafx.scene.input.MouseEvent event) {
-        // Vérifier si c'est un double-clic
         if (event.getClickCount() == 2) {
             Role selectedRole = listeRoles.getSelectionModel().getSelectedItem();
             if (selectedRole != null) {
-                setRoleFieldsEditable(true);
-                champNomRole.requestFocus();
+                handleModifierRole();
             }
         }
     }
-
-
-
     
     // ===== GESTION DES LOGS =====
     
@@ -844,6 +1037,7 @@ public class AdminController implements Initializable {
     @FXML
     private void handleActualiserLogs() {
         loadLogs();
+        updateActiviteRecente();
     }
     
     @FXML
@@ -862,8 +1056,10 @@ public class AdminController implements Initializable {
             if (file != null) {
                 if (adminService.exportLogsToCSV(file, new ArrayList<>(filteredLogs))) {
                     AlertUtils.showInfo("Logs exportés avec succès: " + file.getName());
+                    
+                    String ip = networkService.getLocalIPAddress();
                     adminService.logAction(currentUser.getId(), "EXPORT_LOGS", 
-                        "Export des logs d'activité");
+                        "Export des logs d'activité", ip);
                 } else {
                     AlertUtils.showError("Erreur lors de l'export des logs");
                 }
@@ -878,7 +1074,6 @@ public class AdminController implements Initializable {
     
     private void applyLogFilters() {
         filteredLogs.setPredicate(log -> {
-            // Filtre par type d'action
             String typeAction = filtreTypeAction.getValue();
             if (typeAction != null && !typeAction.equals("Toutes")) {
                 if (!log.getAction().toUpperCase().contains(typeAction.toUpperCase())) {
@@ -886,7 +1081,6 @@ public class AdminController implements Initializable {
                 }
             }
             
-            // Filtre par utilisateur
             String utilisateur = filtreUtilisateurLog.getValue();
             if (utilisateur != null && !utilisateur.equals("Tous")) {
                 if (!utilisateur.equals(log.getUserCode())) {
@@ -894,14 +1088,12 @@ public class AdminController implements Initializable {
                 }
             }
             
-            // Filtre par date de début
             if (dateDebutLogs.getValue() != null) {
                 if (log.getTimestamp().toLocalDate().isBefore(dateDebutLogs.getValue())) {
                     return false;
                 }
             }
             
-            // Filtre par date de fin
             if (dateFinLogs.getValue() != null) {
                 if (log.getTimestamp().toLocalDate().isAfter(dateFinLogs.getValue())) {
                     return false;
