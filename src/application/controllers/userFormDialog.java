@@ -1,5 +1,6 @@
 package application.controllers;
 
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
@@ -7,11 +8,17 @@ import javafx.scene.layout.GridPane;
 import javafx.stage.Modality;
 import application.models.Role;
 import application.models.User;
+import application.models.ServiceHierarchy;
+import application.services.WorkflowService;
 import application.utils.PasswordUtils;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 
 /**
- * Dialogue pour créer ou modifier un utilisateur
+ * Dialogue AMÉLIORÉ pour créer ou modifier un utilisateur
+ * NOUVELLE FONCTIONNALITÉ: Assignation et mutation de services
  */
 public class UserFormDialog extends Dialog<User> {
     
@@ -23,11 +30,14 @@ public class UserFormDialog extends Dialog<User> {
     private final TextField champEmail;
     private final TextField champTelephone;
     private final ComboBox<Role> comboRole;
+    private final ComboBox<ServiceHierarchy> comboService;  // NOUVEAU
     private final CheckBox checkActif;
     private final Label labelForceMotDePasse;
+    private final Label labelInfoService;  // NOUVEAU
     
     private final User utilisateur;
     private final boolean isNewUser;
+    private final WorkflowService workflowService;
     
     /**
      * Constructeur
@@ -37,6 +47,7 @@ public class UserFormDialog extends Dialog<User> {
     public UserFormDialog(User user, ObservableList<Role> roles) {
         this.utilisateur = user;
         this.isNewUser = (user == null);
+        this.workflowService = WorkflowService.getInstance();
         
         // Configuration du dialogue
         setTitle(isNewUser ? "Nouvel utilisateur" : "Modifier l'utilisateur");
@@ -90,6 +101,44 @@ public class UserFormDialog extends Dialog<User> {
         });
         comboRole.setButtonCell(comboRole.getCellFactory().call(null));
         
+        // NOUVEAU : ComboBox pour les services
+        comboService = new ComboBox<>();
+        comboService.setPromptText("Sélectionner un service (optionnel)");
+        comboService.setMaxWidth(Double.MAX_VALUE);
+        loadServices();
+        
+        // Configuration de l'affichage des services
+        comboService.setCellFactory(param -> new ListCell<>() {
+            @Override
+            protected void updateItem(ServiceHierarchy service, boolean empty) {
+                super.updateItem(service, empty);
+                if (empty || service == null) {
+                    setText(null);
+                } else {
+                    String indent = "  ".repeat(service.getNiveau() + 1);
+                    setText(indent + service.getIcone() + " " + service.getServiceName() + 
+                           " (" + service.getServiceCode() + ")");
+                }
+            }
+        });
+        
+        comboService.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(ServiceHierarchy service, boolean empty) {
+                super.updateItem(service, empty);
+                if (empty || service == null) {
+                    setText("Aucun service");
+                } else {
+                    setText(service.getServiceCode() + " - " + service.getServiceName());
+                }
+            }
+        });
+        
+        // Label d'information sur le service
+        labelInfoService = new Label("Le service détermine le workflow et les permissions de l'utilisateur");
+        labelInfoService.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 11px;");
+        labelInfoService.setWrapText(true);
+        
         checkActif = new CheckBox("Compte actif");
         checkActif.setSelected(true);
         
@@ -125,6 +174,21 @@ public class UserFormDialog extends Dialog<User> {
         grid.add(new Label("Rôle:"), 0, row);
         grid.add(comboRole, 1, row++);
         
+        // NOUVEAU : Champ Service
+        grid.add(new Separator(), 0, row);
+        grid.add(new Separator(), 1, row++);
+        
+        Label labelService = new Label("Service d'affectation:");
+        labelService.setStyle("-fx-font-weight: bold;");
+        grid.add(labelService, 0, row);
+        grid.add(comboService, 1, row++);
+        
+        grid.add(new Label(""), 0, row);
+        grid.add(labelInfoService, 1, row++);
+        
+        grid.add(new Separator(), 0, row);
+        grid.add(new Separator(), 1, row++);
+        
         grid.add(new Label(""), 0, row);
         grid.add(checkActif, 1, row++);
         
@@ -139,11 +203,35 @@ public class UserFormDialog extends Dialog<User> {
             champEmail.setText(utilisateur.getEmail());
             comboRole.setValue(utilisateur.getRole());
             checkActif.setSelected(utilisateur.isActif());
+            
+            // NOUVEAU : Charger le service actuel
+            if (utilisateur.getServiceCode() != null && !utilisateur.getServiceCode().isEmpty()) {
+                ServiceHierarchy currentService = findServiceByCode(utilisateur.getServiceCode());
+                if (currentService != null) {
+                    comboService.setValue(currentService);
+                }
+            }
         }
         
         // Listener pour la force du mot de passe
         champMotDePasse.textProperty().addListener((obs, oldVal, newVal) -> {
             updatePasswordStrength(newVal);
+        });
+        
+        // NOUVEAU : Listener pour afficher des infos sur le service sélectionné
+        comboService.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                String info = String.format(
+                    "Service: %s | Niveau: %d | Autorité hiérarchique correspondante",
+                    newVal.getServiceName(), 
+                    newVal.getNiveau()
+                );
+                labelInfoService.setText(info);
+                labelInfoService.setStyle("-fx-text-fill: #27ae60; -fx-font-size: 11px; -fx-font-weight: bold;");
+            } else {
+                labelInfoService.setText("Le service détermine le workflow et les permissions de l'utilisateur");
+                labelInfoService.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 11px;");
+            }
         });
         
         // Validation
@@ -161,6 +249,59 @@ public class UserFormDialog extends Dialog<User> {
             }
             return null;
         });
+    }
+    
+    /**
+     * NOUVEAU : Charge tous les services actifs depuis la base de données
+     */
+    private void loadServices() {
+        try {
+            // Charger le cache si ce n'est pas déjà fait
+            workflowService.loadHierarchyCache();
+            
+            // Récupérer tous les services actifs
+            List<ServiceHierarchy> allServices = workflowService.getAllServices()
+                .stream()
+                .filter(ServiceHierarchy::isActif)
+                .sorted((s1, s2) -> {
+                    // Trier par niveau puis par ordre d'affichage
+                    int nivComp = Integer.compare(s1.getNiveau(), s2.getNiveau());
+                    if (nivComp != 0) return nivComp;
+                    return Integer.compare(s1.getOrdreAffichage(), s2.getOrdreAffichage());
+                })
+                .collect(Collectors.toList());
+            
+            // Ajouter les services au ComboBox
+            comboService.setItems(FXCollections.observableArrayList(allServices));
+            
+            System.out.println("✅ " + allServices.size() + " services chargés dans le formulaire utilisateur");
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors du chargement des services: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Afficher un message d'erreur
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.initModality(Modality.APPLICATION_MODAL);
+            alert.setTitle("Avertissement");
+            alert.setHeaderText("Impossible de charger les services");
+            alert.setContentText("Les services ne sont pas disponibles. L'utilisateur sera créé sans service.");
+            alert.showAndWait();
+        }
+    }
+    
+    /**
+     * NOUVEAU : Trouve un service par son code
+     */
+    private ServiceHierarchy findServiceByCode(String serviceCode) {
+        if (serviceCode == null || serviceCode.isEmpty()) {
+            return null;
+        }
+        
+        return comboService.getItems().stream()
+            .filter(s -> s.getServiceCode().equals(serviceCode))
+            .findFirst()
+            .orElse(null);
     }
     
     private void updatePasswordStrength(String password) {
@@ -301,6 +442,33 @@ public class UserFormDialog extends Dialog<User> {
         user.setEmail(champEmail.getText().trim());
         user.setRole(comboRole.getValue());
         user.setActif(checkActif.isSelected());
+        
+        // NOUVEAU : Assigner le service sélectionné
+        ServiceHierarchy selectedService = comboService.getValue();
+        if (selectedService != null) {
+            user.setServiceCode(selectedService.getServiceCode());
+            
+            // Déterminer le niveau d'autorité en fonction du service
+            // Plus le niveau est bas, plus l'autorité est haute
+            int niveauService = selectedService.getNiveau();
+            
+            // Mapping inversé: niveau -1 (courrier) = autorité 7, niveau 0 (CEMAA) = autorité 0
+            int niveauAutorite;
+            if (niveauService == -1) {
+                niveauAutorite = 7; // Service courrier
+            } else {
+                niveauAutorite = niveauService; // 0 = autorité max, 5 = autorité min
+            }
+            
+            user.setNiveauAutorite(niveauAutorite);
+            
+            System.out.println("✅ Service assigné: " + selectedService.getServiceCode() + 
+                             " (Niveau: " + niveauService + ", Autorité: " + niveauAutorite + ")");
+        } else {
+            user.setServiceCode(null);
+            user.setNiveauAutorite(0);
+            System.out.println("ℹ️ Aucun service assigné");
+        }
         
         return user;
     }

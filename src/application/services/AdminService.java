@@ -46,9 +46,16 @@ public class AdminService {
         List<User> users = new ArrayList<>();
         
         String query = """
-            SELECT u.*, r.nom as role_nom, r.description as role_desc, r.permissions, r.actif as role_actif
+            SELECT u.*, 
+                   r.nom as role_nom, 
+                   r.description as role_desc, 
+                   r.permissions, 
+                   r.actif as role_actif,
+                   s.service_name,
+                   s.niveau as service_niveau
             FROM users u
             LEFT JOIN roles r ON u.role_id = r.id
+            LEFT JOIN service_hierarchy s ON u.service_code = s.service_code
             ORDER BY u.nom, u.prenom
         """;
         
@@ -74,8 +81,8 @@ public class AdminService {
      */
     public boolean createUser(User user) {
         String query = """
-            INSERT INTO users (code, password, nom, prenom, email, role_id, actif)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (code, password, nom, prenom, email, role_id, service_code, niveau_autorite, actif)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
         
         try (Connection conn = databaseService.getConnection();
@@ -87,7 +94,13 @@ public class AdminService {
             stmt.setString(4, user.getPrenom());
             stmt.setString(5, user.getEmail());
             stmt.setInt(6, user.getRole() != null ? user.getRole().getId() : 0);
-            stmt.setBoolean(7, user.isActif());
+            if (user.getServiceCode() != null && !user.getServiceCode().isEmpty()) {
+                stmt.setString(7, user.getServiceCode());
+            } else {
+                stmt.setNull(7, java.sql.Types.VARCHAR);
+            }
+            stmt.setInt(8, user.getNiveauAutorite());
+            stmt.setBoolean(9, user.isActif());
             
             int affectedRows = stmt.executeUpdate();
             
@@ -111,12 +124,8 @@ public class AdminService {
      * Met à jour un utilisateur
      */
     public boolean updateUser(User user) {
-        String query = """
-            UPDATE users SET
-                code = ?, nom = ?, prenom = ?, email = ?,
-                role_id = ?, actif = ?
-            WHERE id = ?
-        """;
+    	String query = "UPDATE users SET code = ?, nom = ?, prenom = ?, email = ?, role_id = ?, " +
+                "service_code = ?, niveau_autorite = ?, actif = ? WHERE id = ?";
         
         try (Connection conn = databaseService.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -126,8 +135,14 @@ public class AdminService {
             stmt.setString(3, user.getPrenom());
             stmt.setString(4, user.getEmail());
             stmt.setInt(5, user.getRole() != null ? user.getRole().getId() : 0);
-            stmt.setBoolean(6, user.isActif());
-            stmt.setInt(7, user.getId());
+            if (user.getServiceCode() != null && !user.getServiceCode().isEmpty()) {
+                stmt.setString(6, user.getServiceCode());
+            } else {
+                stmt.setNull(6, java.sql.Types.VARCHAR);
+            }
+            stmt.setInt(7, user.getNiveauAutorite());
+            stmt.setBoolean(8, user.isActif());
+            stmt.setInt(9, user.getId());
             
             return stmt.executeUpdate() > 0;
             
@@ -553,6 +568,10 @@ public class AdminService {
         user.setPrenom(rs.getString("prenom"));
         user.setEmail(rs.getString("email"));
         user.setActif(rs.getBoolean("actif"));
+        
+        // ✅ AJOUT CRITIQUE : Charger service_code et niveau_autorite
+        user.setServiceCode(rs.getString("service_code"));
+        user.setNiveauAutorite(rs.getInt("niveau_autorite"));
         
         Timestamp dateCreation = rs.getTimestamp("date_creation");
         if (dateCreation != null) {
