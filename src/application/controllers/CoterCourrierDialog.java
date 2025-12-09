@@ -162,35 +162,49 @@ public class CoterCourrierDialog extends Dialog<CotationInfo> {
      * Charge la liste des utilisateurs disponibles
      */
     private void loadUtilisateurs() {
-        try {
-            AdminService adminService = AdminService.getInstance();
-            List<User> allUsers = adminService.getAllUsers();
-            
-            // Filtrer les utilisateurs actifs (exclure l'utilisateur courant)
-            List<User> availableUsers = allUsers.stream()
-                .filter(u -> u.isActif() && u.getId() != currentUser.getId())
-                .collect(Collectors.toList());
-            
-            // Si le courrier a un service actuel, prioriser les utilisateurs de ce service
-            if (courrier.getServiceActuel() != null && !courrier.getServiceActuel().isEmpty()) {
-                availableUsers.sort((u1, u2) -> {
-                    boolean u1Match = courrier.getServiceActuel().equals(u1.getServiceCode());
-                    boolean u2Match = courrier.getServiceActuel().equals(u2.getServiceCode());
-                    
-                    if (u1Match && !u2Match) return -1;
-                    if (!u1Match && u2Match) return 1;
-                    return u1.getNomComplet().compareTo(u2.getNomComplet());
-                });
-            }
-            
+    try {
+        AdminService adminService = AdminService.getInstance();
+        List<User> allUsers = adminService.getAllUsers();
+        
+        int niveauCourant = currentUser.getNiveauAutorite();
+        String serviceCodeCourant = currentUser.getServiceCode();
+        
+        // Filtrer selon les règles hiérarchiques
+        List<User> availableUsers = allUsers.stream()
+            .filter(u -> u.isActif() && u.getId() != currentUser.getId())
+            .filter(u -> {
+                int niveauUser = u.getNiveauAutorite();
+                
+                // Règle générale : niveau strictement inférieur
+                if (niveauUser > niveauCourant) {
+                    return true;
+                }
+                
+                // Exception : CSA et MAGE (niveau 1) peuvent coter au CSP (niveau 0)
+                if (niveauCourant == 1 && niveauUser == 0) {
+                    if (serviceCodeCourant != null && 
+                        (serviceCodeCourant.equals("CSA") || serviceCodeCourant.equals("MAGE"))) {
+                        String roleCodeTarget = u.getRole().getCode();
+                        return roleCodeTarget != null && roleCodeTarget.equals("CSP");
+                    }
+                }
+                
+                return false;
+            })
+            .collect(Collectors.toList());
+        
+        if (availableUsers.isEmpty()) {
+            // Afficher avertissement
+            System.out.print("aucun utilisateur");
+        } else {
             ObservableList<User> usersList = FXCollections.observableArrayList(availableUsers);
             comboUtilisateur.setItems(usersList);
-            
-        } catch (Exception e) {
-            System.err.println("Erreur lors du chargement des utilisateurs: " + e.getMessage());
-            e.printStackTrace();
         }
+        
+    } catch (Exception e) {
+        System.err.println("Erreur chargement utilisateurs: " + e.getMessage());
     }
+}
     
     /**
      * Valide le formulaire

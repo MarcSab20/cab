@@ -13,7 +13,7 @@ import java.util.List;
 public class CourrierService {
     private static CourrierService instance;
     
-    private CourrierService() {}
+    public CourrierService() {}
     
     public static synchronized CourrierService getInstance() {
         if (instance == null) {

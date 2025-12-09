@@ -13,7 +13,7 @@ import application.models.User;
 import application.services.AuthenticationService;
 import application.utils.SessionManager;
 import application.utils.AlertUtils;
-
+import application.controllers.WorkflowGraphController;
 import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -43,6 +43,7 @@ public class MainController implements Initializable {
     @FXML private Button btnReunions;
     @FXML private Button btnMessages;
     @FXML private Button btnRecherche;
+    @FXML private Button btnWorkflowGraph;
     @FXML private Button btnParametres;
     @FXML private Button btnAdmin;
     @FXML private Button btnAdminHierarchy;
@@ -52,6 +53,8 @@ public class MainController implements Initializable {
     private User currentUser;
     private AuthenticationService authService;
     private String currentView = "";
+    private int currentUserNiveau;
+    
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -162,6 +165,10 @@ public class MainController implements Initializable {
                 btnParametres.setOnAction(e -> loadView("parametres"));
             }
             
+            if (btnWorkflowGraph != null) {
+                btnWorkflowGraph.setOnAction(e -> loadView("workflow_graph"));
+            }
+            
             if (btnAdmin != null) {
                 btnAdmin.setOnAction(e -> loadView("admin"));
             }
@@ -183,6 +190,40 @@ public class MainController implements Initializable {
     }
     
     /**
+     * Gère l'ouverture de la vue Analyse Workflow
+     */
+    @FXML
+    private void handleWorkflowGraph() {
+        try {
+            System.out.println("Chargement de la vue Workflow Graph...");
+            
+            // Charger simplement la vue - le contrôleur gèrera tout
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/application/views/workflow_graph.fxml"));
+            Parent root = loader.load();
+            
+            // Remplacer le contenu
+            contentArea.setCenter(root);
+            currentView = "workflow_graph";
+            
+            // Mise à jour du statut
+            if (statusLabel != null) {
+                statusLabel.setText("Vue active: Analyse Workflow");
+            }
+            
+            // Mettre à jour les boutons de navigation
+            updateNavigationButtons("workflow_graph");
+            
+            System.out.println("Vue Workflow Graph chargée avec succès");
+            
+        } catch (IOException e) {
+            System.err.println("Erreur lors du chargement de la vue Analyse Workflow: " + e.getMessage());
+            e.printStackTrace();
+            showTemporaryMessage("Erreur lors du chargement de la vue Analyse Workflow");
+            AlertUtils.showError("Impossible de charger la vue Analyse Workflow: " + e.getMessage());
+        }
+    }
+    
+    /**
      * Configure les permissions selon le rôle de l'utilisateur
      */
     private void setupPermissions() {
@@ -193,11 +234,19 @@ public class MainController implements Initializable {
             // Masquer les fonctions d'administration pour les non-administrateurs
             boolean isAdmin = roleName.contains("admin") || roleName.contains("administrateur");
             boolean isNiveauZero = niveauAutorite == 0;
-            
+            boolean isNiveauUn = niveauAutorite == -1;
             if (btnAdmin != null) {
                 btnAdmin.setVisible(isAdmin || isNiveauZero);
                 btnAdmin.setManaged(isAdmin || isNiveauZero);
             }
+            
+            if (btnWorkflowGraph != null) {
+                // Masquer pour le Service Courrier (niveau -1)
+                boolean accessible = currentUser.getNiveauAutorite() >= 0;
+                btnWorkflowGraph.setVisible(accessible);
+                btnWorkflowGraph.setManaged(accessible);
+            }
+            
             
             // La hiérarchie est accessible uniquement aux utilisateurs de niveau 0
             if (btnAdminHierarchy != null) {
@@ -334,6 +383,7 @@ public class MainController implements Initializable {
             case "reunions": return btnReunions;
             case "messages": return btnMessages;
             case "recherche": return btnRecherche;
+            case "workflow_graph": return btnWorkflowGraph;
             case "parametres": return btnParametres;
             case "admin": return btnAdmin;
             case "admin_hierarchy": return btnAdminHierarchy;

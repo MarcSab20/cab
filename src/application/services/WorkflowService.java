@@ -16,7 +16,7 @@ public class WorkflowService {
     private Map<String, ServiceHierarchy> hierarchyCache;
     private List<ServiceHierarchy> rootServices;
     
-    private WorkflowService() {
+    public WorkflowService() {
         hierarchyCache = new ConcurrentHashMap<>();
         rootServices = new ArrayList<>();
         loadHierarchyCache();
