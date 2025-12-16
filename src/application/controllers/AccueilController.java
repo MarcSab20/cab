@@ -58,12 +58,6 @@ public class AccueilController implements Initializable {
             // Chargement des statistiques
             loadStatistics();
             
-            // Chargement des activités récentes
-            loadRecentActivities();
-            
-            // Mise à jour des informations système
-            updateSystemInfo();
-            
             System.out.println("AccueilController.initialize() - Succès");
             
         } catch (Exception e) {

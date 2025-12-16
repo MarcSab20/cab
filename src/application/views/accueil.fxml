@@ -92,34 +92,7 @@
                </VBox>
             </HBox>
          </VBox>
-         
-         <!-- Activités récentes -->
-         <VBox spacing="15.0" style="-fx-padding: 20; -fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-min-width: 600;">
-            <HBox alignment="CENTER_LEFT" spacing="10.0">
-               <Label style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" 
-                      text="📋 Activités récentes" />
-               <Region HBox.hgrow="ALWAYS" />
-               <Hyperlink text="Voir tout" />
-            </HBox>
-            
-            <ScrollPane fitToWidth="true" prefHeight="150" style="-fx-background-color: transparent;">
-               <VBox fx:id="activitesContainer" spacing="10.0">
-                  <!-- Les activités seront chargées dynamiquement -->
-               </VBox>
-            </ScrollPane>
-         </VBox>
-         
-         <!-- Informations système -->
-         <VBox alignment="CENTER" spacing="8.0" 
-               style="-fx-padding: 20; -fx-background-color: rgba(52, 152, 219, 0.1); -fx-background-radius: 8; -fx-min-width: 500;">
-            <Label style="-fx-text-fill: #3498db; -fx-font-weight: bold;" text="ℹ️ Information" />
-            <Label style="-fx-text-fill: #2c3e50; -fx-text-alignment: center;" 
-                   text="Utilisez le menu de gauche pour accéder aux différentes fonctionnalités." 
-                   wrapText="true" />
-            <Label fx:id="labelInfoSysteme" style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" 
-                   text="Système opérationnel" />
-         </VBox>
-         
+                 
       </VBox>
    </center>
    

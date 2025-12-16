@@ -40,11 +40,11 @@
                     </image>
                 </ImageView>
                 
-                <Label text="GECEMAA" style="-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;"/>
+                <Label text="SYGECO/AA" style="-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;"/>
                 
-                <Label text="Bienvenue à GECEMAA" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;"/>
+                <Label text="Bienvenue à SYGECO/AA" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;"/>
                 
-                <Label text="Système de gestion électronique du courier EMAA" 
+                <Label text="Système de gestion de courrier Armée de l'Air" 
                        style="-fx-font-size: 18px; -fx-text-fill: #7A7A7A;"
                        wrapText="true" alignment="CENTER" maxWidth="400"/>
             </VBox>
