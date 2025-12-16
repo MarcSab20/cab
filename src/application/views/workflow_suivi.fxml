@@ -7,283 +7,294 @@
 
 <BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" 
             fx:controller="application.controllers.WorkflowSuiviController"
-            style="-fx-background-color: #f5f6fa;"
-            minWidth="800" minHeight="600" prefWidth="1000" prefHeight="700">
+            style="-fx-background-color: #ecf0f1;"
+            minWidth="1400" minHeight="900" prefWidth="1600" prefHeight="1000">
    
-   <!-- Barre supérieure -->
+   <!-- =================================================================== -->
+   <!-- BARRE D'OUTILS SUPÉRIEURE -->
+   <!-- =================================================================== -->
    <top>
-      <VBox spacing="15.0" style="-fx-padding: 20; -fx-background-color: white; -fx-border-color: #e0e0e0; -fx-border-width: 0 0 1 0;">
-         
-         <!-- En-tête -->
-         <HBox alignment="CENTER_LEFT" spacing="20.0">
-            <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold; -fx-font-size: 24px;" 
-                   text="📊 Dashboard Workflow - Suivi des Courriers" />
-            <Region HBox.hgrow="ALWAYS" />
-            <Button onAction="#handleActualiser" 
-                    style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 10 20;" 
-                    text="🔄 Actualiser" />
+      <VBox spacing="0">
+         <!-- En-tête principal -->
+         <HBox alignment="CENTER_LEFT" spacing="20" 
+               style="-fx-background-color: linear-gradient(to right, #2c3e50, #34495e); -fx-padding: 20;">
+            <Label text="📊 Visualisation Dynamique des Flux de Courriers" 
+                   style="-fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            
+            <Region HBox.hgrow="ALWAYS"/>
+            
+            <Button text="📥 Exporter PNG" onAction="#handleExport"
+                   style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 8; -fx-padding: 12 24; -fx-font-size: 13px;"/>
+            
+            <Button text="✖ Fermer" onAction="#handleClose"
+                   style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 8; -fx-padding: 12 24; -fx-font-size: 13px;"/>
          </HBox>
          
-         <!-- Statistiques -->
-         <GridPane hgap="15.0" vgap="10.0">
-            <columnConstraints>
-               <ColumnConstraints hgrow="ALWAYS" percentWidth="25.0" />
-               <ColumnConstraints hgrow="ALWAYS" percentWidth="25.0" />
-               <ColumnConstraints hgrow="ALWAYS" percentWidth="25.0" />
-               <ColumnConstraints hgrow="ALWAYS" percentWidth="25.0" />
-            </columnConstraints>
+         <!-- Barre de contrôles -->
+         <VBox spacing="15" style="-fx-background-color: white; -fx-padding: 20; -fx-border-color: #bdc3c7; -fx-border-width: 0 0 2 0;">
             
-            <!-- Total courriers -->
-            <VBox alignment="CENTER" spacing="8.0" GridPane.columnIndex="0"
-                  style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 10; -fx-border-color: #3498db; -fx-border-width: 2; -fx-border-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);">
-               <Label style="-fx-font-size: 36px;" text="📧" />
-               <Label fx:id="statTotal" 
-                      style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #3498db;" 
-                      text="0" />
-               <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px; -fx-font-weight: 600;" 
-                      text="Total courriers" />
-            </VBox>
+            <!-- Ligne 1: Filtres principaux -->
+            <HBox spacing="20" alignment="CENTER_LEFT">
+               <!-- Type de flux -->
+               <VBox spacing="5">
+                  <Label text="🎯 Type de Flux" style="-fx-font-weight: bold; -fx-text-fill: #2c3e50; -fx-font-size: 12px;"/>
+                  <ComboBox fx:id="cbTypeFlux" prefWidth="250" 
+                           style="-fx-background-radius: 8; -fx-font-size: 13px;"/>
+               </VBox>
+               
+               <!-- Période -->
+               <VBox spacing="5">
+                  <Label text="📅 Période (Du)" style="-fx-font-weight: bold; -fx-text-fill: #2c3e50; -fx-font-size: 12px;"/>
+                  <DatePicker fx:id="dpDebut" prefWidth="180" 
+                             style="-fx-background-radius: 8;"/>
+               </VBox>
+               
+               <VBox spacing="5">
+                  <Label text="📅 Au" style="-fx-font-weight: bold; -fx-text-fill: #2c3e50; -fx-font-size: 12px;"/>
+                  <DatePicker fx:id="dpFin" prefWidth="180" 
+                             style="-fx-background-radius: 8;"/>
+               </VBox>
+               
+               <Region HBox.hgrow="ALWAYS"/>
+               
+               <!-- Bouton générer -->
+               <VBox spacing="5" alignment="BOTTOM_CENTER">
+                  <Label text=" " style="-fx-font-size: 12px;"/> <!-- Spacer -->
+                  <Button text="🔄 Générer le Graphe" onAction="#handleGenerateGraph"
+                         style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 8; -fx-padding: 12 30; -fx-font-size: 14px;"/>
+               </VBox>
+            </HBox>
             
-            <!-- En cours -->
-            <VBox alignment="CENTER" spacing="8.0" GridPane.columnIndex="1"
-                  style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 10; -fx-border-color: #f39c12; -fx-border-width: 2; -fx-border-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);">
-               <Label style="-fx-font-size: 36px;" text="⏳" />
-               <Label fx:id="statEnCours" 
-                      style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #f39c12;" 
-                      text="0" />
-               <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px; -fx-font-weight: 600;" 
-                      text="En cours" />
-            </VBox>
+            <!-- Ligne 2: Options d'affichage -->
+            <HBox spacing="25" alignment="CENTER_LEFT" style="-fx-padding: 10 0 0 0;">
+               <CheckBox fx:id="chkAfficherStatistiques" text="📊 Afficher les statistiques détaillées" 
+                        selected="true"
+                        style="-fx-font-weight: 600; -fx-font-size: 13px;"/>
+               
+               <CheckBox fx:id="chkAfficherGoulots" text="⚠️ Mettre en évidence les goulots d'étranglement" 
+                        selected="true"
+                        style="-fx-font-weight: 600; -fx-font-size: 13px;"/>
+               
+               <Region HBox.hgrow="ALWAYS"/>
+               
+               <!-- Contrôles de zoom -->
+               <HBox spacing="10" alignment="CENTER">
+                  <Label text="🔍 Zoom:" style="-fx-font-weight: bold; -fx-text-fill: #7f8c8d; -fx-font-size: 12px;"/>
+                  <Button text="−" onAction="#handleZoomOut" prefWidth="35" prefHeight="35"
+                         style="-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-font-size: 18px; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 6;"/>
+                  <Slider fx:id="sliderZoom" prefWidth="150" min="0.25" max="3.0" value="1.0"
+                         style="-fx-cursor: hand;"/>
+                  <Button text="+" onAction="#handleZoomIn" prefWidth="35" prefHeight="35"
+                         style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 18px; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 6;"/>
+                  <Button text="↻" onAction="#handleResetZoom" prefWidth="35" prefHeight="35"
+                         style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 6;"/>
+               </HBox>
+            </HBox>
             
-            <!-- Terminés -->
-            <VBox alignment="CENTER" spacing="8.0" GridPane.columnIndex="2"
-                  style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 10; -fx-border-color: #27ae60; -fx-border-width: 2; -fx-border-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);">
-               <Label style="-fx-font-size: 36px;" text="✅" />
-               <Label fx:id="statTermines" 
-                      style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #27ae60;" 
-                      text="0" />
-               <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px; -fx-font-weight: 600;" 
-                      text="Terminés" />
-            </VBox>
-            
-            <!-- En attente (au lieu de "En retard") -->
-            <VBox alignment="CENTER" spacing="8.0" GridPane.columnIndex="3"
-                  style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 10; -fx-border-color: #e74c3c; -fx-border-width: 2; -fx-border-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);">
-               <Label style="-fx-font-size: 36px;" text="⏰" />
-               <Label fx:id="statEnAttente" 
-                      style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #e74c3c;" 
-                      text="0" />
-               <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px; -fx-font-weight: 600;" 
-                      text="En attente" />
-            </VBox>
-         </GridPane>
-         
-         <!-- Filtres -->
-         <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-padding: 10 0;">
-            <Label style="-fx-text-fill: #7f8c8d; -fx-font-weight: 600;" text="Filtrer par:" />
-            <ComboBox fx:id="filtreService" prefWidth="180.0" promptText="Service"
-                     style="-fx-background-radius: 5;" />
-            <ComboBox fx:id="filtreStatut" prefWidth="150.0" promptText="Statut"
-                     style="-fx-background-radius: 5;" />
-            <ComboBox fx:id="filtrePriorite" prefWidth="150.0" promptText="Priorité"
-                     style="-fx-background-radius: 5;" />
-            
-            <Region HBox.hgrow="ALWAYS" />
-            
-            <TextField fx:id="champRecherche" prefWidth="250.0" promptText="🔍 Rechercher..."
-                      style="-fx-background-radius: 5;" />
-            <Button text="🔄 Réinitialiser" onAction="#handleReinitialiserFiltres"
-                   style="-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 8 16;" />
-         </HBox>
-         
+         </VBox>
       </VBox>
    </top>
    
-   <!-- Zone principale -->
+   <!-- =================================================================== -->
+   <!-- ZONE PRINCIPALE: GRAPHE + STATISTIQUES -->
+   <!-- =================================================================== -->
    <center>
-      <SplitPane dividerPositions="0.6" orientation="HORIZONTAL" style="-fx-background-color: #f5f6fa;">
+      <SplitPane dividerPositions="0.7" orientation="HORIZONTAL">
          
-         <!-- Liste des courriers -->
-         <VBox spacing="10.0" style="-fx-padding: 20;">
+         <!-- ZONE DE VISUALISATION DU GRAPHE -->
+         <VBox spacing="10" style="-fx-background-color: #ecf0f1; -fx-padding: 20;">
             
-            <Label style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" 
-                   text="Liste des courriers en workflow" />
-            
-            <TableView fx:id="tableWorkflow" VBox.vgrow="ALWAYS"
-                      style="-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);">
-               <columns>
-                  <TableColumn fx:id="colNumero" prefWidth="120.0" text="N° Courrier" 
-                              style="-fx-alignment: CENTER;" />
-                  <TableColumn fx:id="colObjet" prefWidth="250.0" text="Objet" />
-                  <TableColumn fx:id="colStatut" prefWidth="120.0" text="Statut" 
-                              style="-fx-alignment: CENTER;" />
-                  <TableColumn fx:id="colService" prefWidth="160.0" text="Service actuel" />
-                  <TableColumn fx:id="colPriorite" prefWidth="120.0" text="Priorité" 
-                              style="-fx-alignment: CENTER;" />
-                  <TableColumn fx:id="colDate" prefWidth="140.0" text="Date" 
-                              style="-fx-alignment: CENTER;" />
-                  <TableColumn fx:id="colActions" prefWidth="80.0" text="Actions" 
-                              style="-fx-alignment: CENTER;" />
-               </columns>
+            <!-- Légende des couleurs -->
+            <HBox alignment="CENTER" spacing="30" 
+                  style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 10; -fx-border-color: #bdc3c7; -fx-border-width: 1; -fx-border-radius: 10;">
                
-               <placeholder>
-                  <VBox alignment="CENTER" spacing="15.0" style="-fx-padding: 50;">
-                     <Label style="-fx-font-size: 64px; -fx-text-fill: #bdc3c7;" text="📭" />
-                     <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 18px; -fx-font-weight: 600;" 
-                            text="Aucun courrier en workflow" />
-                     <Label style="-fx-text-fill: #95a5a6; -fx-font-size: 13px;" 
-                            text="Les courriers apparaîtront ici une fois qu'ils seront en traitement" />
-                  </VBox>
-               </placeholder>
-            </TableView>
+               <Label text="🏷️ LÉGENDE DES FLUX" style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;"/>
+               
+               <Separator orientation="VERTICAL" prefHeight="30"/>
+               
+               <!-- Flux entrant -->
+               <HBox spacing="8" alignment="CENTER">
+                  <Region prefWidth="40" prefHeight="6" 
+                         style="-fx-background-color: #e67e22; -fx-background-radius: 3;"/>
+                  <Label text="Flux Entrants" style="-fx-font-weight: bold; -fx-text-fill: #e67e22; -fx-font-size: 13px;"/>
+               </HBox>
+               
+               <!-- Flux sortant -->
+               <HBox spacing="8" alignment="CENTER">
+                  <Region prefWidth="40" prefHeight="6" 
+                         style="-fx-background-color: #3498db; -fx-background-radius: 3;"/>
+                  <Label text="Flux Sortants" style="-fx-font-weight: bold; -fx-text-fill: #3498db; -fx-font-size: 13px;"/>
+               </HBox>
+               
+               <!-- Flux interne -->
+               <HBox spacing="8" alignment="CENTER">
+                  <Region prefWidth="40" prefHeight="6" 
+                         style="-fx-background-color: #95a5a6; -fx-background-radius: 3;"/>
+                  <Label text="Flux Internes" style="-fx-font-weight: bold; -fx-text-fill: #95a5a6; -fx-font-size: 13px;"/>
+               </HBox>
+               
+               <Separator orientation="VERTICAL" prefHeight="30"/>
+               
+               <!-- Goulot -->
+               <HBox spacing="8" alignment="CENTER">
+                  <Label text="⚠️" style="-fx-font-size: 20px;"/>
+                  <Label text="Goulot d'étranglement" style="-fx-font-weight: bold; -fx-text-fill: #e74c3c; -fx-font-size: 13px;"/>
+               </HBox>
+            </HBox>
+            
+            <!-- Zone de dessin du graphe avec ScrollPane -->
+            <ScrollPane fx:id="graphScrollPane" fitToWidth="false" fitToHeight="false" pannable="true"
+                       VBox.vgrow="ALWAYS"
+                       style="-fx-background-color: white; -fx-border-color: #bdc3c7; -fx-border-width: 2; -fx-border-radius: 10; -fx-background-radius: 10;">
+               <Pane fx:id="graphPane" style="-fx-background-color: #f8f9fa;">
+                  <!-- Le graphe sera généré dynamiquement ici -->
+               </Pane>
+            </ScrollPane>
+            
+            <!-- Informations d'aide -->
+            <HBox alignment="CENTER" spacing="15" 
+                  style="-fx-background-color: #d5e8f7; -fx-padding: 12; -fx-background-radius: 8;">
+               <Label text="💡" style="-fx-font-size: 20px;"/>
+               <VBox spacing="3">
+                  <Label text="• Survolez les nœuds pour voir les détails des services" 
+                        style="-fx-text-fill: #2c3e50; -fx-font-size: 11px;"/>
+                  <Label text="• La largeur des flèches indique le volume de courriers entre les services" 
+                        style="-fx-text-fill: #2c3e50; -fx-font-size: 11px;"/>
+                  <Label text="• Utilisez Ctrl + Molette pour zoomer, ou les contrôles en haut à droite" 
+                        style="-fx-text-fill: #2c3e50; -fx-font-size: 11px;"/>
+               </VBox>
+            </HBox>
+         </VBox>
+         
+         <!-- PANNEAU DES STATISTIQUES -->
+         <VBox spacing="15" style="-fx-background-color: white; -fx-padding: 20;">
+            
+            <!-- Titre -->
+            <Label text="📈 STATISTIQUES EN TEMPS RÉEL" 
+                   style="-fx-font-weight: bold; -fx-font-size: 18px; -fx-text-fill: #2c3e50;"/>
+            
+            <Separator/>
+            
+            <!-- Statistiques globales -->
+            <GridPane hgap="12" vgap="12">
+               <columnConstraints>
+                  <ColumnConstraints percentWidth="50"/>
+                  <ColumnConstraints percentWidth="50"/>
+               </columnConstraints>
+               
+               <!-- Total courriers -->
+               <VBox alignment="CENTER" spacing="8" GridPane.columnIndex="0" GridPane.rowIndex="0"
+                     style="-fx-background-color: #e8f4f8; -fx-padding: 18; -fx-background-radius: 10; -fx-border-color: #3498db; -fx-border-width: 2; -fx-border-radius: 10;">
+                  <Label text="📧" style="-fx-font-size: 32px;"/>
+                  <Label fx:id="statTotalCourriers" text="0" 
+                        style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #3498db;"/>
+                  <Label text="Courriers traités" style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px; -fx-font-weight: 600;"/>
+               </VBox>
+               
+               <!-- Services actifs -->
+               <VBox alignment="CENTER" spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="0"
+                     style="-fx-background-color: #f5eef8; -fx-padding: 18; -fx-background-radius: 10; -fx-border-color: #9b59b6; -fx-border-width: 2; -fx-border-radius: 10;">
+                  <Label text="🏢" style="-fx-font-size: 32px;"/>
+                  <Label fx:id="statServicesActifs" text="0" 
+                        style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #9b59b6;"/>
+                  <Label text="Services impliqués" style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px; -fx-font-weight: 600;"/>
+               </VBox>
+               
+               <!-- Durée moyenne -->
+               <VBox alignment="CENTER" spacing="8" GridPane.columnIndex="0" GridPane.rowIndex="1"
+                     style="-fx-background-color: #fef5e7; -fx-padding: 18; -fx-background-radius: 10; -fx-border-color: #f39c12; -fx-border-width: 2; -fx-border-radius: 10;">
+                  <Label text="⏱️" style="-fx-font-size: 32px;"/>
+                  <Label fx:id="statDureeMoyenne" text="0h" 
+                        style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #f39c12;"/>
+                  <Label text="Durée moyenne" style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px; -fx-font-weight: 600;"/>
+               </VBox>
+               
+               <!-- Goulots détectés -->
+               <VBox alignment="CENTER" spacing="8" GridPane.columnIndex="1" GridPane.rowIndex="1"
+                     style="-fx-background-color: #fdeaea; -fx-padding: 18; -fx-background-radius: 10; -fx-border-color: #e74c3c; -fx-border-width: 2; -fx-border-radius: 10;">
+                  <Label text="⚠️" style="-fx-font-size: 32px;"/>
+                  <Label fx:id="statGoulotsDetectes" text="0" 
+                        style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #e74c3c;"/>
+                  <Label text="Goulots détectés" style="-fx-text-fill: #7f8c8d; -fx-font-size: 11px; -fx-font-weight: 600;"/>
+               </VBox>
+            </GridPane>
+            
+            <Separator/>
+            
+            <!-- Détails par service -->
+            <VBox fx:id="statsDetailContainer" spacing="10" VBox.vgrow="ALWAYS">
+               <Label text="📋 DÉTAILS PAR SERVICE" 
+                      style="-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #2c3e50;"/>
+               
+               <TableView fx:id="tableFluxDetails" VBox.vgrow="ALWAYS"
+                         style="-fx-background-radius: 8; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 8;">
+                  <columns>
+                     <TableColumn fx:id="colService" text="Service" prefWidth="140" minWidth="100"/>
+                     <TableColumn fx:id="colEntrants" text="↓ Ent." prefWidth="60" minWidth="50" 
+                                 style="-fx-alignment: CENTER;"/>
+                     <TableColumn fx:id="colSortants" text="↑ Sort." prefWidth="60" minWidth="50" 
+                                 style="-fx-alignment: CENTER;"/>
+                     <TableColumn fx:id="colInternes" text="↔ Int." prefWidth="60" minWidth="50" 
+                                 style="-fx-alignment: CENTER;"/>
+                     <TableColumn fx:id="colDuree" text="Durée" prefWidth="80" minWidth="70" 
+                                 style="-fx-alignment: CENTER;"/>
+                     <TableColumn fx:id="colStatut" text="Statut" prefWidth="100" minWidth="90"/>
+                  </columns>
+                  
+                  <placeholder>
+                     <VBox alignment="CENTER" spacing="10" style="-fx-padding: 30;">
+                        <Label text="📊" style="-fx-font-size: 40px; -fx-text-fill: #bdc3c7;"/>
+                        <Label text="Aucune statistique disponible" 
+                              style="-fx-text-fill: #7f8c8d; -fx-font-size: 13px;"/>
+                        <Label text="Générez le graphe pour voir les données" 
+                              style="-fx-text-fill: #95a5a6; -fx-font-size: 11px;"/>
+                     </VBox>
+                  </placeholder>
+               </TableView>
+               
+               <!-- Légende des statuts -->
+               <VBox spacing="6" style="-fx-background-color: #f8f9fa; -fx-padding: 12; -fx-background-radius: 6;">
+                  <Label text="📌 Légende des statuts" style="-fx-font-weight: bold; -fx-font-size: 11px; -fx-text-fill: #7f8c8d;"/>
+                  <HBox spacing="15">
+                     <HBox spacing="5" alignment="CENTER_LEFT">
+                        <Label text="✓" style="-fx-text-fill: #27ae60; -fx-font-weight: bold; -fx-font-size: 14px;"/>
+                        <Label text="Excellent (≥80%)" style="-fx-font-size: 10px;"/>
+                     </HBox>
+                     <HBox spacing="5" alignment="CENTER_LEFT">
+                        <Label text="◐" style="-fx-text-fill: #f39c12; -fx-font-weight: bold; -fx-font-size: 14px;"/>
+                        <Label text="Satisfaisant (60-79%)" style="-fx-font-size: 10px;"/>
+                     </HBox>
+                  </HBox>
+                  <HBox spacing="15">
+                     <HBox spacing="5" alignment="CENTER_LEFT">
+                        <Label text="◯" style="-fx-text-fill: #95a5a6; -fx-font-weight: bold; -fx-font-size: 14px;"/>
+                        <Label text="À améliorer (inf 60%)" style="-fx-font-size: 10px;"/>
+                     </HBox>
+                     <HBox spacing="5" alignment="CENTER_LEFT">
+                        <Label text="⚠️" style="-fx-font-size: 14px;"/>
+                        <Label text="Goulot d'étranglement" style="-fx-font-size: 10px; -fx-text-fill: #e74c3c; -fx-font-weight: bold;"/>
+                     </HBox>
+                  </HBox>
+               </VBox>
+            </VBox>
             
          </VBox>
          
-         <!-- Panneau de détails -->
-         <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;">
-            <VBox fx:id="detailsContainer" spacing="20.0" style="-fx-padding: 20;">
-               
-               <!-- Titre -->
-               <VBox spacing="10.0">
-                  <Label style="-fx-font-weight: bold; -fx-font-size: 18px; -fx-text-fill: #2c3e50;" 
-                         text="📄 Détails du courrier" />
-                  <Label fx:id="labelCourrierSelectionne" 
-                         style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" 
-                         text="Sélectionnez un courrier pour voir son workflow" 
-                         wrapText="true" />
-               </VBox>
-               
-               <Separator />
-               
-               <!-- Informations principales -->
-               <VBox spacing="15.0" 
-                     style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);">
-                  <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" 
-                         text="Informations générales" />
-                  
-                  <GridPane hgap="15.0" vgap="12.0">
-                     <columnConstraints>
-                        <ColumnConstraints percentWidth="35.0" />
-                        <ColumnConstraints percentWidth="65.0" />
-                     </columnConstraints>
-                     
-                     <Label text="N° Courrier:" GridPane.columnIndex="0" GridPane.rowIndex="0" 
-                            style="-fx-font-weight: bold; -fx-text-fill: #7f8c8d;"/>
-                     <Label fx:id="detailNumero" text="--" GridPane.columnIndex="1" GridPane.rowIndex="0"
-                            style="-fx-text-fill: #2c3e50;"/>
-                     
-                     <Label text="Objet:" GridPane.columnIndex="0" GridPane.rowIndex="1" 
-                            style="-fx-font-weight: bold; -fx-text-fill: #7f8c8d;"/>
-                     <Label fx:id="detailObjet" text="--" GridPane.columnIndex="1" GridPane.rowIndex="1" 
-                            wrapText="true" style="-fx-text-fill: #2c3e50;"/>
-                     
-                     <Label text="Statut:" GridPane.columnIndex="0" GridPane.rowIndex="2" 
-                            style="-fx-font-weight: bold; -fx-text-fill: #7f8c8d;"/>
-                     <Label fx:id="detailStatut" text="--" GridPane.columnIndex="1" GridPane.rowIndex="2"
-                            style="-fx-text-fill: #2c3e50;"/>
-                     
-                     <Label text="Priorité:" GridPane.columnIndex="0" GridPane.rowIndex="3" 
-                            style="-fx-font-weight: bold; -fx-text-fill: #7f8c8d;"/>
-                     <Label fx:id="detailPriorite" text="--" GridPane.columnIndex="1" GridPane.rowIndex="3"
-                            style="-fx-text-fill: #2c3e50;"/>
-                     
-                     <Label text="Expéditeur:" GridPane.columnIndex="0" GridPane.rowIndex="4" 
-                            style="-fx-font-weight: bold; -fx-text-fill: #7f8c8d;"/>
-                     <Label fx:id="detailExpediteur" text="--" GridPane.columnIndex="1" GridPane.rowIndex="4"
-                            style="-fx-text-fill: #2c3e50;"/>
-                     
-                     <Label text="Date réception:" GridPane.columnIndex="0" GridPane.rowIndex="5" 
-                            style="-fx-font-weight: bold; -fx-text-fill: #7f8c8d;"/>
-                     <Label fx:id="detailDateReception" text="--" GridPane.columnIndex="1" GridPane.rowIndex="5"
-                            style="-fx-text-fill: #2c3e50;"/>
-                     
-                     <Label text="Service actuel:" GridPane.columnIndex="0" GridPane.rowIndex="6" 
-                            style="-fx-font-weight: bold; -fx-text-fill: #7f8c8d;"/>
-                     <Label fx:id="detailServiceActuel" text="--" GridPane.columnIndex="1" GridPane.rowIndex="6"
-                            style="-fx-text-fill: #2c3e50;"/>
-                  </GridPane>
-               </VBox>
-               
-               <!-- Timeline du workflow -->
-               <VBox spacing="10.0" 
-                     style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);">
-                  <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50; -fx-font-size: 16px;" 
-                         text="⏱️ Timeline du workflow" />
-                  
-                  <ScrollPane fx:id="workflowPane" fitToWidth="true" prefHeight="300" VBox.vgrow="ALWAYS"
-                             style="-fx-background-color: transparent; -fx-border-width: 0; -fx-background: transparent;">
-                     <VBox fx:id="timelineContainer" spacing="10.0">
-                        <!-- Timeline sera construite dynamiquement -->
-                        <VBox alignment="CENTER" spacing="15.0" style="-fx-padding: 40;">
-                           <Label style="-fx-font-size: 48px; -fx-text-fill: #bdc3c7;" text="🔄" />
-                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 14px;" 
-                                  text="Sélectionnez un courrier dans la liste" />
-                           <Label style="-fx-text-fill: #95a5a6; -fx-font-size: 12px;" 
-                                  text="pour visualiser sa chaîne de workflow" />
-                        </VBox>
-                     </VBox>
-                  </ScrollPane>
-                  
-                  <!-- Légende -->
-                  <Separator />
-                  <VBox spacing="8.0">
-                     <Label style="-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #7f8c8d;" 
-                            text="Légende" />
-                     
-                     <HBox spacing="20.0">
-                        <HBox alignment="CENTER_LEFT" spacing="5.0">
-                           <Label style="-fx-font-size: 14px;" text="🔵" />
-                           <Label style="-fx-font-size: 11px; -fx-text-fill: #7f8c8d;" text="Étape en cours" />
-                        </HBox>
-                        
-                        <HBox alignment="CENTER_LEFT" spacing="5.0">
-                           <Label style="-fx-font-size: 14px;" text="🟢" />
-                           <Label style="-fx-font-size: 11px; -fx-text-fill: #7f8c8d;" text="Étape terminée" />
-                        </HBox>
-                        
-                        <HBox alignment="CENTER_LEFT" spacing="5.0">
-                           <Label style="-fx-font-size: 14px;" text="⚪" />
-                           <Label style="-fx-font-size: 11px; -fx-text-fill: #7f8c8d;" text="Étape en attente" />
-                        </HBox>
-                     </HBox>
-                  </VBox>
-               </VBox>
-               
-               <!-- Actions rapides -->
-               <VBox spacing="10.0" 
-                     style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);">
-                  <Label style="-fx-font-weight: bold; -fx-text-fill: #2c3e50; -fx-font-size: 16px;" 
-                         text="⚡ Actions rapides" />
-                  
-                  <HBox spacing="10.0">
-                     <Button fx:id="btnTransferer" text="➡️ Transférer" onAction="#handleTransferer"
-                            style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 10 20;"/>
-                     <Button fx:id="btnTraiter" text="✅ Traiter" onAction="#handleTraiter"
-                            style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 10 20;"/>
-                  </HBox>
-                  
-                  <HBox spacing="10.0">
-                     <Button fx:id="btnArchiver" text="📦 Archiver" onAction="#handleArchiver"
-                            style="-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 10 20;"/>
-                     <Button fx:id="btnAjouterCommentaire" text="💬 Commenter" onAction="#handleAjouterCommentaire"
-                            style="-fx-background-color: #f39c12; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 10 20;"/>
-                  </HBox>
-               </VBox>
-               
-               <!-- Zone de commentaire -->
-               <VBox spacing="8.0" 
-                     style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);">
-                  <Label style="-fx-font-weight: bold; -fx-text-fill: #7f8c8d;" 
-                         text="Commentaire:" />
-                  <TextArea fx:id="detailCommentaire" prefRowCount="4" wrapText="true"
-                           promptText="Ajoutez un commentaire sur ce courrier..."
-                           style="-fx-background-radius: 5;"/>
-               </VBox>
-               
-            </VBox>
-         </ScrollPane>
-         
       </SplitPane>
    </center>
+   
+   <!-- =================================================================== -->
+   <!-- BARRE D'INFORMATION INFÉRIEURE -->
+   <!-- =================================================================== -->
+   <bottom>
+      <HBox alignment="CENTER" spacing="20" 
+            style="-fx-background-color: #34495e; -fx-padding: 12;">
+         <Label text="ℹ️ Cette visualisation montre uniquement les services ayant traité des courriers dans la période sélectionnée" 
+               style="-fx-text-fill: white; -fx-font-size: 12px;"/>
+         <Separator orientation="VERTICAL" prefHeight="20" style="-fx-background-color: rgba(255,255,255,0.3);"/>
+         <Label text="💡 Les services CB*, CE*, CEA* n'apparaissent que s'ils ont été impliqués dans le traitement" 
+               style="-fx-text-fill: #ecf0f1; -fx-font-size: 11px;"/>
+      </HBox>
+   </bottom>
    
 </BorderPane>

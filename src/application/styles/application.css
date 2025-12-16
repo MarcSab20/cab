@@ -23,6 +23,13 @@
     -fx-font-size: 24px;
 }
 
+.card:hover {
+    -fx-background-color: #f4f6f8;
+    -fx-scale-x: 1.03;
+    -fx-scale-y: 1.03;
+}
+
+
 .login-subtitle {
     -fx-text-fill: #666666;
     -fx-font-size: 14px;

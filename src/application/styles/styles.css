@@ -48,6 +48,13 @@
     -fx-font-size: 11px;
 }
 
+.card:hover {
+    -fx-background-color: #f4f6f8;
+    -fx-scale-x: 1.03;
+    -fx-scale-y: 1.03;
+}
+
+
 .stat-number {
     -fx-font-size: 32px;
     -fx-font-weight: bold;

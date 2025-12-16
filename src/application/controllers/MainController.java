@@ -12,6 +12,7 @@ import javafx.stage.Stage;
 import application.models.User;
 import application.services.AuthenticationService;
 import application.utils.SessionManager;
+import application.utils.WorkflowVisualizationHelper;
 import application.utils.AlertUtils;
 import application.controllers.WorkflowGraphController;
 import java.io.IOException;
@@ -44,6 +45,7 @@ public class MainController implements Initializable {
     @FXML private Button btnMessages;
     @FXML private Button btnRecherche;
     @FXML private Button btnWorkflowGraph;
+    @FXML private Button btnWorkflowVisualization;
     @FXML private Button btnParametres;
     @FXML private Button btnAdmin;
     @FXML private Button btnAdminHierarchy;
@@ -135,6 +137,12 @@ public class MainController implements Initializable {
             
             if (btnDashboard != null) {
                 btnDashboard.setOnAction(e -> loadView("dashboard"));
+            }
+            
+            if (btnWorkflowVisualization != null) {
+                btnWorkflowVisualization.setOnAction(e -> {
+                    WorkflowVisualizationHelper.openVisualizationWindowSafe(currentUser);
+                });
             }
             
             if (btnWorkflowDashboard != null) {
@@ -267,6 +275,13 @@ public class MainController implements Initializable {
                 }
             }
             
+            if (btnWorkflowVisualization != null) {
+                // Masquer pour le Service Courrier (niveau -1)
+                boolean accessible = currentUser.getNiveauAutorite() >= 0;
+                btnWorkflowVisualization.setVisible(accessible);
+                btnWorkflowVisualization.setManaged(accessible);
+            }
+            
         } catch (Exception e) {
             System.err.println("Erreur lors de la configuration des permissions: " + e.getMessage());
             e.printStackTrace();
@@ -295,6 +310,22 @@ public class MainController implements Initializable {
             
             FXMLLoader loader = new FXMLLoader(fxmlUrl);
             Parent view = loader.load();
+            
+            // Récupération du contrôleur et passage de la référence au MainController
+            Object controller = loader.getController();
+            if (controller != null) {
+                // Si le contrôleur a une méthode setMainController, l'appeler
+                try {
+                    controller.getClass().getMethod("setMainController", MainController.class)
+                        .invoke(controller, this);
+                    System.out.println("✓ Référence MainController passée au contrôleur");
+                } catch (NoSuchMethodException e) {
+                    // Le contrôleur n'a pas de méthode setMainController, ce n'est pas grave
+                    System.out.println("ℹ Le contrôleur n'a pas de méthode setMainController");
+                } catch (Exception e) {
+                    System.err.println("⚠ Erreur lors de l'appel de setMainController: " + e.getMessage());
+                }
+            }
             
             // Remplacement du contenu
             if (contentArea != null) {

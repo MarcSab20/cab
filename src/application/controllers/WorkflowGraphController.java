@@ -21,6 +21,7 @@ import application.models.*;
 import application.services.*;
 import application.utils.SessionManager;
 import application.utils.AlertUtils;
+import application.utils.WorkflowVisualizationHelper;
 
 import java.net.URL;
 import java.time.LocalDate;
@@ -91,7 +92,7 @@ public class WorkflowGraphController implements Initializable {
             courrierService = new CourrierService();
             
             // RÉCUPÉRER L'UTILISATEUR DEPUIS SESSION MANAGER
-            currentUser = SessionManager.getInstance().getCurrentUser();  // PAS DE "User" DEVANT !
+            currentUser = SessionManager.getInstance().getCurrentUser();
             
             if (currentUser == null) {
                 System.err.println("ERREUR: Aucun utilisateur en session");
@@ -202,6 +203,34 @@ public class WorkflowGraphController implements Initializable {
                 }
             });
         }
+    }
+    
+    /**
+     * ✨ NOUVELLE MÉTHODE : Ouvre la fenêtre de visualisation collective
+     */
+    @FXML
+    private void handleOpenCollectiveView() {
+        try {
+            System.out.println("Ouverture de la visualisation collective...");
+            
+            // Ouvrir la fenêtre de visualisation avec l'utilisateur courant
+            WorkflowVisualizationHelper.openVisualizationWindow(currentUser);
+            
+            System.out.println("✅ Fenêtre de visualisation ouverte avec succès");
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de l'ouverture de la visualisation: " + e.getMessage());
+            e.printStackTrace();
+            AlertUtils.showError(
+                "Impossible d'ouvrir la visualisation",
+                "Une erreur s'est produite:\n" + e.getMessage()
+            );
+        }
+    }
+    
+    @FXML
+    private void handleExportGraph() {
+        AlertUtils.showInfo("Export", "La fonctionnalité d'export sera bientôt disponible");
     }
     
     /**
@@ -790,10 +819,6 @@ public class WorkflowGraphController implements Initializable {
         loadStatistiques();
     }
     
-    @FXML
-    private void handleExportGraph() {
-        AlertUtils.showInfo("Export", "La fonctionnalité d'export sera bientôt disponible");
-    }
     
     @FXML
     private void handleActualiser() {

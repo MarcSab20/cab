@@ -91,12 +91,16 @@
                      <Font size="14.0" />
                   </font>
                </Button>
+
+               <Button fx:id="btnWorkVisualization" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="📊 Visualisation Workflow">
+                  <padding>
+                     <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+                  </padding>
+                  <font>
+                     <Font size="14.0" />
+                  </font>
+               </Button>
                
-               <Button fx:id="btnWorkflowGraph" 
-			        text="📊 Analyse Workflow" 
-			        styleClass="sidebar-button"
-			        onAction="#handleWorkflowGraph" />
-        
                <Button fx:id="btnWorkflowDashboard" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="🔄 Suivi Workflow">
                   <padding>
                      <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />

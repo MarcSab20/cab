@@ -1,75 +1,65 @@
 package application.controllers;
 
 import javafx.application.Platform;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Cursor;
+import javafx.scene.Group;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.geometry.Pos;
-import javafx.geometry.Insets;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.*;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
+import javafx.scene.transform.Scale;
+import javafx.stage.Stage;
 import application.models.*;
 import application.services.*;
 import application.utils.SessionManager;
 import application.utils.AlertUtils;
-import javafx.application.Platform;
+
 import java.net.URL;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Contrôleur pour le suivi des workflows - VERSION ROBUSTE
- * Gère les erreurs silencieuses et l'absence de données
+ * Contrôleur pour la visualisation dynamique et interactive du workflow
+ * Affiche les flux de courriers entre services avec statistiques en temps réel
  */
 public class WorkflowSuiviController implements Initializable {
     
-    // Filtres
-    @FXML private ComboBox<String> filtreStatut;
-    @FXML private ComboBox<String> filtrePriorite;
-    @FXML private ComboBox<String> filtreService;
-    @FXML private TextField champRecherche;
-    @FXML private DatePicker dateDebut;
-    @FXML private DatePicker dateFin;
-    
-    // TableView et colonnes
-    @FXML private TableView<Courrier> tableWorkflow;
-    @FXML private TableColumn<Courrier, String> colNumero;
-    @FXML private TableColumn<Courrier, String> colObjet;
-    @FXML private TableColumn<Courrier, String> colStatut;
-    @FXML private TableColumn<Courrier, String> colService;
-    @FXML private TableColumn<Courrier, String> colPriorite;
-    @FXML private TableColumn<Courrier, String> colDate;
-    @FXML private TableColumn<Courrier, String> colActions;
-    
-    // Détails du courrier sélectionné
-    @FXML private VBox detailsContainer;
-    @FXML private Label detailNumero;
-    @FXML private Label detailObjet;
-    @FXML private Label detailStatut;
-    @FXML private Label detailPriorite;
-    @FXML private Label detailExpediteur;
-    @FXML private Label detailDateReception;
-    @FXML private Label detailServiceActuel;
-    @FXML private TextArea detailCommentaire;
-    
-    // Timeline du workflow
-    @FXML private VBox timelineContainer;
+    // === Contrôles FXML ===
+    @FXML private ComboBox<String> cbTypeFlux;
+    @FXML private DatePicker dpDebut;
+    @FXML private DatePicker dpFin;
+    @FXML private CheckBox chkAfficherStatistiques;
+    @FXML private CheckBox chkAfficherGoulots;
+    @FXML private Slider sliderZoom;
+    @FXML private ScrollPane graphScrollPane;
+    @FXML private Pane graphPane;
     
     // Statistiques
-    @FXML private Label statTotal;
-    @FXML private Label statEnCours;
-    @FXML private Label statEnAttente;
-    @FXML private Label statTermines;
+    @FXML private Label statTotalCourriers;
+    @FXML private Label statServicesActifs;
+    @FXML private Label statDureeMoyenne;
+    @FXML private Label statGoulotsDetectes;
+    @FXML private VBox statsDetailContainer;
     
-    // Boutons d'action
-    @FXML private Button btnTransferer;
-    @FXML private Button btnTraiter;
-    @FXML private Button btnArchiver;
-    @FXML private Button btnAjouterCommentaire;
+    // Tableau détaillé
+    @FXML private TableView<ServiceFlowStats> tableFluxDetails;
+    @FXML private TableColumn<ServiceFlowStats, String> colService;
+    @FXML private TableColumn<ServiceFlowStats, Number> colEntrants;
+    @FXML private TableColumn<ServiceFlowStats, Number> colSortants;
+    @FXML private TableColumn<ServiceFlowStats, Number> colInternes;
+    @FXML private TableColumn<ServiceFlowStats, String> colDuree;
+    @FXML private TableColumn<ServiceFlowStats, String> colStatut;
     
     // Services
     private User currentUser;
@@ -77,682 +67,992 @@ public class WorkflowSuiviController implements Initializable {
     private CourrierService courrierService;
     
     // Données
-    private ServiceHierarchy userService;
-    private ObservableList<Courrier> courriersObservable;
-    private List<Courrier> tousLesCourriers;
-    private Courrier courrierSelectionne;
+    private List<ServiceHierarchy> servicesAutorises;
+    private Map<String, ServiceFlowStats> fluxStats;
+    private List<FluxCourrier> fluxCourriers;
+    
+    // Constantes de dessin
+    private static final double NODE_WIDTH = 150;
+    private static final double NODE_HEIGHT = 60;
+    private static final double VERTICAL_SPACING = 120;
+    private static final double HORIZONTAL_SPACING = 300;
+    private static final double MIN_ARROW_WIDTH = 2;
+    private static final double MAX_ARROW_WIDTH = 20;
+    
+    // Zoom
+    private Scale scaleTransform;
+    private double currentZoom = 1.0;
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        System.out.println("=== WorkflowSuiviController.initialize() - DÉBUT ===");
+        System.out.println("=== WorkflowVisualizationController.initialize() ===");
         
         try {
-            // Initialisation des services
-            if (!initializeServices()) {
-                System.err.println("ERREUR: Échec de l'initialisation des services");
-                showErrorState("Impossible d'initialiser les services");
+            // Initialiser les services
+            currentUser = SessionManager.getInstance().getCurrentUser();
+            workflowService = WorkflowService.getInstance();
+            courrierService = CourrierService.getInstance();
+            
+            if (currentUser == null) {
+                AlertUtils.showError("Aucun utilisateur connecté");
                 return;
             }
             
-            // Initialisation de la TableView
-            initializeTableView();
+            // Charger les services autorisés
+            loadServicesAutorises();
             
-            // Initialisation des filtres
-            initializeFilters();
+            // Initialiser les composants
+            initializeComponents();
             
-            // Chargement des données
-            loadDataSafely();
+            // Charger les données initiales
+            loadInitialData();
             
-            // Configuration des listeners
-            setupListeners();
-            Platform.runLater(() -> {
-                try {
-                    if (tableWorkflow != null) {
-                        tableWorkflow.setMinHeight(400);
-                        tableWorkflow.setPrefHeight(Region.USE_COMPUTED_SIZE);
-                        tableWorkflow.setMaxHeight(Double.MAX_VALUE);
-                    }
-                    if (detailsContainer != null) {
-                        detailsContainer.setMinHeight(500);
-                        detailsContainer.setPrefHeight(Region.USE_COMPUTED_SIZE);
-                    }
-                    if (timelineContainer != null) {
-                        timelineContainer.setMinHeight(200);
-                        timelineContainer.setPrefHeight(Region.USE_COMPUTED_SIZE);
-                    }
-                    System.out.println("✓ Dimensions des composants workflow configurées");
-                } catch (Exception e) {
-                    System.err.println("⚠ Erreur configuration dimensions workflow: " + e.getMessage());
+            System.out.println("✓ WorkflowVisualizationController initialisé");
+            
+        } catch (Exception e) {
+            System.err.println("Erreur initialisation: " + e.getMessage());
+            e.printStackTrace();
+            AlertUtils.showError("Erreur d'initialisation: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Initialise les composants de l'interface
+     */
+    private void initializeComponents() {
+        // Types de flux
+        if (cbTypeFlux != null) {
+            cbTypeFlux.getItems().addAll(
+                "Tous les flux",
+                "Flux entrants uniquement",
+                "Flux sortants uniquement",
+                "Flux internes uniquement"
+            );
+            cbTypeFlux.setValue("Tous les flux");
+            cbTypeFlux.setOnAction(e -> regenerateGraph());
+        }
+        
+        // Dates par défaut
+        if (dpFin != null) {
+            dpFin.setValue(LocalDate.now());
+        }
+        if (dpDebut != null) {
+            dpDebut.setValue(LocalDate.now().minusMonths(1));
+        }
+        
+        // Checkboxes
+        if (chkAfficherStatistiques != null) {
+            chkAfficherStatistiques.setSelected(true);
+            chkAfficherStatistiques.setOnAction(e -> updateStatisticsVisibility());
+        }
+        
+        if (chkAfficherGoulots != null) {
+            chkAfficherGoulots.setSelected(true);
+            chkAfficherGoulots.setOnAction(e -> regenerateGraph());
+        }
+        
+        // Zoom
+        setupZoom();
+        
+        // Configuration du graphPane
+        if (graphPane != null) {
+            graphPane.setMinSize(2000, 1500);
+            graphPane.setStyle("-fx-background-color: #f8f9fa;");
+        }
+        
+        // Configuration de la table
+        setupTable();
+    }
+    
+    /**
+     * Configure le système de zoom
+     */
+    private void setupZoom() {
+        if (sliderZoom != null && graphPane != null) {
+            scaleTransform = new Scale(1.0, 1.0);
+            graphPane.getTransforms().add(scaleTransform);
+            
+            sliderZoom.setMin(0.25);
+            sliderZoom.setMax(3.0);
+            sliderZoom.setValue(1.0);
+            sliderZoom.setShowTickMarks(true);
+            sliderZoom.setShowTickLabels(true);
+            sliderZoom.setMajorTickUnit(0.5);
+            
+            sliderZoom.valueProperty().addListener((obs, oldVal, newVal) -> {
+                currentZoom = newVal.doubleValue();
+                scaleTransform.setX(currentZoom);
+                scaleTransform.setY(currentZoom);
+                
+                // Ajuster la taille du pane
+                graphPane.setMinWidth(2000 * currentZoom);
+                graphPane.setMinHeight(1500 * currentZoom);
+            });
+        }
+        
+        // Zoom avec la molette
+        if (graphScrollPane != null) {
+            graphScrollPane.setOnScroll(event -> {
+                if (event.isControlDown()) {
+                    event.consume();
+                    double delta = event.getDeltaY() > 0 ? 0.1 : -0.1;
+                    double newZoom = Math.max(0.25, Math.min(3.0, currentZoom + delta));
+                    sliderZoom.setValue(newZoom);
                 }
             });
-            System.out.println("=== WorkflowSuiviController.initialize() - SUCCÈS ===");
-            
-        } catch (Exception e) {
-            System.err.println("=== ERREUR CRITIQUE dans WorkflowSuiviController.initialize() ===");
-            e.printStackTrace();
-            showErrorState("Erreur lors de l'initialisation: " + e.getMessage());
         }
     }
     
     /**
-     * Initialise les services avec gestion d'erreurs
+     * Configure la table des détails
      */
-    private boolean initializeServices() {
-        try {
-            // Récupérer l'utilisateur courant
-            currentUser = SessionManager.getInstance().getCurrentUser();
-            if (currentUser == null) {
-                System.err.println("ERREUR: Aucun utilisateur en session");
-                return false;
-            }
-            
-            System.out.println("Utilisateur connecté: " + currentUser.getNomComplet());
-            
-            // Initialiser les services
-            try {
-                workflowService = WorkflowService.getInstance();
-                System.out.println("✓ WorkflowService initialisé");
-            } catch (Exception e) {
-                System.err.println("⚠ Erreur WorkflowService: " + e.getMessage());
-                workflowService = null;
-            }
-            
-            try {
-                courrierService = CourrierService.getInstance();
-                System.out.println("✓ CourrierService initialisé");
-            } catch (Exception e) {
-                System.err.println("⚠ Erreur CourrierService: " + e.getMessage());
-                courrierService = null;
-            }
-            
-            // Charger le service de l'utilisateur
-            if (workflowService != null && currentUser.getServiceCode() != null) {
-                try {
-                    userService = workflowService.getServiceByCode(currentUser.getServiceCode());
-                    if (userService != null) {
-                        System.out.println("✓ Service utilisateur: " + userService.getServiceName());
+    private void setupTable() {
+        if (tableFluxDetails == null) return;
+        
+        colService.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleStringProperty(data.getValue().getServiceName()));
+        
+        colEntrants.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleIntegerProperty(data.getValue().getFluxEntrants()));
+        
+        colSortants.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleIntegerProperty(data.getValue().getFluxSortants()));
+        
+        colInternes.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleIntegerProperty(data.getValue().getFluxInternes()));
+        
+        colDuree.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleStringProperty(data.getValue().getDureeMoyenneFormatee()));
+        
+        colStatut.setCellValueFactory(data -> 
+            new javafx.beans.property.SimpleStringProperty(data.getValue().getStatutDescription()));
+        
+        // Colorier la colonne statut
+        colStatut.setCellFactory(column -> new TableCell<ServiceFlowStats, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    ServiceFlowStats stats = getTableView().getItems().get(getIndex());
+                    if (stats.estGoulot()) {
+                        setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold;");
+                    } else if (stats.getScorePerformance() >= 80) {
+                        setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold;");
+                    } else {
+                        setStyle("-fx-text-fill: #f39c12;");
                     }
-                } catch (Exception e) {
-                    System.err.println("⚠ Erreur chargement service utilisateur: " + e.getMessage());
                 }
             }
-            
-            return true;
-            
-        } catch (Exception e) {
-            System.err.println("ERREUR lors de l'initialisation des services: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
+        });
     }
     
     /**
-     * Initialise la TableView
+     * Charge les services autorisés selon le niveau hiérarchique
      */
-    private void initializeTableView() {
-        System.out.println("Initialisation de la TableView...");
+    private void loadServicesAutorises() {
+        servicesAutorises = new ArrayList<>();
+        int niveauAutorite = currentUser.getNiveauAutorite();
         
-        try {
-            courriersObservable = FXCollections.observableArrayList();
-            
-            if (tableWorkflow == null) {
-                System.err.println("⚠ tableWorkflow est null");
-                return;
+        if (niveauAutorite == 0) {
+            // Niveau 0 : voir tout
+            servicesAutorises.addAll(workflowService.getAllServices());
+        } else if (niveauAutorite >= 1) {
+            // Autres niveaux : voir sa hiérarchie
+            String serviceCode = currentUser.getServiceCode();
+            if (serviceCode != null) {
+                ServiceHierarchy userService = workflowService.getServiceByCode(serviceCode);
+                if (userService != null) {
+                    servicesAutorises.add(userService);
+                    servicesAutorises.addAll(userService.getTousLesDescendants());
+                }
             }
-            
-            // Configuration des colonnes si elles existent
-            if (colNumero != null) {
-                colNumero.setCellValueFactory(data -> 
-                    new SimpleStringProperty(data.getValue().getNumeroCourrier()));
-                System.out.println("✓ colNumero configurée");
-            }
-            
-            if (colObjet != null) {
-                colObjet.setCellValueFactory(data -> 
-                    new SimpleStringProperty(data.getValue().getObjet()));
-                System.out.println("✓ colObjet configurée");
-            }
-            
-            if (colStatut != null) {
-                colStatut.setCellValueFactory(data -> 
-                    new SimpleStringProperty(data.getValue().getStatut().getLibelle()));
-                colStatut.setCellFactory(column -> new TableCell<Courrier, String>() {
-                    @Override
-                    protected void updateItem(String item, boolean empty) {
-                        super.updateItem(item, empty);
-                        if (empty || item == null) {
-                            setText(null);
-                            setStyle("");
-                        } else {
-                            setText(item);
-                            Courrier courrier = getTableView().getItems().get(getIndex());
-                            setStyle("-fx-background-color: " + courrier.getStatut().getCouleur() + 
-                                   "; -fx-background-radius: 5; -fx-padding: 5;");
-                        }
-                    }
-                });
-                System.out.println("✓ colStatut configurée");
-            }
-            
-            if (colService != null) {
-                colService.setCellValueFactory(data -> 
-                    new SimpleStringProperty(
-                        data.getValue().getServiceActuel() != null ? 
-                        data.getValue().getServiceActuel() : "N/A"
-                    ));
-                System.out.println("✓ colService configurée");
-            }
-            
-            if (colPriorite != null) {
-                colPriorite.setCellValueFactory(data -> 
-                    new SimpleStringProperty(
-                        data.getValue().getPrioriteIcone() + " " + 
-                        data.getValue().getPriorite()
-                    ));
-                System.out.println("✓ colPriorite configurée");
-            }
-            
-            if (colDate != null) {
-                colDate.setCellValueFactory(data -> 
-                    new SimpleStringProperty(
-                        data.getValue().getDateReception().format(
-                            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
-                        )
-                    ));
-                System.out.println("✓ colDate configurée");
-            }
-            
-            if (colActions != null) {
-                colActions.setCellFactory(column -> new TableCell<Courrier, String>() {
-                    private final Button btnDetails = new Button("👁");
-                    
-                    {
-                        btnDetails.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
-                        btnDetails.setTooltip(new Tooltip("Voir détails"));
-                        btnDetails.setOnAction(event -> {
-                            Courrier courrier = getTableView().getItems().get(getIndex());
-                            afficherDetails(courrier);
-                        });
-                    }
-                    
-                    @Override
-                    protected void updateItem(String item, boolean empty) {
-                        super.updateItem(item, empty);
-                        if (empty) {
-                            setGraphic(null);
-                        } else {
-                            HBox container = new HBox(5);
-                            container.setAlignment(Pos.CENTER);
-                            container.getChildren().add(btnDetails);
-                            setGraphic(container);
-                        }
-                    }
-                });
-                System.out.println("✓ colActions configurée");
-            }
-            
-            tableWorkflow.setItems(courriersObservable);
-            
-            // Message si table vide
-            tableWorkflow.setPlaceholder(new Label("Aucun courrier en workflow"));
-            
-            System.out.println("✓ TableView initialisée");
-            
-        } catch (Exception e) {
-            System.err.println("Erreur initialisation TableView: " + e.getMessage());
-            e.printStackTrace();
         }
+        
+        System.out.println("✓ " + servicesAutorises.size() + " services autorisés pour " + currentUser.getCode());
     }
     
     /**
-     * Initialise les filtres
+     * Charge les données initiales
      */
-    private void initializeFilters() {
-        System.out.println("Initialisation des filtres...");
+    private void loadInitialData() {
+        calculateFluxStatistics();
+        generateGraph();
+        updateStatistics();
+        updateTable();
+    }
+    
+    /**
+     * Calcule les statistiques des flux
+     */
+    private void calculateFluxStatistics() {
+        fluxStats = new HashMap<>();
+        fluxCourriers = new ArrayList<>();
         
-        try {
-            // Filtre statut
-            if (filtreStatut != null) {
-                ObservableList<String> statuts = FXCollections.observableArrayList(
-                    "Tous",
-                    StatutCourrier.EN_ATTENTE.getLibelle(),
-                    StatutCourrier.EN_COURS.getLibelle(),
-                    StatutCourrier.TRAITE.getLibelle(),
-                    StatutCourrier.ARCHIVE.getLibelle()
-                );
-                filtreStatut.setItems(statuts);
-                filtreStatut.setValue("Tous");
-                System.out.println("✓ filtreStatut configuré");
-            }
+        LocalDateTime debut = dpDebut.getValue() != null ? 
+            dpDebut.getValue().atStartOfDay() : LocalDateTime.now().minusMonths(1);
+        LocalDateTime fin = dpFin.getValue() != null ? 
+            dpFin.getValue().atTime(23, 59, 59) : LocalDateTime.now();
+        
+        // Récupérer tous les courriers de la période
+        List<Courrier> courriers = courrierService.getAllCourriers().stream()
+            .filter(c -> c.getDateReception() != null)
+            .filter(c -> !c.getDateReception().isBefore(debut))
+            .filter(c -> !c.getDateReception().isAfter(fin))
+            .collect(Collectors.toList());
+        
+        // Pour chaque courrier, analyser ses étapes de workflow
+        for (Courrier courrier : courriers) {
+            List<WorkflowStep> steps = workflowService.getWorkflowHistory(courrier.getId());
             
-            // Filtre priorité
-            if (filtrePriorite != null) {
-                ObservableList<String> priorites = FXCollections.observableArrayList(
-                    "Toutes",
-                    PrioriteCourrier.NORMALE.getLibelle(),
-                    PrioriteCourrier.URGENTE.getLibelle(),
-                    PrioriteCourrier.TRES_URGENTE.getLibelle()
-                );
-                filtrePriorite.setItems(priorites);
-                filtrePriorite.setValue("Toutes");
-                System.out.println("✓ filtrePriorite configuré");
-            }
+            if (steps.isEmpty()) continue;
             
-            // Filtre service
-            if (filtreService != null) {
-                ObservableList<String> services = FXCollections.observableArrayList("Tous");
+            // Identifier le type de courrier
+            TypeCourrier typeCourrier = courrier.getTypeCourrier();
+            
+            for (int i = 0; i < steps.size(); i++) {
+                WorkflowStep step = steps.get(i);
+                String serviceCode = step.getServiceCode();
                 
-                if (workflowService != null) {
-                    try {
-                        List<ServiceHierarchy> tousServices = workflowService.getAllServices();
-                        services.addAll(tousServices.stream()
-                            .map(ServiceHierarchy::getServiceName)
-                            .collect(Collectors.toList()));
-                    } catch (Exception e) {
-                        System.err.println("⚠ Erreur chargement services pour filtre: " + e.getMessage());
-                    }
+                // Vérifier si ce service est autorisé
+                boolean isAuthorized = servicesAutorises.stream()
+                    .anyMatch(s -> s.getServiceCode().equals(serviceCode));
+                
+                if (!isAuthorized) continue;
+                
+                // Obtenir ou créer les stats pour ce service
+                ServiceFlowStats stats = fluxStats.computeIfAbsent(serviceCode, 
+                    k -> new ServiceFlowStats(serviceCode, getServiceName(serviceCode)));
+                
+                // Déterminer le type de flux
+                if (i == 0) {
+                    // Première étape = flux entrant
+                    stats.incrementFluxEntrants();
+                } else if (i == steps.size() - 1 && step.getStatutEtape() == StatutEtapeWorkflow.TERMINE) {
+                    // Dernière étape terminée = flux sortant
+                    stats.incrementFluxSortants();
+                } else {
+                    // Étape intermédiaire = flux interne
+                    stats.incrementFluxInternes();
                 }
                 
-                filtreService.setItems(services);
-                filtreService.setValue("Tous");
-                System.out.println("✓ filtreService configuré");
+                // Calculer la durée de traitement
+                if (i < steps.size() - 1) {
+                    WorkflowStep nextStep = steps.get(i + 1);
+                    long heures = java.time.Duration.between(
+                        step.getDateAction(),
+                        nextStep.getDateAction()
+                    ).toHours();
+                    
+                    stats.ajouterDureeTraitement(heures);
+                    
+                    // Enregistrer le flux
+                    FluxCourrier flux = new FluxCourrier(
+                        courrier.getId(),
+                        courrier.getNumeroCourrier(),
+                        typeCourrier,
+                        serviceCode,
+                        nextStep.getServiceCode(),
+                        heures,
+                        step.getDateAction()
+                    );
+                    fluxCourriers.add(flux);
+                }
+                
+                // Détecter les retards
+                if (step.isEnRetard()) {
+                    stats.incrementRetards();
+                }
             }
-            
-            System.out.println("✓ Filtres initialisés");
-            
-        } catch (Exception e) {
-            System.err.println("Erreur initialisation filtres: " + e.getMessage());
-            e.printStackTrace();
         }
-    }
-    
-    /**
-     * Charge les données de manière sécurisée
-     */
-    private void loadDataSafely() {
-        System.out.println("Chargement des données...");
         
-        try {
-            tousLesCourriers = getCourriersVisibles();
-            System.out.println("✓ " + tousLesCourriers.size() + " courriers chargés");
-            
-            appliquerFiltres();
-            updateStatistics();
-            
-        } catch (Exception e) {
-            System.err.println("Erreur chargement données: " + e.getMessage());
-            e.printStackTrace();
-            
-            // Initialiser avec une liste vide
-            tousLesCourriers = new ArrayList<>();
-            courriersObservable.clear();
-        }
+        System.out.println("✓ Statistiques calculées pour " + fluxStats.size() + " services");
     }
     
     /**
-     * Configure les listeners
+     * Obtient le nom d'un service
      */
-    private void setupListeners() {
-        System.out.println("Configuration des listeners...");
+    private String getServiceName(String serviceCode) {
+        ServiceHierarchy service = workflowService.getServiceByCode(serviceCode);
+        return service != null ? service.getServiceName() : serviceCode;
+    }
+    
+    /**
+     * Génère le graphe de visualisation
+     */
+    private void generateGraph() {
+        if (graphPane == null) return;
         
-        try {
-            // Listener sur sélection dans la table
-            if (tableWorkflow != null) {
-                tableWorkflow.getSelectionModel().selectedItemProperty().addListener(
-                    (obs, oldSelection, newSelection) -> {
-                        if (newSelection != null) {
-                            afficherDetails(newSelection);
-                        }
-                    }
-                );
-                System.out.println("✓ Listener sélection table configuré");
+        Platform.runLater(() -> {
+            graphPane.getChildren().clear();
+            
+            try {
+                // Filtrer les flux selon le type sélectionné
+                String typeFlux = cbTypeFlux.getValue();
+                List<FluxCourrier> fluxFiltres = filterFluxByType(fluxCourriers, typeFlux);
+                
+                if (fluxFiltres.isEmpty()) {
+                    showEmptyGraphMessage();
+                    return;
+                }
+                
+                // Identifier les services uniques impliqués
+                Set<String> servicesImpliques = new HashSet<>();
+                for (FluxCourrier flux : fluxFiltres) {
+                    servicesImpliques.add(flux.getServiceSource());
+                    servicesImpliques.add(flux.getServiceDestination());
+                }
+                
+                // Filtrer pour garder uniquement les services autorisés
+                servicesImpliques = servicesImpliques.stream()
+                    .filter(code -> servicesAutorises.stream()
+                        .anyMatch(s -> s.getServiceCode().equals(code)))
+                    .collect(Collectors.toSet());
+                
+                // Calculer les positions des nœuds
+                Map<String, Point2D> positions = calculateNodePositions(new ArrayList<>(servicesImpliques));
+                
+                // Dessiner les flux (arêtes)
+                drawFlows(fluxFiltres, positions, typeFlux);
+                
+                // Dessiner les nœuds
+                drawNodes(servicesImpliques, positions);
+                
+                System.out.println("✓ Graphe généré avec " + servicesImpliques.size() + " services");
+                
+            } catch (Exception e) {
+                System.err.println("Erreur génération graphe: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
+    
+    /**
+     * Filtre les flux selon le type sélectionné
+     */
+    private List<FluxCourrier> filterFluxByType(List<FluxCourrier> flux, String typeFlux) {
+        if (typeFlux == null || typeFlux.equals("Tous les flux")) {
+            return new ArrayList<>(flux);
+        }
+        
+        return flux.stream().filter(f -> {
+            switch (typeFlux) {
+                case "Flux entrants uniquement":
+                    return f.getTypeCourrier() == TypeCourrier.ENTRANT;
+                case "Flux sortants uniquement":
+                    return f.getTypeCourrier() == TypeCourrier.SORTANT;
+                case "Flux internes uniquement":
+                    return f.getTypeCourrier() == TypeCourrier.INTERNE;
+                default:
+                    return true;
+            }
+        }).collect(Collectors.toList());
+    }
+    
+    /**
+     * Calcule les positions des nœuds dans le graphe
+     */
+    private Map<String, Point2D> calculateNodePositions(List<String> serviceCodes) {
+        Map<String, Point2D> positions = new HashMap<>();
+        
+        // Grouper les services par niveau hiérarchique
+        Map<Integer, List<String>> parNiveau = serviceCodes.stream()
+            .collect(Collectors.groupingBy(code -> {
+                ServiceHierarchy service = workflowService.getServiceByCode(code);
+                return service != null ? service.getNiveau() : 999;
+            }));
+        
+        double startY = 150;
+        int niveauIndex = 0;
+        
+        List<Integer> niveaux = new ArrayList<>(parNiveau.keySet());
+        Collections.sort(niveaux);
+        
+        for (Integer niveau : niveaux) {
+            List<String> services = parNiveau.get(niveau);
+            
+            double totalWidth = services.size() * HORIZONTAL_SPACING;
+            double startX = Math.max(200, (graphPane.getWidth() - totalWidth) / 2);
+            
+            for (int i = 0; i < services.size(); i++) {
+                String serviceCode = services.get(i);
+                double x = startX + i * HORIZONTAL_SPACING;
+                double y = startY + niveauIndex * VERTICAL_SPACING;
+                
+                positions.put(serviceCode, new Point2D(x, y));
             }
             
-            // Listeners sur les filtres
-            if (filtreStatut != null) {
-                filtreStatut.setOnAction(e -> appliquerFiltres());
-            }
-            if (filtrePriorite != null) {
-                filtrePriorite.setOnAction(e -> appliquerFiltres());
-            }
-            if (filtreService != null) {
-                filtreService.setOnAction(e -> appliquerFiltres());
-            }
+            niveauIndex++;
+        }
+        
+        return positions;
+    }
+    
+    /**
+     * Dessine les flux entre services
+     */
+    private void drawFlows(List<FluxCourrier> flux, Map<String, Point2D> positions, String typeFlux) {
+        // Regrouper les flux par paire source-destination
+        Map<String, List<FluxCourrier>> fluxGroupes = flux.stream()
+            .collect(Collectors.groupingBy(f -> f.getServiceSource() + "->" + f.getServiceDestination()));
+        
+        for (Map.Entry<String, List<FluxCourrier>> entry : fluxGroupes.entrySet()) {
+            List<FluxCourrier> fluxGroupe = entry.getValue();
+            FluxCourrier premier = fluxGroupe.get(0);
             
-            // Listener sur champ recherche
-            if (champRecherche != null) {
-                champRecherche.textProperty().addListener((obs, oldVal, newVal) -> 
-                    appliquerFiltres()
-                );
-            }
+            Point2D posSource = positions.get(premier.getServiceSource());
+            Point2D posDest = positions.get(premier.getServiceDestination());
             
-            System.out.println("✓ Listeners configurés");
+            if (posSource == null || posDest == null) continue;
             
-        } catch (Exception e) {
-            System.err.println("Erreur configuration listeners: " + e.getMessage());
-            e.printStackTrace();
+            // Calculer l'épaisseur selon le nombre de courriers
+            int nombreCourriers = fluxGroupe.size();
+            double epaisseur = calculateArrowWidth(nombreCourriers);
+            
+            // Déterminer la couleur selon le type
+            String couleur = getFlowColor(premier.getTypeCourrier(), typeFlux);
+            
+            // Calculer la durée moyenne
+            double dureeMoyenne = fluxGroupe.stream()
+                .mapToLong(FluxCourrier::getDureeHeures)
+                .average()
+                .orElse(0);
+            
+            // Dessiner la flèche
+            drawCurvedArrow(posSource, posDest, epaisseur, couleur, nombreCourriers, dureeMoyenne);
         }
     }
     
     /**
-     * Récupère les courriers visibles pour l'utilisateur
+     * Calcule la largeur de la flèche selon le nombre de courriers
      */
-    private List<Courrier> getCourriersVisibles() {
-        try {
-            if (workflowService == null || currentUser == null) {
-                System.out.println("⚠ Impossible de charger les courriers (service ou user null)");
-                return new ArrayList<>();
-            }
-            
-            return workflowService.getCourriersVisiblesPourUtilisateur(currentUser);
-            
-        } catch (Exception e) {
-            System.err.println("Erreur récupération courriers: " + e.getMessage());
-            return new ArrayList<>();
+    private double calculateArrowWidth(int nombreCourriers) {
+        if (nombreCourriers <= 1) return MIN_ARROW_WIDTH;
+        if (nombreCourriers >= 50) return MAX_ARROW_WIDTH;
+        
+        return MIN_ARROW_WIDTH + (MAX_ARROW_WIDTH - MIN_ARROW_WIDTH) * 
+               Math.log(nombreCourriers) / Math.log(50);
+    }
+    
+    /**
+     * Obtient la couleur du flux selon le type
+     */
+    private String getFlowColor(TypeCourrier type, String filtreType) {
+        if (filtreType != null && filtreType.contains("entrants")) {
+            return "#e67e22"; // Orange
+        } else if (filtreType != null && filtreType.contains("sortants")) {
+            return "#3498db"; // Bleu
+        } else if (filtreType != null && filtreType.contains("internes")) {
+            return "#95a5a6"; // Gris
+        }
+        
+        // Couleur par défaut selon le type
+        switch (type) {
+            case ENTRANT: return "#e67e22"; // Orange
+            case SORTANT: return "#3498db"; // Bleu
+            case INTERNE: return "#95a5a6"; // Gris
+            default: return "#34495e";
         }
     }
     
     /**
-     * Applique les filtres sur la liste des courriers
+     * Dessine une flèche courbe entre deux points
      */
-    @FXML
-    private void appliquerFiltres() {
-        try {
-            if (tousLesCourriers == null) {
-                return;
-            }
-            
-            List<Courrier> courriersFiltres = new ArrayList<>(tousLesCourriers);
-            
-            // Filtre par statut
-            if (filtreStatut != null && !filtreStatut.getValue().equals("Tous")) {
-                String statutSelectionne = filtreStatut.getValue();
-                courriersFiltres = courriersFiltres.stream()
-                    .filter(c -> c.getStatut().getLibelle().equals(statutSelectionne))
-                    .collect(Collectors.toList());
-            }
-            
-            // Filtre par priorité
-            if (filtrePriorite != null && !filtrePriorite.getValue().equals("Toutes")) {
-                String prioriteSelectionnee = filtrePriorite.getValue();
-                courriersFiltres = courriersFiltres.stream()
-                    .filter(c -> c.getPriorite().equals(prioriteSelectionnee))
-                    .collect(Collectors.toList());
-            }
-            
-            // Filtre par service
-            if (filtreService != null && !filtreService.getValue().equals("Tous")) {
-                String serviceSelectionne = filtreService.getValue();
-                courriersFiltres = courriersFiltres.stream()
-                    .filter(c -> serviceSelectionne.equals(c.getServiceActuel()))
-                    .collect(Collectors.toList());
-            }
-            
-            // Recherche textuelle
-            if (champRecherche != null && !champRecherche.getText().trim().isEmpty()) {
-                String recherche = champRecherche.getText().toLowerCase();
-                courriersFiltres = courriersFiltres.stream()
-                    .filter(c -> 
-                        c.getNumeroCourrier().toLowerCase().contains(recherche) ||
-                        c.getObjet().toLowerCase().contains(recherche) ||
-                        (c.getExpediteur() != null && c.getExpediteur().toLowerCase().contains(recherche))
-                    )
-                    .collect(Collectors.toList());
-            }
-            
-            // Mettre à jour la table
-            courriersObservable.clear();
-            courriersObservable.addAll(courriersFiltres);
-            
-            System.out.println("✓ Filtres appliqués: " + courriersFiltres.size() + " courriers affichés");
-            
-        } catch (Exception e) {
-            System.err.println("Erreur application filtres: " + e.getMessage());
-            e.printStackTrace();
+    private void drawCurvedArrow(Point2D start, Point2D end, double width, String color, 
+                                 int count, double duree) {
+        Group arrowGroup = new Group();
+        
+        // Calcul du point de contrôle pour la courbe de Bézier
+        double midX = (start.getX() + end.getX()) / 2;
+        double midY = (start.getY() + end.getY()) / 2;
+        
+        // Décalage perpendiculaire pour créer la courbe
+        double dx = end.getX() - start.getX();
+        double dy = end.getY() - start.getY();
+        double length = Math.sqrt(dx * dx + dy * dy);
+        double curvature = 0.2; // 20% de courbure
+        
+        double controlX = midX - curvature * length * (dy / length);
+        double controlY = midY + curvature * length * (dx / length);
+        
+        // Créer le chemin courbe
+        Path path = new Path();
+        path.getElements().add(new MoveTo(start.getX() + NODE_WIDTH, start.getY() + NODE_HEIGHT / 2));
+        path.getElements().add(new QuadCurveTo(
+            controlX, controlY,
+            end.getX(), end.getY() + NODE_HEIGHT / 2
+        ));
+        
+        path.setStroke(Color.web(color));
+        path.setStrokeWidth(width);
+        path.setFill(null);
+        path.setOpacity(0.7);
+        
+        // Ajouter une lueur si le flux est important
+        if (count > 20) {
+            javafx.scene.effect.Glow glow = new javafx.scene.effect.Glow();
+            glow.setLevel(0.5);
+            path.setEffect(glow);
         }
-    }
-    
-    /**
-     * Réinitialise les filtres
-     */
-    @FXML
-    private void handleReinitialiserFiltres() {
-        try {
-            if (filtreStatut != null) filtreStatut.setValue("Tous");
-            if (filtrePriorite != null) filtrePriorite.setValue("Toutes");
-            if (filtreService != null) filtreService.setValue("Tous");
-            if (champRecherche != null) champRecherche.clear();
-            if (dateDebut != null) dateDebut.setValue(null);
-            if (dateFin != null) dateFin.setValue(null);
-            
-            appliquerFiltres();
-            
-        } catch (Exception e) {
-            System.err.println("Erreur réinitialisation filtres: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-    
-    /**
-     * Affiche les détails d'un courrier
-     */
-    private void afficherDetails(Courrier courrier) {
-        try {
-            courrierSelectionne = courrier;
-            
-            if (detailsContainer == null) {
-                System.err.println("⚠ detailsContainer est null");
-                return;
-            }
-            
-            // Remplir les champs de détails
-            if (detailNumero != null) {
-                detailNumero.setText(courrier.getNumeroCourrier());
-            }
-            if (detailObjet != null) {
-                detailObjet.setText(courrier.getObjet());
-            }
-            if (detailStatut != null) {
-                detailStatut.setText(courrier.getStatut().getLibelle());
-            }
-            if (detailPriorite != null) {
-                detailPriorite.setText(courrier.getPriorite());
-            }
-            if (detailExpediteur != null) {
-                detailExpediteur.setText(courrier.getExpediteur() != null ? courrier.getExpediteur() : "N/A");
-            }
-            if (detailDateReception != null) {
-                detailDateReception.setText(
-                    courrier.getDateReception().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
-                );
-            }
-            if (detailServiceActuel != null) {
-                detailServiceActuel.setText(
-                    courrier.getServiceActuel() != null ? courrier.getServiceActuel() : "N/A"
-                );
-            }
-            
-            // Afficher la timeline
-            afficherTimeline(courrier);
-            
-            // Activer/désactiver les boutons d'action
-            updateActionButtons(courrier);
-            
-            System.out.println("✓ Détails affichés pour: " + courrier.getNumeroCourrier());
-            
-        } catch (Exception e) {
-            System.err.println("Erreur affichage détails: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-    
-    /**
-     * Affiche la timeline du workflow
-     */
-    private void afficherTimeline(Courrier courrier) {
-        try {
-            if (timelineContainer == null) {
-                return;
-            }
-            
-            timelineContainer.getChildren().clear();
-            
-            // Créer une timeline simple
-            Label timelineTitle = new Label("Historique du workflow");
-            timelineTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
-            
-            VBox timelineBox = new VBox(10);
-            timelineBox.setPadding(new Insets(10));
-            
-            // Événement: Réception
-            VBox eventBox1 = createTimelineEvent(
-                "📨 Réception",
-                courrier.getDateReception().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
-                "Courrier reçu"
+        
+        arrowGroup.getChildren().add(path);
+        
+        // Ajouter le label avec le nombre si > 5
+        if (count > 5) {
+            Label countLabel = new Label(String.valueOf(count));
+            countLabel.setLayoutX(controlX - 15);
+            countLabel.setLayoutY(controlY - 25);
+            countLabel.setStyle(
+                "-fx-background-color: white; " +
+                "-fx-padding: 3 8; " +
+                "-fx-border-color: " + color + "; " +
+                "-fx-border-width: 2; " +
+                "-fx-border-radius: 10; " +
+                "-fx-background-radius: 10; " +
+                "-fx-font-weight: bold; " +
+                "-fx-font-size: 11px;"
             );
-            timelineBox.getChildren().add(eventBox1);
+            arrowGroup.getChildren().add(countLabel);
+        }
+        
+        // Tooltip avec détails
+        String tooltipText = String.format(
+            "%d courrier%s\nDurée moyenne: %.1fh",
+            count, count > 1 ? "s" : "", duree
+        );
+        Tooltip tooltip = new Tooltip(tooltipText);
+        Tooltip.install(path, tooltip);
+        
+        // Interactivité
+        path.setCursor(Cursor.HAND);
+        path.setOnMouseEntered(e -> {
+            path.setStrokeWidth(width * 1.5);
+            path.setOpacity(1.0);
+        });
+        path.setOnMouseExited(e -> {
+            path.setStrokeWidth(width);
+            path.setOpacity(0.7);
+        });
+        
+        graphPane.getChildren().add(arrowGroup);
+    }
+    
+    /**
+     * Dessine les nœuds représentant les services
+     */
+    private void drawNodes(Set<String> serviceCodes, Map<String, Point2D> positions) {
+        for (String serviceCode : serviceCodes) {
+            Point2D pos = positions.get(serviceCode);
+            if (pos == null) continue;
             
-            // Si en cours ou traité
-            if (courrier.getStatut() != StatutCourrier.EN_ATTENTE) {
-                VBox eventBox2 = createTimelineEvent(
-                    "🔄 En cours de traitement",
-                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
-                    "Service: " + (courrier.getServiceActuel() != null ? courrier.getServiceActuel() : "N/A")
-                );
-                timelineBox.getChildren().add(eventBox2);
-            }
+            ServiceHierarchy service = workflowService.getServiceByCode(serviceCode);
+            ServiceFlowStats stats = fluxStats.get(serviceCode);
             
-            timelineContainer.getChildren().addAll(timelineTitle, timelineBox);
+            if (service == null) continue;
             
-        } catch (Exception e) {
-            System.err.println("Erreur affichage timeline: " + e.getMessage());
-            e.printStackTrace();
+            VBox nodeBox = createServiceNode(service, stats, pos.getX(), pos.getY());
+            graphPane.getChildren().add(nodeBox);
         }
     }
     
     /**
-     * Crée un événement de timeline
+     * Crée un nœud visuel pour un service
      */
-    private VBox createTimelineEvent(String titre, String date, String description) {
-        VBox eventBox = new VBox(5);
-        eventBox.setPadding(new Insets(10));
-        eventBox.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 5;");
+    private VBox createServiceNode(ServiceHierarchy service, ServiceFlowStats stats, double x, double y) {
+        VBox node = new VBox(8);
+        node.setLayoutX(x);
+        node.setLayoutY(y);
+        node.setPrefWidth(NODE_WIDTH);
+        node.setMinHeight(NODE_HEIGHT);
+        node.setAlignment(Pos.CENTER);
+        node.setPadding(new Insets(12));
         
-        Label titreLabel = new Label(titre);
-        titreLabel.setStyle("-fx-font-weight: bold;");
+        // Style selon les performances
+        String borderColor = "#3498db";
+        String backgroundColor = "#ffffff";
         
-        Label dateLabel = new Label(date);
-        dateLabel.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 11px;");
-        
-        Label descLabel = new Label(description);
-        descLabel.setStyle("-fx-font-size: 12px;");
-        
-        eventBox.getChildren().addAll(titreLabel, dateLabel, descLabel);
-        
-        return eventBox;
-    }
-    
-    /**
-     * Met à jour les boutons d'action
-     */
-    private void updateActionButtons(Courrier courrier) {
-        try {
-            boolean peutTransferer = courrier.getStatut() != StatutCourrier.ARCHIVE;
-            boolean peutTraiter = courrier.getStatut() == StatutCourrier.EN_COURS;
-            boolean peutArchiver = courrier.getStatut() == StatutCourrier.TRAITE;
-            
-            if (btnTransferer != null) {
-                btnTransferer.setDisable(!peutTransferer);
+        if (stats != null) {
+            if (stats.estGoulot() && chkAfficherGoulots.isSelected()) {
+                borderColor = "#e74c3c";
+                backgroundColor = "#fde6e6";
+            } else if (stats.getScorePerformance() >= 80) {
+                borderColor = "#27ae60";
+                backgroundColor = "#e8f8f5";
+            } else if (stats.getScorePerformance() < 60) {
+                borderColor = "#f39c12";
+                backgroundColor = "#fef5e7";
             }
-            if (btnTraiter != null) {
-                btnTraiter.setDisable(!peutTraiter);
-            }
-            if (btnArchiver != null) {
-                btnArchiver.setDisable(!peutArchiver);
-            }
-            
-        } catch (Exception e) {
-            System.err.println("Erreur mise à jour boutons: " + e.getMessage());
         }
+        
+        node.setStyle(
+            "-fx-background-color: " + backgroundColor + ";" +
+            "-fx-border-color: " + borderColor + ";" +
+            "-fx-border-width: 3;" +
+            "-fx-border-radius: 12;" +
+            "-fx-background-radius: 12;" +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 8, 0, 0, 3);"
+        );
+        
+        // Icône
+        Label iconLabel = new Label(service.getIcone());
+        iconLabel.setFont(Font.font(24));
+        
+        // Code du service
+        Label codeLabel = new Label(service.getServiceCode());
+        codeLabel.setFont(Font.font("System", FontWeight.BOLD, 13));
+        codeLabel.setStyle("-fx-text-fill: #2c3e50;");
+        
+        // Nom du service (tronqué si trop long)
+        String serviceName = service.getServiceName();
+        if (serviceName.length() > 20) {
+            serviceName = serviceName.substring(0, 17) + "...";
+        }
+        Label nameLabel = new Label(serviceName);
+        nameLabel.setFont(Font.font(10));
+        nameLabel.setStyle("-fx-text-fill: #7f8c8d;");
+        nameLabel.setWrapText(true);
+        nameLabel.setMaxWidth(NODE_WIDTH - 20);
+        
+        node.getChildren().addAll(iconLabel, codeLabel, nameLabel);
+        
+        // Statistiques si disponibles
+        if (stats != null) {
+            HBox statsBox = new HBox(8);
+            statsBox.setAlignment(Pos.CENTER);
+            
+            if (stats.getFluxEntrants() > 0) {
+                Label entrants = new Label("↓" + stats.getFluxEntrants());
+                entrants.setStyle("-fx-font-size: 9px; -fx-text-fill: #e67e22; -fx-font-weight: bold;");
+                statsBox.getChildren().add(entrants);
+            }
+            
+            if (stats.getFluxSortants() > 0) {
+                Label sortants = new Label("↑" + stats.getFluxSortants());
+                sortants.setStyle("-fx-font-size: 9px; -fx-text-fill: #3498db; -fx-font-weight: bold;");
+                statsBox.getChildren().add(sortants);
+            }
+            
+            if (stats.getFluxInternes() > 0) {
+                Label internes = new Label("↔" + stats.getFluxInternes());
+                internes.setStyle("-fx-font-size: 9px; -fx-text-fill: #95a5a6; -fx-font-weight: bold;");
+                statsBox.getChildren().add(internes);
+            }
+            
+            if (!statsBox.getChildren().isEmpty()) {
+                node.getChildren().add(statsBox);
+            }
+        }
+        
+        // Tooltip détaillé
+        if (stats != null) {
+            String tooltipText = String.format(
+                "%s\n\n" +
+                "Flux entrants: %d\n" +
+                "Flux sortants: %d\n" +
+                "Flux internes: %d\n" +
+                "Durée moyenne: %s\n" +
+                "Score: %d%%\n" +
+                "%s",
+                service.getServiceName(),
+                stats.getFluxEntrants(),
+                stats.getFluxSortants(),
+                stats.getFluxInternes(),
+                stats.getDureeMoyenneFormatee(),
+                stats.getScorePerformance(),
+                stats.estGoulot() ? "⚠️ GOULOT DÉTECTÉ" : "✓ Flux normal"
+            );
+            Tooltip tooltip = new Tooltip(tooltipText);
+            Tooltip.install(node, tooltip);
+        }
+        
+        // Interactivité
+        node.setCursor(Cursor.HAND);
+        node.setOnMouseEntered(e -> {
+            node.setScaleX(1.1);
+            node.setScaleY(1.1);
+        });
+        node.setOnMouseExited(e -> {
+            node.setScaleX(1.0);
+            node.setScaleY(1.0);
+        });
+        
+        return node;
     }
     
     /**
-     * Met à jour les statistiques
+     * Met à jour les statistiques globales
      */
     private void updateStatistics() {
-        try {
-            if (tousLesCourriers == null) {
-                return;
+        int totalCourriers = fluxCourriers.stream()
+            .map(FluxCourrier::getCourrierId)
+            .collect(Collectors.toSet())
+            .size();
+        
+        int servicesActifs = fluxStats.size();
+        
+        double dureeMoyenne = fluxStats.values().stream()
+            .mapToDouble(ServiceFlowStats::getDureeMoyenne)
+            .filter(d -> d > 0)
+            .average()
+            .orElse(0);
+        
+        long goulotsDetectes = fluxStats.values().stream()
+            .filter(ServiceFlowStats::estGoulot)
+            .count();
+        
+        if (statTotalCourriers != null) {
+            statTotalCourriers.setText(String.valueOf(totalCourriers));
+        }
+        
+        if (statServicesActifs != null) {
+            statServicesActifs.setText(String.valueOf(servicesActifs));
+        }
+        
+        if (statDureeMoyenne != null) {
+            if (dureeMoyenne < 1) {
+                statDureeMoyenne.setText(String.format("%.0f min", dureeMoyenne * 60));
+            } else if (dureeMoyenne < 24) {
+                statDureeMoyenne.setText(String.format("%.1f h", dureeMoyenne));
+            } else {
+                statDureeMoyenne.setText(String.format("%.1f j", dureeMoyenne / 24));
+            }
+        }
+        
+        if (statGoulotsDetectes != null) {
+            statGoulotsDetectes.setText(String.valueOf(goulotsDetectes));
+            if (goulotsDetectes > 0) {
+                statGoulotsDetectes.setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold;");
+            } else {
+                statGoulotsDetectes.setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold;");
+            }
+        }
+    }
+    
+    /**
+     * Met à jour la table des détails
+     */
+    private void updateTable() {
+        if (tableFluxDetails == null) return;
+        
+        List<ServiceFlowStats> statsList = new ArrayList<>(fluxStats.values());
+        statsList.sort((a, b) -> {
+            // Trier par goulots d'abord, puis par score
+            if (a.estGoulot() != b.estGoulot()) {
+                return a.estGoulot() ? -1 : 1;
+            }
+            return Integer.compare(b.getScorePerformance(), a.getScorePerformance());
+        });
+        
+        tableFluxDetails.getItems().clear();
+        tableFluxDetails.getItems().addAll(statsList);
+    }
+    
+    /**
+     * Affiche un message quand le graphe est vide
+     */
+    private void showEmptyGraphMessage() {
+        VBox emptyBox = new VBox(20);
+        emptyBox.setAlignment(Pos.CENTER);
+        emptyBox.setLayoutX(graphPane.getWidth() / 2 - 200);
+        emptyBox.setLayoutY(graphPane.getHeight() / 2 - 100);
+        emptyBox.setPrefWidth(400);
+        
+        Label iconLabel = new Label("📊");
+        iconLabel.setFont(Font.font(64));
+        iconLabel.setStyle("-fx-text-fill: #bdc3c7;");
+        
+        Label messageLabel = new Label("Aucun flux de courriers pour la période sélectionnée");
+        messageLabel.setFont(Font.font(16));
+        messageLabel.setStyle("-fx-text-fill: #7f8c8d;");
+        messageLabel.setWrapText(true);
+        messageLabel.setMaxWidth(380);
+        
+        Label hintLabel = new Label("Essayez de modifier les filtres ou la période");
+        hintLabel.setFont(Font.font(12));
+        hintLabel.setStyle("-fx-text-fill: #95a5a6;");
+        
+        emptyBox.getChildren().addAll(iconLabel, messageLabel, hintLabel);
+        graphPane.getChildren().add(emptyBox);
+    }
+    
+    // === HANDLERS ===
+    
+    @FXML
+    private void handleGenerate() {
+        calculateFluxStatistics();
+        generateGraph();
+        updateStatistics();
+        updateTable();
+    }
+    
+    @FXML
+    private void handleExport() {
+        AlertUtils.showInfo("Export", "Fonctionnalité d'export en cours de développement");
+    }
+    
+    @FXML
+    private void handleZoomIn() {
+        if (sliderZoom != null) {
+            sliderZoom.setValue(Math.min(3.0, currentZoom + 0.25));
+        }
+    }
+    
+    @FXML
+    private void handleZoomOut() {
+        if (sliderZoom != null) {
+            sliderZoom.setValue(Math.max(0.25, currentZoom - 0.25));
+        }
+    }
+    
+    @FXML
+    private void handleResetZoom() {
+        if (sliderZoom != null) {
+            sliderZoom.setValue(1.0);
+        }
+    }
+    
+    private void regenerateGraph() {
+        generateGraph();
+    }
+    
+    private void updateStatisticsVisibility() {
+        boolean visible = chkAfficherStatistiques != null && chkAfficherStatistiques.isSelected();
+        if (statsDetailContainer != null) {
+            statsDetailContainer.setVisible(visible);
+            statsDetailContainer.setManaged(visible);
+        }
+    }
+    
+    // === CLASSES INTERNES ===
+    
+    /**
+     * Classe pour représenter un point 2D
+     */
+    private static class Point2D {
+        private final double x, y;
+        
+        public Point2D(double x, double y) {
+            this.x = x;
+            this.y = y;
+        }
+        
+        public double getX() { return x; }
+        public double getY() { return y; }
+    }
+    
+    /**
+     * Classe pour représenter un flux de courrier
+     */
+    private static class FluxCourrier {
+        private final int courrierId;
+        private final String numeroCourrier;
+        private final TypeCourrier typeCourrier;
+        private final String serviceSource;
+        private final String serviceDestination;
+        private final long dureeHeures;
+        private final LocalDateTime dateFlux;
+        
+        public FluxCourrier(int courrierId, String numeroCourrier, TypeCourrier typeCourrier,
+                           String serviceSource, String serviceDestination, long dureeHeures,
+                           LocalDateTime dateFlux) {
+            this.courrierId = courrierId;
+            this.numeroCourrier = numeroCourrier;
+            this.typeCourrier = typeCourrier;
+            this.serviceSource = serviceSource;
+            this.serviceDestination = serviceDestination;
+            this.dureeHeures = dureeHeures;
+            this.dateFlux = dateFlux;
+        }
+        
+        public int getCourrierId() { return courrierId; }
+        public String getNumeroCourrier() { return numeroCourrier; }
+        public TypeCourrier getTypeCourrier() { return typeCourrier; }
+        public String getServiceSource() { return serviceSource; }
+        public String getServiceDestination() { return serviceDestination; }
+        public long getDureeHeures() { return dureeHeures; }
+        public LocalDateTime getDateFlux() { return dateFlux; }
+    }
+    
+    /**
+     * Classe pour les statistiques de flux d'un service
+     */
+    public static class ServiceFlowStats {
+        private final String serviceCode;
+        private final String serviceName;
+        private int fluxEntrants;
+        private int fluxSortants;
+        private int fluxInternes;
+        private double dureeMoyenne;
+        private int nombreDurees;
+        private int retards;
+        
+        public ServiceFlowStats(String serviceCode, String serviceName) {
+            this.serviceCode = serviceCode;
+            this.serviceName = serviceName;
+        }
+        
+        public void incrementFluxEntrants() { fluxEntrants++; }
+        public void incrementFluxSortants() { fluxSortants++; }
+        public void incrementFluxInternes() { fluxInternes++; }
+        public void incrementRetards() { retards++; }
+        
+        public void ajouterDureeTraitement(long heures) {
+            dureeMoyenne = (dureeMoyenne * nombreDurees + heures) / (nombreDurees + 1);
+            nombreDurees++;
+        }
+        
+        public String getServiceCode() { return serviceCode; }
+        public String getServiceName() { return serviceName; }
+        public int getFluxEntrants() { return fluxEntrants; }
+        public int getFluxSortants() { return fluxSortants; }
+        public int getFluxInternes() { return fluxInternes; }
+        public double getDureeMoyenne() { return dureeMoyenne; }
+        public int getRetards() { return retards; }
+        
+        public String getDureeMoyenneFormatee() {
+            if (dureeMoyenne < 1) {
+                return String.format("%.0f min", dureeMoyenne * 60);
+            } else if (dureeMoyenne < 24) {
+                return String.format("%.1f h", dureeMoyenne);
+            } else {
+                return String.format("%.1f j", dureeMoyenne / 24);
+            }
+        }
+        
+        public int getScorePerformance() {
+            int total = fluxEntrants + fluxSortants + fluxInternes;
+            if (total == 0) return 100;
+            
+            double tauxRetard = (double) retards / total;
+            double score = 100 - (tauxRetard * 50);
+            
+            if (dureeMoyenne > 48) {
+                score -= 20;
+            } else if (dureeMoyenne > 24) {
+                score -= 10;
             }
             
-            int total = tousLesCourriers.size();
-            long enCours = tousLesCourriers.stream()
-                .filter(c -> c.getStatut() == StatutCourrier.EN_COURS)
-                .count();
-            long enAttente = tousLesCourriers.stream()
-                .filter(c -> c.getStatut() == StatutCourrier.EN_ATTENTE)
-                .count();
-            long termines = tousLesCourriers.stream()
-                .filter(c -> c.getStatut() == StatutCourrier.TRAITE || c.getStatut() == StatutCourrier.ARCHIVE)
-                .count();
-            
-            if (statTotal != null) statTotal.setText(String.valueOf(total));
-            if (statEnCours != null) statEnCours.setText(String.valueOf(enCours));
-            if (statEnAttente != null) statEnAttente.setText(String.valueOf(enAttente));
-            if (statTermines != null) statTermines.setText(String.valueOf(termines));
-            
-            System.out.println("✓ Statistiques mises à jour");
-            
-        } catch (Exception e) {
-            System.err.println("Erreur mise à jour statistiques: " + e.getMessage());
-            e.printStackTrace();
+            return Math.max(0, Math.min(100, (int) score));
         }
-    }
-    
-    /**
-     * Rafraîchit les données
-     */
-    @FXML
-    private void handleActualiser() {
-        System.out.println("Actualisation des données...");
-        loadDataSafely();
-    }
-    
-    /**
-     * Gestion des actions (stubs pour l'instant)
-     */
-    @FXML
-    private void handleTransferer() {
-        if (courrierSelectionne != null) {
-            AlertUtils.showInfo("Transfert", "Fonction de transfert en cours de développement");
+        
+        public boolean estGoulot() {
+            int total = fluxEntrants + fluxSortants + fluxInternes;
+            return dureeMoyenne > 24 || (total > 0 && retards > total * 0.3);
         }
-    }
-    
-    @FXML
-    private void handleTraiter() {
-        if (courrierSelectionne != null) {
-            AlertUtils.showInfo("Traitement", "Fonction de traitement en cours de développement");
+        
+        public String getStatutDescription() {
+            if (estGoulot()) {
+                return "⚠️ Goulot";
+            } else if (getScorePerformance() >= 80) {
+                return "✓ Excellent";
+            } else if (getScorePerformance() >= 60) {
+                return "◐ Satisfaisant";
+            } else {
+                return "◯ À améliorer";
+            }
         }
-    }
-    
-    @FXML
-    private void handleArchiver() {
-        if (courrierSelectionne != null) {
-            AlertUtils.showInfo("Archivage", "Fonction d'archivage en cours de développement");
-        }
-    }
-    
-    @FXML
-    private void handleAjouterCommentaire() {
-        if (courrierSelectionne != null) {
-            AlertUtils.showInfo("Commentaire", "Fonction d'ajout de commentaire en cours de développement");
-        }
-    }
-    
-    /**
-     * Affiche un état d'erreur dans l'interface
-     */
-    private void showErrorState(String message) {
-        System.err.println("AFFICHAGE ÉTAT D'ERREUR: " + message);
     }
 }

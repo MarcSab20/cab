@@ -33,6 +33,7 @@ public class AccueilController implements Initializable {
     private CourrierService courrierService;
     private DocumentService documentService;
     private MessageService messageService;
+    private MainController mainController;
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -58,12 +59,25 @@ public class AccueilController implements Initializable {
             // Chargement des statistiques
             loadStatistics();
             
+            // Chargement des activités récentes
+            loadRecentActivities();
+            
+            // Mise à jour des informations système
+            updateSystemInfo();
+            
             System.out.println("AccueilController.initialize() - Succès");
             
         } catch (Exception e) {
             System.err.println("Erreur lors de l'initialisation de AccueilController: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+    
+    /**
+     * Définit le MainController parent (appelé par le MainController après le chargement)
+     */
+    public void setMainController(MainController mainController) {
+        this.mainController = mainController;
     }
     
     /**
@@ -109,7 +123,7 @@ public class AccueilController implements Initializable {
                 "📧 Nouveau courrier reçu: Demande de devis",
                 "✅ Courrier traité: Rapport mensuel",
                 "📄 Document créé: Plan d'action 2025",
-                "🔄 Courrier transféré: Demande de congé"
+                "📤 Courrier transféré: Demande de congé"
             };
             
             for (String activite : activites) {
@@ -177,37 +191,57 @@ public class AccueilController implements Initializable {
     }
     
     /**
-     * Navigation vers une autre vue
+     * Navigation vers une autre vue via le MainController
      */
     private void navigateToView(String viewName) {
         try {
-            // Récupérer le MainController pour naviguer
-            MainController mainController = getMainController();
+            // Si le mainController a été défini, l'utiliser
             if (mainController != null) {
                 mainController.navigateToView(viewName);
+            } else {
+                // Sinon, essayer de le récupérer depuis la scène
+                MainController controller = getMainControllerFromScene();
+                if (controller != null) {
+                    controller.navigateToView(viewName);
+                } else {
+                    System.err.println("ERREUR: MainController non disponible pour la navigation");
+                }
             }
         } catch (Exception e) {
-            System.err.println("Erreur lors de la navigation: " + e.getMessage());
+            System.err.println("Erreur lors de la navigation vers " + viewName + ": " + e.getMessage());
             e.printStackTrace();
         }
     }
     
     /**
-     * Récupère le MainController
+     * Récupère le MainController depuis la scène actuelle
      */
-    private MainController getMainController() {
+    private MainController getMainControllerFromScene() {
         try {
             Stage stage = (Stage) labelBienvenue.getScene().getWindow();
             Scene scene = stage.getScene();
             Parent root = scene.getRoot();
             
-            // Le MainController devrait être accessible depuis la racine
-            if (root.getUserData() instanceof MainController) {
-                return (MainController) root.getUserData();
+            // Le MainController devrait être accessible depuis la racine via getUserData
+            Object userData = root.getUserData();
+            if (userData instanceof MainController) {
+                return (MainController) userData;
             }
+            
+            System.err.println("AVERTISSEMENT: MainController non trouvé dans getUserData");
+            
         } catch (Exception e) {
             System.err.println("Erreur lors de la récupération du MainController: " + e.getMessage());
         }
         return null;
+    }
+    
+    /**
+     * Rafraîchit les données affichées (peut être appelé par le MainController)
+     */
+    public void refresh() {
+        loadStatistics();
+        loadRecentActivities();
+        updateSystemInfo();
     }
 }
