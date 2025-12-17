@@ -92,7 +92,7 @@
                   </font>
                </Button>
 
-               <Button fx:id="btnWorkVisualization" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="📊 Visualisation Workflow">
+               <Button fx:id="btnWorkflowVisualization" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="📊 Visualisation Workflow">
                   <padding>
                      <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
                   </padding>

@@ -28,7 +28,7 @@ public class WorkflowVisualizationHelper {
         
         // Charger le FXML
         FXMLLoader loader = new FXMLLoader(
-            WorkflowVisualizationHelper.class.getResource("/application/views/workflow_visualization.fxml")
+            WorkflowVisualizationHelper.class.getResource("/application/views/workflow_suivi.fxml")
         );
         Parent root = loader.load();
         
