@@ -1,6 +1,7 @@
 package application.services;
 
 import application.models.Message;
+import application.models.StatutMessage;
 import application.models.User;
 
 import java.sql.*;
@@ -26,14 +27,18 @@ public class MessageService {
     
     public List<Message> getMessagesForUser(int userId) {
         List<Message> messages = new ArrayList<>();
+        
+        // Requête qui récupère les messages REÇUS et ENVOYÉS
         String query = """
             SELECT m.*, 
-                   exp.nom as exp_nom, exp.prenom as exp_prenom,
-                   dest.nom as dest_nom, dest.prenom as dest_prenom
+                   exp.id as exp_id, exp.code as exp_code, exp.nom as exp_nom, 
+                   exp.prenom as exp_prenom, exp.email as exp_email,
+                   dest.id as dest_id, dest.code as dest_code, dest.nom as dest_nom, 
+                   dest.prenom as dest_prenom, dest.email as dest_email
             FROM messages m
             LEFT JOIN users exp ON m.expediteur_id = exp.id
             LEFT JOIN users dest ON m.destinataire_id = dest.id
-            WHERE m.destinataire_id = ?
+            WHERE (m.destinataire_id = ? OR m.expediteur_id = ?)
             ORDER BY m.date_envoi DESC
         """;
         
@@ -41,6 +46,7 @@ public class MessageService {
              PreparedStatement stmt = conn.prepareStatement(query)) {
             
             stmt.setInt(1, userId);
+            stmt.setInt(2, userId); // IMPORTANT: Récupérer aussi les messages envoyés
             
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -49,6 +55,7 @@ public class MessageService {
             }
         } catch (SQLException e) {
             System.err.println("Erreur lors de la récupération des messages: " + e.getMessage());
+            e.printStackTrace();
         }
         
         return messages;
@@ -57,8 +64,10 @@ public class MessageService {
     public Message getMessageById(int id) {
         String query = """
             SELECT m.*, 
-                   exp.nom as exp_nom, exp.prenom as exp_prenom,
-                   dest.nom as dest_nom, dest.prenom as dest_prenom
+                   exp.id as exp_id, exp.code as exp_code, exp.nom as exp_nom, 
+                   exp.prenom as exp_prenom, exp.email as exp_email,
+                   dest.id as dest_id, dest.code as dest_code, dest.nom as dest_nom, 
+                   dest.prenom as dest_prenom, dest.email as dest_email
             FROM messages m
             LEFT JOIN users exp ON m.expediteur_id = exp.id
             LEFT JOIN users dest ON m.destinataire_id = dest.id
@@ -93,8 +102,9 @@ public class MessageService {
     private boolean insertMessage(Message message) {
         String query = """
             INSERT INTO messages (expediteur_id, destinataire_id, objet, contenu,
-                                date_envoi, lu, priorite, type_message, important, archive)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                date_envoi, lu, priorite, type_message, important, 
+                                archive, statut, piece_jointe, reponse_a)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
         
         try (Connection conn = databaseService.getConnection();
@@ -111,6 +121,20 @@ public class MessageService {
             stmt.setBoolean(9, message.isImportant());
             stmt.setBoolean(10, message.isArchive());
             
+            // CORRECTION: Gérer le statut correctement
+            String statut = message.getStatut() != null ? 
+                           message.getStatut().name().toLowerCase() : 
+                           StatutMessage.ENVOYE.name().toLowerCase();
+            stmt.setString(11, statut);
+            
+            stmt.setString(12, message.getPieceJointe());
+            
+            if (message.getReponseA() != null) {
+                stmt.setInt(13, message.getReponseA());
+            } else {
+                stmt.setNull(13, Types.INTEGER);
+            }
+            
             int affected = stmt.executeUpdate();
             
             if (affected > 0) {
@@ -119,10 +143,14 @@ public class MessageService {
                         message.setId(generatedKeys.getInt(1));
                     }
                 }
+                
+                System.out.println("✅ Message inséré avec succès - ID: " + message.getId() + 
+                                 ", Statut: " + statut);
                 return true;
             }
         } catch (SQLException e) {
-            System.err.println("Erreur lors de l'insertion du message: " + e.getMessage());
+            System.err.println("❌ Erreur lors de l'insertion du message: " + e.getMessage());
+            e.printStackTrace();
         }
         
         return false;
@@ -130,7 +158,16 @@ public class MessageService {
     
     private boolean updateMessage(Message message) {
         String query = """
-            UPDATE messages SET lu = ?, date_lecture = ?, important = ?, archive = ?
+            UPDATE messages SET 
+                lu = ?, 
+                date_lecture = ?, 
+                important = ?, 
+                archive = ?,
+                statut = ?,
+                objet = ?,
+                contenu = ?,
+                priorite = ?,
+                piece_jointe = ?
             WHERE id = ?
         """;
         
@@ -142,11 +179,27 @@ public class MessageService {
                 Timestamp.valueOf(message.getDateLecture()) : null);
             stmt.setBoolean(3, message.isImportant());
             stmt.setBoolean(4, message.isArchive());
-            stmt.setInt(5, message.getId());
             
-            return stmt.executeUpdate() > 0;
+            String statut = message.getStatut() != null ? 
+                           message.getStatut().name().toLowerCase() : 
+                           StatutMessage.ENVOYE.name().toLowerCase();
+            stmt.setString(5, statut);
+            
+            stmt.setString(6, message.getObjet());
+            stmt.setString(7, message.getContenu());
+            stmt.setString(8, message.getPriorite().name().toLowerCase());
+            stmt.setString(9, message.getPieceJointe());
+            stmt.setInt(10, message.getId());
+            
+            int affected = stmt.executeUpdate();
+            System.out.println("✅ Message mis à jour - ID: " + message.getId() + 
+                             ", Lignes affectées: " + affected);
+            
+            return affected > 0;
+            
         } catch (SQLException e) {
-            System.err.println("Erreur lors de la mise à jour du message: " + e.getMessage());
+            System.err.println("❌ Erreur lors de la mise à jour du message: " + e.getMessage());
+            e.printStackTrace();
         }
         
         return false;
@@ -187,17 +240,48 @@ public class MessageService {
         message.setImportant(rs.getBoolean("important"));
         message.setArchive(rs.getBoolean("archive"));
         
+        // CORRECTION: Mapper le statut correctement
+        String statutStr = rs.getString("statut");
+        if (statutStr != null) {
+            message.setStatut(StatutMessage.fromDatabase(statutStr));
+        }
+        
+        // Mapper la priorité
+        String prioriteStr = rs.getString("priorite");
+        if (prioriteStr != null) {
+            message.setPriorite(application.models.PrioriteMessage.fromDatabase(prioriteStr));
+        }
+        
+        // Mapper le type
+        String typeStr = rs.getString("type_message");
+        if (typeStr != null) {
+            message.setTypeMessage(application.models.TypeMessage.fromDatabase(typeStr));
+        }
+        
+        // Pièce jointe
+        message.setPieceJointe(rs.getString("piece_jointe"));
+        
+        // Réponse à
+        int reponseA = rs.getInt("reponse_a");
+        if (!rs.wasNull()) {
+            message.setReponseA(reponseA);
+        }
+        
         // Création des utilisateurs expéditeur et destinataire
         User expediteur = new User();
-        expediteur.setId(rs.getInt("expediteur_id"));
+        expediteur.setId(rs.getInt("exp_id"));
+        expediteur.setCode(rs.getString("exp_code"));
         expediteur.setNom(rs.getString("exp_nom"));
         expediteur.setPrenom(rs.getString("exp_prenom"));
+        expediteur.setEmail(rs.getString("exp_email"));
         message.setExpediteur(expediteur);
         
         User destinataire = new User();
-        destinataire.setId(rs.getInt("destinataire_id"));
+        destinataire.setId(rs.getInt("dest_id"));
+        destinataire.setCode(rs.getString("dest_code"));
         destinataire.setNom(rs.getString("dest_nom"));
         destinataire.setPrenom(rs.getString("dest_prenom"));
+        destinataire.setEmail(rs.getString("dest_email"));
         message.setDestinataire(destinataire);
         
         return message;

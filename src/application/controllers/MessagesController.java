@@ -8,10 +8,13 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.stage.Stage;
+import javafx.scene.Scene;
 import application.models.Message;
 import application.models.MessageGroup;
 import application.models.PrioriteMessage;
 import application.models.Role;
+import application.models.StatutMessage;
 import application.models.User;
 import application.models.UserPresence;
 import application.services.DatabaseService;
@@ -30,6 +33,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
+import javafx.stage.FileChooser;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 public class MessagesController implements Initializable, MessageSyncService.MessageListener {
     
     // Filtres
@@ -38,29 +48,42 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
     @FXML private ComboBox<String> filtrePrioriteMsg;
     @FXML private TextField champRechercheMsg;
     
+    // Boutons d'actions principales
+    @FXML private Button btnNouveauMessage;
+    @FXML private Button btnActualiser;
+    @FXML private Button btnStatistiques;
+    
     // Liste des messages
     @FXML private VBox listeMessages;
     @FXML private Label nombreMessages;
+    @FXML private Label labelDossierActuel;
     @FXML private CheckBox checkboxSelectAll;
     
+    // Zone vide
+    @FXML private VBox zoneVide;
+    
     // Zone de lecture
+    @FXML private ScrollPane scrollZoneMessage;
     @FXML private VBox zoneMessage;
     @FXML private Label labelObjetMessage;
+    @FXML private Label labelPrioriteMessage;
     @FXML private Label labelExpediteurMsg;
     @FXML private Label labelDestinataireMsg;
     @FXML private Label labelDateMessage;
     @FXML private Label labelObjetDetail;
     @FXML private ScrollPane scrollPaneContenu;
     
-    // Boutons d'action
+    // Boutons d'action sur message
     @FXML private Button btnRepondre;
     @FXML private Button btnRepondreATous;
     @FXML private Button btnTransferer;
     @FXML private Button btnMarquerImportant;
+    @FXML private Button btnImprimer;
     @FXML private Button btnArchiver;
     @FXML private Button btnSupprimer;
     
     // Zone de composition
+    @FXML private ScrollPane scrollZoneComposition;
     @FXML private VBox zoneComposition;
     @FXML private ComboBox<User> comboDestinataire;
     @FXML private TextField champCc;
@@ -72,13 +95,19 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
     @FXML private Button btnAnnuler;
     @FXML private Button btnAnnulerComposition;
     @FXML private Button btnEnvoyerMessage;
+    @FXML private VBox containerDestinataires;
     
     private User currentUser;
+    private MultipleRecipientsSelector recipientsSelector;
+    private List<User> selectedRecipients = new ArrayList<>();
     private MessageService messageService;
     private MessageSyncService messageSyncService;
     private ObservableList<User> listeUtilisateurs;
     private ObservableList<Message> messages;
     private Message selectedMessage;
+    private String currentDossier = "Boîte de réception";
+    private File selectedAttachment = null;
+    private static final String ATTACHMENTS_DIR = "attachments/messages/";
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -91,6 +120,7 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
             messageSyncService = MessageSyncService.getInstance();
             messageSyncService.addMessageListener(this);
             messageSyncService.updatePresence(currentUser.getId(), UserPresence.Statut.ONLINE);
+            
             if (currentUser == null) {
                 System.err.println("ERREUR: Aucun utilisateur en session");
                 return;
@@ -101,7 +131,9 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
             setupComposition();
             loadMessages();
             chargerListeUtilisateurs();
-            configurerComboDestinataire();
+            
+            // Afficher la zone vide par défaut
+            showEmptyZone();
             
         } catch (Exception e) {
             System.err.println("Erreur dans MessagesController.initialize(): " + e.getMessage());
@@ -110,30 +142,32 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
     }
     
     private void setupFilters() {
-        // Initialiser les ComboBox
+        // Les ComboBox sont déjà initialisés dans le FXML
         if (filtreDossier != null) {
-            filtreDossier.setItems(FXCollections.observableArrayList(
-                "Boîte de réception", "Messages envoyés", "Brouillons", 
-                "Messages importants", "Archive", "Corbeille"
-            ));
-            filtreDossier.setValue("Boîte de réception");
-            filtreDossier.setOnAction(e -> applyFilters());
+            filtreDossier.setOnAction(e -> {
+                currentDossier = filtreDossier.getValue();
+                if (labelDossierActuel != null) {
+                    labelDossierActuel.setText(currentDossier);
+                }
+                applyFilters();
+            });
         }
         
         if (filtreStatut != null) {
-            filtreStatut.setItems(FXCollections.observableArrayList(
-                "Tous", "Non lus", "Lus", "Importants"
-            ));
-            filtreStatut.setValue("Tous");
             filtreStatut.setOnAction(e -> applyFilters());
         }
         
         if (filtrePrioriteMsg != null) {
-            filtrePrioriteMsg.setItems(FXCollections.observableArrayList(
-                "Toutes", "Très haute", "Haute", "Normale", "Basse"
-            ));
-            filtrePrioriteMsg.setValue("Toutes");
             filtrePrioriteMsg.setOnAction(e -> applyFilters());
+        }
+        
+        // Recherche en temps réel
+        if (champRechercheMsg != null) {
+            champRechercheMsg.textProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null && !newVal.equals(oldVal)) {
+                    applyFilters();
+                }
+            });
         }
     }
     
@@ -160,10 +194,7 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
     
     private void setupComposition() {
         if (comboPrioriteComposition != null) {
-            comboPrioriteComposition.setItems(FXCollections.observableArrayList(
-                "Basse", "Normale", "Haute", "Très haute"
-            ));
-            comboPrioriteComposition.setValue("Normale");
+            // Déjà initialisé dans le FXML
         }
         
         if (btnEnvoyer != null) {
@@ -182,10 +213,285 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
             btnAnnulerComposition.setOnAction(e -> handleAnnulerComposition());
         }
         
-        // Masquer la zone de composition par défaut
-        if (zoneComposition != null) {
-            zoneComposition.setVisible(false);
-            zoneComposition.setManaged(false);
+        // Créer le répertoire des pièces jointes s'il n'existe pas
+        try {
+            Path attachmentsPath = Paths.get(ATTACHMENTS_DIR);
+            if (!Files.exists(attachmentsPath)) {
+                Files.createDirectories(attachmentsPath);
+                System.out.println("✅ Répertoire des pièces jointes créé: " + ATTACHMENTS_DIR);
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Erreur lors de la création du répertoire des pièces jointes: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Affiche la zone vide par défaut
+     */
+    private void showEmptyZone() {
+        if (zoneVide != null) {
+            zoneVide.setVisible(true);
+            zoneVide.setManaged(true);
+        }
+        if (scrollZoneMessage != null) {
+            scrollZoneMessage.setVisible(false);
+            scrollZoneMessage.setManaged(false);
+        }
+        if (scrollZoneComposition != null) {
+            scrollZoneComposition.setVisible(false);
+            scrollZoneComposition.setManaged(false);
+        }
+    }
+    
+    /**
+     * NOUVEAU: Gère le bouton "Nouveau message"
+     */
+    @FXML
+    private void handleNouveauMessage() {
+        showCompositionForm();
+        
+        // Réinitialiser le formulaire
+        if (recipientsSelector != null) {
+            recipientsSelector.setSelectedUsers(new ArrayList<>());
+        }
+        if (champCc != null) champCc.clear();
+        if (champObjetComposition != null) champObjetComposition.clear();
+        if (textAreaMessage != null) textAreaMessage.clear();
+        if (comboPrioriteComposition != null) comboPrioriteComposition.setValue("Normale");
+        
+        selectedAttachment = null;
+    }
+    
+    /**
+     * NOUVEAU: Gère le bouton "Actualiser"
+     */
+    @FXML
+    private void handleActualiser() {
+        System.out.println("🔄 Actualisation des messages...");
+        loadMessages();
+        AlertUtils.showInfo("Messages actualisés", "La liste des messages a été mise à jour.");
+    }
+    
+    /**
+     * NOUVEAU: Gère le bouton "Joindre"
+     */
+    @FXML
+    private void handleJoindre() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Sélectionner un fichier à joindre");
+        
+        // Filtres pour les types de fichiers courants
+        fileChooser.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("Tous les fichiers", "*.*"),
+            new FileChooser.ExtensionFilter("Documents", "*.pdf", "*.doc", "*.docx", "*.txt"),
+            new FileChooser.ExtensionFilter("Images", "*.jpg", "*.jpeg", "*.png", "*.gif"),
+            new FileChooser.ExtensionFilter("Archives", "*.zip", "*.rar", "*.7z")
+        );
+        
+        // Ouvrir le dialogue
+        javafx.stage.Stage stage = (javafx.stage.Stage) textAreaMessage.getScene().getWindow();
+        File file = fileChooser.showOpenDialog(stage);
+        
+        if (file != null) {
+            // Vérifier la taille du fichier (limite: 10 MB)
+            long fileSizeInMB = file.length() / (1024 * 1024);
+            
+            if (fileSizeInMB > 10) {
+                AlertUtils.showWarning("Fichier trop volumineux", 
+                    "La taille du fichier ne doit pas dépasser 10 MB.\n" +
+                    "Taille actuelle: " + fileSizeInMB + " MB");
+                return;
+            }
+            
+            selectedAttachment = file;
+            
+            // Afficher une notification
+            AlertUtils.showInfo("Fichier sélectionné", 
+                "Fichier: " + file.getName() + "\n" +
+                "Taille: " + String.format("%.2f", fileSizeInMB) + " MB");
+            
+            System.out.println("📎 Pièce jointe sélectionnée: " + file.getName());
+        }
+    }
+    
+    /**
+     * NOUVEAU: Ouvre un brouillon pour modification
+     */
+    private void openDraftForEditing(Message draft) {
+        showCompositionForm();
+        
+        // Remplir les destinataires (un seul pour un brouillon classique)
+        if (recipientsSelector != null && draft.getDestinataire() != null) {
+            List<User> recipients = new ArrayList<>();
+            
+            // Si le contenu contient [DESTINATAIRES:...], extraire la liste
+            String contenu = draft.getContenu();
+            if (contenu.startsWith("[DESTINATAIRES:")) {
+                // Extraire les noms et essayer de retrouver les utilisateurs
+                // (Pour simplifier, on ne gère que le premier destinataire ici)
+                recipients.add(draft.getDestinataire());
+            } else {
+                recipients.add(draft.getDestinataire());
+            }
+            
+            recipientsSelector.setSelectedUsers(recipients);
+        }
+        
+        if (champObjetComposition != null) {
+            champObjetComposition.setText(draft.getObjet());
+        }
+        
+        if (textAreaMessage != null) {
+            String contenu = draft.getContenu();
+            // Retirer la note [DESTINATAIRES:...] si présente
+            if (contenu.startsWith("[DESTINATAIRES:")) {
+                int endIndex = contenu.indexOf("]\n\n");
+                if (endIndex != -1) {
+                    contenu = contenu.substring(endIndex + 3);
+                }
+            }
+            textAreaMessage.setText(contenu);
+        }
+        
+        if (comboPrioriteComposition != null && draft.getPriorite() != null) {
+            comboPrioriteComposition.setValue(draft.getPriorite().getLibelle());
+        }
+    }
+    
+    /**
+     * NOUVEAU: Gère le bouton "Statistiques"
+     */
+    @FXML
+    private void handleStatistiques() {
+        try {
+            List<Message> allMessages = messageService.getMessagesForUser(currentUser.getId());
+            
+            int total = allMessages.size();
+            int nonLus = (int) allMessages.stream().filter(m -> !m.isLu()).count();
+            int importants = (int) allMessages.stream().filter(Message::isImportant).count();
+            int archives = (int) allMessages.stream().filter(Message::isArchive).count();
+            
+            String stats = String.format(
+                "📊 STATISTIQUES DE MESSAGERIE\n\n" +
+                "Total de messages: %d\n" +
+                "Messages non lus: %d\n" +
+                "Messages importants: %d\n" +
+                "Messages archivés: %d\n\n" +
+                "Taux de lecture: %.1f%%",
+                total,
+                nonLus,
+                importants,
+                archives,
+                total > 0 ? ((total - nonLus) * 100.0 / total) : 0.0
+            );
+            
+            AlertUtils.showInfo("Statistiques", stats);
+            
+        } catch (Exception e) {
+            System.err.println("Erreur lors du calcul des statistiques: " + e.getMessage());
+            AlertUtils.showError("Impossible de calculer les statistiques.");
+        }
+    }
+    
+    /**
+     * NOUVEAU: Gère l'impression du message
+     */
+    @FXML
+    private void handleImprimer() {
+        if (selectedMessage == null) {
+            AlertUtils.showWarning("Veuillez sélectionner un message à imprimer");
+            return;
+        }
+        
+        // Pour l'instant, juste une notification
+        // Dans une vraie implémentation, on utiliserait PrinterJob de JavaFX
+        AlertUtils.showInfo("Impression", 
+            "Fonctionnalité d'impression en cours de développement.\n" +
+            "Message: " + selectedMessage.getObjet());
+    }
+    
+    /**
+     * NOUVEAU: Marque les messages sélectionnés comme lus
+     */
+    @FXML
+    private void handleMarquerLuSelection() {
+        // Pour l'instant, marquer tous les messages non lus du dossier courant
+        int count = 0;
+        for (Message msg : messages) {
+            if (!msg.isLu()) {
+                msg.marquerCommeLu();
+                if (messageService.saveMessage(msg)) {
+                    count++;
+                }
+            }
+        }
+        
+        if (count > 0) {
+            AlertUtils.showInfo(count + " message(s) marqué(s) comme lu(s)");
+            loadMessages();
+        } else {
+            AlertUtils.showInfo("Tous les messages sont déjà lus");
+        }
+    }
+    
+    /**
+     * NOUVEAU: Archive les messages sélectionnés
+     */
+    @FXML
+    private void handleArchiverSelection() {
+        boolean confirm = AlertUtils.showConfirmation(
+            "Confirmation",
+            "Voulez-vous archiver tous les messages affichés ?"
+        );
+        
+        if (confirm) {
+            int count = 0;
+            for (Message msg : messages) {
+                if (!msg.isArchive()) {
+                    msg.setArchive(true);
+                    if (messageService.saveMessage(msg)) {
+                        count++;
+                    }
+                }
+            }
+            
+            if (count > 0) {
+                AlertUtils.showInfo(count + " message(s) archivé(s)");
+                loadMessages();
+            }
+        }
+    }
+    
+    /**
+     * NOUVEAU: Supprime les messages sélectionnés
+     */
+    @FXML
+    private void handleSupprimerSelection() {
+        boolean confirm = AlertUtils.showConfirmation(
+            "Confirmation",
+            "Voulez-vous supprimer tous les messages affichés ?\n" +
+            "Cette action est irréversible."
+        );
+        
+        if (confirm) {
+            int count = 0;
+            List<Integer> idsToDelete = new ArrayList<>();
+            
+            for (Message msg : messages) {
+                idsToDelete.add(msg.getId());
+            }
+            
+            for (int id : idsToDelete) {
+                if (messageService.deleteMessage(id)) {
+                    count++;
+                }
+            }
+            
+            if (count > 0) {
+                AlertUtils.showInfo(count + " message(s) supprimé(s)");
+                loadMessages();
+                showEmptyZone();
+            }
         }
     }
     
@@ -195,11 +501,8 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
             messages.clear();
             messages.addAll(list);
             
-            if (nombreMessages != null) {
-                nombreMessages.setText("(" + messages.size() + " messages)");
-            }
-            
-            displayMessagesList();
+            // Appliquer les filtres immédiatement
+            applyFilters();
             
         } catch (Exception e) {
             System.err.println("Erreur lors du chargement des messages: " + e.getMessage());
@@ -211,6 +514,13 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
         if (listeMessages == null) return;
         
         listeMessages.getChildren().clear();
+        
+        if (messages.isEmpty()) {
+            Label emptyLabel = new Label("Aucun message dans ce dossier");
+            emptyLabel.setStyle("-fx-text-fill: #7f8c8d; -fx-padding: 30; -fx-font-size: 14px;");
+            listeMessages.getChildren().add(emptyLabel);
+            return;
+        }
         
         for (Message message : messages) {
             HBox messageBox = createMessageBox(message);
@@ -317,8 +627,44 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
             displayMessagesList(); // Rafraîchir la liste
         }
         
+        if (message.getStatut() == StatutMessage.BROUILLON) {
+            openDraftForEditing(message);
+            return;
+        }
+        
+        // Masquer les autres zones
+        if (zoneVide != null) {
+            zoneVide.setVisible(false);
+            zoneVide.setManaged(false);
+        }
+        if (scrollZoneComposition != null) {
+            scrollZoneComposition.setVisible(false);
+            scrollZoneComposition.setManaged(false);
+        }
+        
+        // Afficher la zone de message
+        if (scrollZoneMessage != null) {
+            scrollZoneMessage.setVisible(true);
+            scrollZoneMessage.setManaged(true);
+        }
+        
+        // Remplir les détails
         if (labelObjetMessage != null) {
             labelObjetMessage.setText(message.getObjet());
+        }
+        
+        // Afficher la priorité si nécessaire
+        if (labelPrioriteMessage != null) {
+            if (message.getPriorite() != null && message.getPriorite().isCritique()) {
+                labelPrioriteMessage.setText(message.getPriorite().getIcone() + " " + message.getPriorite().getLibelle().toUpperCase());
+                labelPrioriteMessage.setStyle(
+                    "-fx-background-color: " + message.getPriorite().getCouleur() + 
+                    "; -fx-text-fill: white; -fx-padding: 4 8; -fx-background-radius: 12; -fx-font-size: 10px;"
+                );
+                labelPrioriteMessage.setVisible(true);
+            } else {
+                labelPrioriteMessage.setVisible(false);
+            }
         }
         
         if (labelExpediteurMsg != null) {
@@ -343,28 +689,29 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
         if (scrollPaneContenu != null) {
             VBox contenuBox = new VBox(10);
             contenuBox.setPadding(new Insets(15));
+            contenuBox.setStyle("-fx-background-color: #f8f9fa;");
             
             // Diviser le contenu en paragraphes
             String[] paragraphes = message.getContenu().split("\n");
             for (String paragraphe : paragraphes) {
-                Label label = new Label(paragraphe);
-                label.setWrapText(true);
-                contenuBox.getChildren().add(label);
+                if (!paragraphe.trim().isEmpty()) {
+                    Label label = new Label(paragraphe);
+                    label.setWrapText(true);
+                    label.setStyle("-fx-font-size: 14px;");
+                    contenuBox.getChildren().add(label);
+                }
             }
             
             scrollPaneContenu.setContent(contenuBox);
         }
         
-        // Afficher la zone de message
-        if (zoneMessage != null) {
-            zoneMessage.setVisible(true);
-            zoneMessage.setManaged(true);
-        }
-        
-        // Masquer la zone de composition
-        if (zoneComposition != null) {
-            zoneComposition.setVisible(false);
-            zoneComposition.setManaged(false);
+        // Mettre à jour le bouton Important
+        if (btnMarquerImportant != null) {
+            if (message.isImportant()) {
+                btnMarquerImportant.setText("⭐ Retirer important");
+            } else {
+                btnMarquerImportant.setText("⭐ Marquer important");
+            }
         }
     }
     
@@ -373,10 +720,14 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
         applyFilters();
     }
     
+    /**
+     * AMÉLIORÉ: Applique tous les filtres
+     */
     private void applyFilters() {
         try {
             String dossierFilter = filtreDossier != null ? filtreDossier.getValue() : "Boîte de réception";
             String statutFilter = filtreStatut != null ? filtreStatut.getValue() : "Tous";
+            String prioriteFilter = filtrePrioriteMsg != null ? filtrePrioriteMsg.getValue() : "Toutes";
             String searchText = champRechercheMsg != null ? champRechercheMsg.getText().toLowerCase() : "";
             
             List<Message> allMessages = messageService.getMessagesForUser(currentUser.getId());
@@ -385,17 +736,80 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
             for (Message m : allMessages) {
                 boolean matches = true;
                 
+                // Filtre de dossier
+                switch (dossierFilter) {
+                    case "Boîte de réception":
+                        // Messages reçus non archivés et non supprimés
+                        if (m.getDestinataire().getId() != currentUser.getId() || 
+                            m.isArchive() || 
+                            m.getStatut() == StatutMessage.SUPPRIME ||
+                            m.getStatut() == StatutMessage.BROUILLON) {
+                            matches = false;
+                        }
+                        break;
+                        
+                    case "Messages envoyés":
+                        // CORRECTION: Messages envoyés par l'utilisateur courant
+                        if (m.getExpediteur().getId() != currentUser.getId() ||
+                            m.getStatut() == StatutMessage.BROUILLON ||
+                            m.getStatut() == StatutMessage.SUPPRIME) {
+                            matches = false;
+                        }
+                        break;
+                        
+                    case "Brouillons":
+                        // CORRECTION: Uniquement les brouillons de l'utilisateur
+                        if (m.getStatut() != StatutMessage.BROUILLON ||
+                            m.getExpediteur().getId() != currentUser.getId()) {
+                            matches = false;
+                        }
+                        break;
+                        
+                    case "Messages importants":
+                        if (!m.isImportant() || m.isArchive()) {
+                            matches = false;
+                        }
+                        break;
+                        
+                    case "Archive":
+                        if (!m.isArchive()) {
+                            matches = false;
+                        }
+                        break;
+                        
+                    case "Corbeille":
+                        if (m.getStatut() != StatutMessage.SUPPRIME) {
+                            matches = false;
+                        }
+                        break;
+                }
+                
                 // Filtre statut
-                if (statutFilter.equals("Non lus") && m.isLu()) {
-                    matches = false;
-                } else if (statutFilter.equals("Lus") && !m.isLu()) {
-                    matches = false;
-                } else if (statutFilter.equals("Importants") && !m.isImportant()) {
-                    matches = false;
+                if (matches) {
+                    switch (statutFilter) {
+                        case "Non lus":
+                            if (m.isLu()) matches = false;
+                            break;
+                        case "Lus":
+                            if (!m.isLu()) matches = false;
+                            break;
+                        case "Importants":
+                            if (!m.isImportant()) matches = false;
+                            break;
+                    }
+                }
+                
+                // Filtre priorité
+                if (matches && !prioriteFilter.equals("Toutes")) {
+                    application.models.PrioriteMessage priorite = 
+                        application.models.PrioriteMessage.fromLibelle(prioriteFilter);
+                    if (priorite != null && m.getPriorite() != priorite) {
+                        matches = false;
+                    }
                 }
                 
                 // Recherche textuelle
-                if (!searchText.isEmpty()) {
+                if (matches && !searchText.isEmpty()) {
                     boolean textMatch = m.getObjet().toLowerCase().contains(searchText) ||
                                       m.getContenu().toLowerCase().contains(searchText) ||
                                       m.getExpediteur().getNomComplet().toLowerCase().contains(searchText);
@@ -418,8 +832,12 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
             
             displayMessagesList();
             
+            System.out.println("🔍 Filtrage appliqué - Dossier: " + dossierFilter + 
+                             ", Résultats: " + messages.size());
+            
         } catch (Exception e) {
             System.err.println("Erreur lors de l'application des filtres: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     
@@ -432,16 +850,15 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
 
         showCompositionForm();
 
-        // Utiliser comboDestinataire avec setValue()
-        if (comboDestinataire != null) {
-            // Sélectionner l'expéditeur du message comme destinataire
-            User expediteur = selectedMessage.getExpediteur();
-            comboDestinataire.setValue(expediteur);
+        // Sélectionner l'expéditeur du message comme destinataire unique
+        if (recipientsSelector != null) {
+            List<User> recipients = new ArrayList<>();
+            recipients.add(selectedMessage.getExpediteur());
+            recipientsSelector.setSelectedUsers(recipients);
         }
         
         if (champObjetComposition != null) {
             String objet = selectedMessage.getObjet();
-            // Éviter les "RE: RE: RE:" multiples
             if (!objet.startsWith("RE:")) {
                 champObjetComposition.setText("RE: " + objet);
             } else {
@@ -451,7 +868,6 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
         
         if (textAreaMessage != null) {
             textAreaMessage.setText("\n\n--- Message original ---\n" + selectedMessage.getContenu());
-            // Positionner le curseur au début pour faciliter la rédaction
             textAreaMessage.positionCaret(0);
         }
     }
@@ -480,13 +896,21 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
     public void onRefreshRequest() {
         javafx.application.Platform.runLater(() -> {
             loadMessages();
-            chargerListeUtilisateurs(); // Rafraîchir aussi la liste
+            chargerListeUtilisateurs();
         });
     }
     
     @FXML
     private void handleRepondreATous() {
-        AlertUtils.showInfo("Fonction de réponse à tous en cours de développement");
+        if (selectedMessage == null) {
+            AlertUtils.showWarning("Veuillez sélectionner un message");
+            return;
+        }
+        
+        // Pour l'instant, même comportement que Répondre
+        handleRepondre();
+        
+        AlertUtils.showInfo("La fonction 'Répondre à tous' sera disponible prochainement pour les groupes.");
     }
     
     @FXML
@@ -498,9 +922,9 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
 
         showCompositionForm();
 
-        // Laisser le destinataire vide (l'utilisateur choisira)
-        if (comboDestinataire != null) {
-            comboDestinataire.setValue(null);
+        // Laisser les destinataires vides (l'utilisateur choisira)
+        if (recipientsSelector != null) {
+            recipientsSelector.setSelectedUsers(new ArrayList<>());
         }
         
         if (champObjetComposition != null) {
@@ -539,9 +963,12 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
         selectedMessage.setImportant(!selectedMessage.isImportant());
         
         if (messageService.saveMessage(selectedMessage)) {
-            AlertUtils.showInfo("Message marqué comme " + 
-                (selectedMessage.isImportant() ? "important" : "non important"));
+            String action = selectedMessage.isImportant() ? "important" : "non important";
+            AlertUtils.showInfo("Message marqué comme " + action);
+            
+            // Mettre à jour l'affichage
             displayMessagesList();
+            showMessageDetails(selectedMessage);
         } else {
             AlertUtils.showError("Erreur lors de la mise à jour");
         }
@@ -559,6 +986,7 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
         if (messageService.saveMessage(selectedMessage)) {
             AlertUtils.showInfo("Message archivé avec succès");
             loadMessages();
+            showEmptyZone();
         } else {
             AlertUtils.showError("Erreur lors de l'archivage");
         }
@@ -580,12 +1008,7 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
             if (messageService.deleteMessage(selectedMessage.getId())) {
                 AlertUtils.showInfo("Message supprimé avec succès");
                 loadMessages();
-                
-                // Masquer les détails
-                if (zoneMessage != null) {
-                    zoneMessage.setVisible(false);
-                    zoneMessage.setManaged(false);
-                }
+                showEmptyZone();
             } else {
                 AlertUtils.showError("Erreur lors de la suppression");
             }
@@ -593,14 +1016,20 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
     }
     
     private void showCompositionForm() {
-        if (zoneComposition != null) {
-            zoneComposition.setVisible(true);
-            zoneComposition.setManaged(true);
+        // Masquer les autres zones
+        if (zoneVide != null) {
+            zoneVide.setVisible(false);
+            zoneVide.setManaged(false);
+        }
+        if (scrollZoneMessage != null) {
+            scrollZoneMessage.setVisible(false);
+            scrollZoneMessage.setManaged(false);
         }
         
-        if (zoneMessage != null) {
-            zoneMessage.setVisible(false);
-            zoneMessage.setManaged(false);
+        // Afficher la zone de composition
+        if (scrollZoneComposition != null) {
+            scrollZoneComposition.setVisible(true);
+            scrollZoneComposition.setManaged(true);
         }
     }
     
@@ -612,49 +1041,22 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
             List<User> users = getAllActiveUsers();
             listeUtilisateurs = FXCollections.observableArrayList(users);
             
-            if (comboDestinataire != null) {
-                comboDestinataire.setItems(listeUtilisateurs);
+            // Initialiser le sélecteur multiple
+            if (recipientsSelector == null) {
+                recipientsSelector = new MultipleRecipientsSelector(users, messageSyncService);
+                
+                // Ajouter au conteneur si présent
+                if (containerDestinataires != null) {
+                    containerDestinataires.getChildren().clear();
+                    containerDestinataires.getChildren().add(recipientsSelector.getView());
+                }
             }
+            
         } catch (Exception e) {
             System.err.println("Erreur lors du chargement des utilisateurs: " + e.getMessage());
         }
     }
     
-    /**
-     * Configure le ComboBox pour afficher les noms complets
-     */
-    private void configurerComboDestinataire() {
-        if (comboDestinataire != null) {
-            // Définir comment afficher les utilisateurs
-            comboDestinataire.setCellFactory(param -> new ListCell<User>() {
-                @Override
-                protected void updateItem(User user, boolean empty) {
-                    super.updateItem(user, empty);
-                    if (empty || user == null) {
-                        setText(null);
-                    } else {
-                        // Afficher avec icône de statut
-                        UserPresence presence = messageSyncService.getUserPresence(user.getId());
-                        String statut = presence != null ? presence.getStatut().getIcone() : "⚫";
-                        setText(statut + " " + user.getNomComplet() + " (" + user.getCode() + ")");
-                    }
-                }
-            });
-            
-            // Définir comment afficher l'élément sélectionné
-            comboDestinataire.setButtonCell(new ListCell<User>() {
-                @Override
-                protected void updateItem(User user, boolean empty) {
-                    super.updateItem(user, empty);
-                    if (empty || user == null) {
-                        setText(null);
-                    } else {
-                        setText(user.getNomComplet());
-                    }
-                }
-            });
-        }
-    }
     
     /**
      * Récupère tous les utilisateurs actifs sauf l'utilisateur courant
@@ -711,12 +1113,17 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
         return users;
     }
     
-   @FXML
+    @FXML
     private void handleEnvoyerMessage() {
         try {
-            // Validation du destinataire
-            if (comboDestinataire == null || comboDestinataire.getValue() == null) {
-                AlertUtils.showWarning("Veuillez sélectionner un destinataire");
+            // Récupérer les destinataires sélectionnés
+            List<User> destinataires = recipientsSelector != null ? 
+                                       recipientsSelector.getSelectedUsers() : 
+                                       new ArrayList<>();
+            
+            // Validation des destinataires
+            if (destinataires.isEmpty()) {
+                AlertUtils.showWarning("Veuillez sélectionner au moins un destinataire");
                 return;
             }
             
@@ -730,32 +1137,76 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
                 return;
             }
             
-            // Récupérer le destinataire sélectionné
-            User destinataire = comboDestinataire.getValue();
-            
-            // Créer le message
-            Message message = new Message();
-            message.setExpediteur(currentUser);
-            message.setDestinataire(destinataire);
-            message.setObjet(champObjetComposition.getText());
-            message.setContenu(textAreaMessage.getText());
-            
-            // Définir la priorité si sélectionnée
+            // Récupérer la priorité
+            application.models.PrioriteMessage priorite = application.models.PrioriteMessage.NORMALE;
             if (comboPrioriteComposition != null && comboPrioriteComposition.getValue() != null) {
                 String prioriteStr = comboPrioriteComposition.getValue();
-                PrioriteMessage priorite = PrioriteMessage.fromLibelle(prioriteStr);
-                if (priorite != null) {
-                    message.setPriorite(priorite);
+                application.models.PrioriteMessage p = 
+                    application.models.PrioriteMessage.fromLibelle(prioriteStr);
+                if (p != null) {
+                    priorite = p;
                 }
             }
             
-            // Envoyer via le service de synchronisation
-            if (messageSyncService.envoyerMessage(message)) {
-                AlertUtils.showInfo("Message envoyé avec succès à " + destinataire.getNomComplet());
+            // Sauvegarder la pièce jointe une seule fois
+            String attachmentPath = null;
+            if (selectedAttachment != null) {
+                attachmentPath = saveAttachment(selectedAttachment);
+                if (attachmentPath == null) {
+                    AlertUtils.showError("Erreur lors de la sauvegarde de la pièce jointe");
+                    return;
+                }
+            }
+            
+            // Envoyer un message à chaque destinataire
+            int successCount = 0;
+            int failCount = 0;
+            
+            for (User destinataire : destinataires) {
+                // Créer un message pour ce destinataire
+                Message message = new Message();
+                message.setExpediteur(currentUser);
+                message.setDestinataire(destinataire);
+                message.setObjet(champObjetComposition.getText());
+                message.setContenu(textAreaMessage.getText());
+                message.setStatut(StatutMessage.ENVOYE);
+                message.setPriorite(priorite);
+                
+                // Ajouter la pièce jointe
+                if (attachmentPath != null) {
+                    message.setPieceJointe(attachmentPath);
+                }
+                
+                // Envoyer via le service de synchronisation
+                if (messageSyncService.envoyerMessage(message)) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            }
+            
+            // Afficher le résultat
+            if (successCount > 0) {
+                String confirmMsg = String.format(
+                    "Message envoyé avec succès à %d destinataire%s",
+                    successCount,
+                    successCount > 1 ? "s" : ""
+                );
+                
+                if (failCount > 0) {
+                    confirmMsg += String.format("\n%d échec%s", failCount, failCount > 1 ? "s" : "");
+                }
+                
+                if (selectedAttachment != null) {
+                    confirmMsg += "\nPièce jointe: " + selectedAttachment.getName();
+                }
+                
+                AlertUtils.showInfo("Message envoyé", confirmMsg);
                 clearCompositionForm();
                 loadMessages();
+                showEmptyZone();
             } else {
-                AlertUtils.showError("Erreur lors de l'envoi du message");
+                AlertUtils.showError("Échec de l'envoi à tous les destinataires");
             }
             
         } catch (Exception e) {
@@ -764,68 +1215,153 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
             AlertUtils.showError("Erreur lors de l'envoi du message: " + e.getMessage());
         }
     }
+
+    
+    /**
+     * NOUVEAU: Sauvegarde une pièce jointe
+     */
+    private String saveAttachment(File file) {
+        try {
+            // Générer un nom unique pour éviter les conflits
+            String uniqueFileName = System.currentTimeMillis() + "_" + file.getName();
+            Path targetPath = Paths.get(ATTACHMENTS_DIR + uniqueFileName);
+            
+            // Copier le fichier
+            Files.copy(file.toPath(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+            
+            System.out.println("✅ Pièce jointe sauvegardée: " + targetPath.toString());
+            return targetPath.toString();
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la sauvegarde de la pièce jointe: " + e.getMessage());
+            e.printStackTrace();
+            AlertUtils.showError("Impossible de sauvegarder la pièce jointe");
+            return null;
+        }
+    }
     
     /**
      * Efface le formulaire de composition
      */
     private void clearCompositionForm() {
-        if (comboDestinataire != null) comboDestinataire.setValue(null);
+        if (recipientsSelector != null) {
+            recipientsSelector.setSelectedUsers(new ArrayList<>());
+        }
         if (champCc != null) champCc.clear();
         if (champObjetComposition != null) champObjetComposition.clear();
         if (textAreaMessage != null) textAreaMessage.clear();
         if (comboPrioriteComposition != null) comboPrioriteComposition.setValue("Normale");
         
-        if (zoneComposition != null) {
-            zoneComposition.setVisible(false);
-            zoneComposition.setManaged(false);
-        }
-    }
-    
-    @FXML
-    private void handleCreerGroupe() {
-        // Demander le nom du groupe
-        Optional<String> result = AlertUtils.showTextInput(
-            "Nouveau groupe",
-            "Nom du groupe:",
-            ""
-        );
-        
-        if (result.isPresent() && !result.get().trim().isEmpty()) {
-            MessageGroup groupe = new MessageGroup(result.get(), currentUser);
-            groupe.setDescription("Groupe de discussion");
-            groupe.setTypeGroupe(MessageGroup.TypeGroupe.PRIVE);
-            
-            if (messageSyncService.creerGroupe(groupe)) {
-                AlertUtils.showInfo("Groupe créé avec succès");
-                // Ajouter des membres...
-            }
-        }
-    }
-    
-    @FXML
-    private void handleEnvoyerMessageGroupe(MessageGroup groupe) {
-        Message message = new Message();
-        message.setExpediteur(currentUser);
-        message.setObjet(champObjetComposition.getText());
-        message.setContenu(textAreaMessage.getText());
-        
-        if (messageSyncService.envoyerMessageGroupe(message, groupe)) {
-            AlertUtils.showInfo("Message envoyé au groupe");
-        }
-    }
-    
-    private void afficherStatutPresence(User user, Label statusLabel) {
-        UserPresence presence = messageSyncService.getUserPresence(user.getId());
-        
-        if (presence != null) {
-            statusLabel.setText(presence.getStatutAvecIcone());
-            statusLabel.setStyle(presence.getStyleStatut());
-        }
+        // Réinitialiser la pièce jointe
+        selectedAttachment = null;
     }
     
     @FXML
     private void handleSauvegarderBrouillon() {
-        AlertUtils.showInfo("Message sauvegardé en brouillon");
+        try {
+            // Validation minimale
+            if (champObjetComposition == null || champObjetComposition.getText().trim().isEmpty()) {
+                AlertUtils.showWarning("Veuillez saisir au moins un objet pour sauvegarder le brouillon");
+                return;
+            }
+            
+            // Récupérer les destinataires
+            List<User> destinataires = recipientsSelector != null ? 
+                                       recipientsSelector.getSelectedUsers() : 
+                                       new ArrayList<>();
+            
+            // Si plusieurs destinataires, créer un brouillon pour chacun
+            // Sinon, créer un seul brouillon avec l'expéditeur comme destinataire temporaire
+            
+            if (destinataires.isEmpty()) {
+                // Aucun destinataire : brouillon simple
+                saveSingleDraft(currentUser);
+            } else if (destinataires.size() == 1) {
+                // Un seul destinataire : brouillon simple
+                saveSingleDraft(destinataires.get(0));
+            } else {
+                // Plusieurs destinataires : créer un brouillon "collectif"
+                // On stocke le premier destinataire, les autres seront en Cc ou dans l'objet
+                User firstRecipient = destinataires.get(0);
+                
+                // Ajouter une note dans le contenu pour indiquer les autres destinataires
+                String contenuOriginal = textAreaMessage != null ? textAreaMessage.getText() : "";
+                StringBuilder contenuAvecDestinataires = new StringBuilder();
+                contenuAvecDestinataires.append("[DESTINATAIRES: ");
+                for (int i = 0; i < destinataires.size(); i++) {
+                    if (i > 0) contenuAvecDestinataires.append(", ");
+                    contenuAvecDestinataires.append(destinataires.get(i).getNomComplet());
+                }
+                contenuAvecDestinataires.append("]\n\n");
+                contenuAvecDestinataires.append(contenuOriginal);
+                
+                saveSingleDraft(firstRecipient, contenuAvecDestinataires.toString());
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la sauvegarde du brouillon: " + e.getMessage());
+            e.printStackTrace();
+            AlertUtils.showError("Erreur lors de la sauvegarde: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * NOUVEAU: Sauvegarde un brouillon unique
+     */
+    private void saveSingleDraft(User destinataire) {
+        String contenu = textAreaMessage != null ? textAreaMessage.getText() : "";
+        saveSingleDraft(destinataire, contenu);
+    }
+    
+    /**
+     * NOUVEAU: Sauvegarde un brouillon unique avec contenu spécifique
+     */
+    private void saveSingleDraft(User destinataire, String contenu) {
+        try {
+            Message message = new Message();
+            message.setExpediteur(currentUser);
+            message.setDestinataire(destinataire);
+            message.setObjet(champObjetComposition.getText());
+            message.setContenu(contenu.isEmpty() ? "(Brouillon vide)" : contenu);
+            
+            // Définir la priorité
+            if (comboPrioriteComposition != null && comboPrioriteComposition.getValue() != null) {
+                String prioriteStr = comboPrioriteComposition.getValue();
+                application.models.PrioriteMessage priorite = 
+                    application.models.PrioriteMessage.fromLibelle(prioriteStr);
+                if (priorite != null) {
+                    message.setPriorite(priorite);
+                }
+            }
+            
+            // IMPORTANT: Définir le statut comme BROUILLON
+            message.setStatut(StatutMessage.BROUILLON);
+            
+            // Copier la pièce jointe si présente
+            if (selectedAttachment != null) {
+                String attachmentPath = saveAttachment(selectedAttachment);
+                if (attachmentPath != null) {
+                    message.setPieceJointe(attachmentPath);
+                }
+            }
+            
+            // Sauvegarder via le service
+            if (messageService.saveMessage(message)) {
+                AlertUtils.showInfo("Brouillon sauvegardé", 
+                    "Le message a été sauvegardé en brouillon.\n" +
+                    "Vous pouvez le retrouver dans le dossier 'Brouillons'.");
+                
+                clearCompositionForm();
+                loadMessages();
+                showEmptyZone();
+            } else {
+                AlertUtils.showError("Erreur lors de la sauvegarde du brouillon");
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la sauvegarde: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
     
     @FXML
@@ -837,6 +1373,7 @@ public class MessagesController implements Initializable, MessageSyncService.Mes
         
         if (confirm) {
             clearCompositionForm();
+            showEmptyZone();
         }
     }
     

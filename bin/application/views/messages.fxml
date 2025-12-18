@@ -22,49 +22,49 @@
                </font>
             </Label>
             <Region HBox.hgrow="ALWAYS" />
-            <Button styleClass="button-success" text="✏️ Nouveau message" />
-            <Button styleClass="button-primary" text="🔄 Actualiser" />
-            <Button styleClass="button-info" text="📊 Statistiques" />
+            <Button fx:id="btnNouveauMessage" onAction="#handleNouveauMessage" styleClass="button-success" text="✏️ Nouveau message" />
+            <Button fx:id="btnActualiser" onAction="#handleActualiser" styleClass="button-primary" text="🔄 Actualiser" />
+            <Button fx:id="btnStatistiques" onAction="#handleStatistiques" styleClass="button-info" text="📊 Statistiques" />
          </HBox>
          
          <!-- Filtres et recherche -->
          <HBox alignment="CENTER_LEFT" spacing="15.0">
             <Label text="Dossier:" />
-            <ComboBox fx:id="filtreDossier" prefWidth="120.0" value="Boîte de réception">
-			    <items>
-			        <FXCollections fx:factory="observableArrayList">
-			            <String fx:value="Boîte de réception" />
-			            <String fx:value="Messages envoyés" />
-			            <String fx:value="Brouillons" />
-			            <String fx:value="Messages importants" />
-			            <String fx:value="Archive" />
-			            <String fx:value="Corbeille" />
-			        </FXCollections>
-			    </items>
-			</ComboBox>
-			
-			<ComboBox fx:id="filtreStatut" prefWidth="100.0" promptText="Statut">
-			    <items>
-			        <FXCollections fx:factory="observableArrayList">
-			            <String fx:value="Tous" />
-			            <String fx:value="Non lus" />
-			            <String fx:value="Lus" />
-			            <String fx:value="Importants" />
-			        </FXCollections>
-			    </items>
-			</ComboBox>
-			
-			<ComboBox fx:id="filtrePrioriteMsg" prefWidth="100.0" promptText="Priorité">
-			    <items>
-			        <FXCollections fx:factory="observableArrayList">
-			            <String fx:value="Toutes" />
-			            <String fx:value="Très haute" />
-			            <String fx:value="Haute" />
-			            <String fx:value="Normale" />
-			            <String fx:value="Basse" />
-			        </FXCollections>
-			    </items>
-			</ComboBox>
+            <ComboBox fx:id="filtreDossier" prefWidth="160.0" value="Boîte de réception">
+                <items>
+                    <FXCollections fx:factory="observableArrayList">
+                        <String fx:value="Boîte de réception" />
+                        <String fx:value="Messages envoyés" />
+                        <String fx:value="Brouillons" />
+                        <String fx:value="Messages importants" />
+                        <String fx:value="Archive" />
+                        <String fx:value="Corbeille" />
+                    </FXCollections>
+                </items>
+            </ComboBox>
+            
+            <ComboBox fx:id="filtreStatut" prefWidth="100.0" promptText="Statut" value="Tous">
+                <items>
+                    <FXCollections fx:factory="observableArrayList">
+                        <String fx:value="Tous" />
+                        <String fx:value="Non lus" />
+                        <String fx:value="Lus" />
+                        <String fx:value="Importants" />
+                    </FXCollections>
+                </items>
+            </ComboBox>
+            
+            <ComboBox fx:id="filtrePrioriteMsg" prefWidth="120.0" promptText="Priorité" value="Toutes">
+                <items>
+                    <FXCollections fx:factory="observableArrayList">
+                        <String fx:value="Toutes" />
+                        <String fx:value="Très haute" />
+                        <String fx:value="Haute" />
+                        <String fx:value="Normale" />
+                        <String fx:value="Basse" />
+                    </FXCollections>
+                </items>
+            </ComboBox>
             
             <Region HBox.hgrow="ALWAYS" />
             
@@ -84,27 +84,27 @@
             
             <!-- En-tête de la liste -->
             <HBox alignment="CENTER_LEFT" spacing="10.0">
-               <Label style="-fx-font-weight: bold;" text="Boîte de réception" />
-               <Label fx:id="nombreMessages" style="-fx-text-fill: #7f8c8d;" text="(25 messages)" />
+               <Label fx:id="labelDossierActuel" style="-fx-font-weight: bold;" text="Boîte de réception" />
+               <Label fx:id="nombreMessages" style="-fx-text-fill: #7f8c8d;" text="(0 messages)" />
                <Region HBox.hgrow="ALWAYS" />
-               <Button text="🗑️" />
-               <Button text="📁" />
+               <Button text="🗑️" onAction="#handleSupprimerSelection" />
+               <Button text="📁" onAction="#handleArchiverSelection" />
             </HBox>
             
             <!-- Outils de sélection -->
             <HBox alignment="CENTER_LEFT" spacing="10.0">
                <CheckBox fx:id="checkboxSelectAll" text="Tout sélectionner" />
                <Region HBox.hgrow="ALWAYS" />
-               <Button text="Marquer comme lu" />
-               <Button text="Supprimer" />
+               <Button text="Marquer comme lu" onAction="#handleMarquerLuSelection" />
             </HBox>
             
             <Separator />
             
             <!-- Liste des messages -->
-            <ScrollPane VBox.vgrow="ALWAYS" fitToWidth="true">
+            <ScrollPane VBox.vgrow="ALWAYS" fitToWidth="true" style="-fx-background-color: transparent;">
                <VBox fx:id="listeMessages" spacing="2.0">
                   <!-- Les messages seront ajoutés dynamiquement -->
+                  <Label style="-fx-text-fill: #7f8c8d; -fx-padding: 30;" text="Aucun message à afficher" />
                </VBox>
             </ScrollPane>
             
@@ -113,119 +113,146 @@
          <!-- Zone de lecture/rédaction du message -->
          <VBox HBox.hgrow="ALWAYS" spacing="15.0" style="-fx-padding: 20;">
             
-            <!-- En-tête du message -->
-            <VBox fx:id="zoneMessage" spacing="15.0" styleClass="card">
-               
-               <!-- Informations du message -->
-               <VBox spacing="8.0">
-                  <HBox alignment="CENTER_LEFT" spacing="15.0">
-                     <Label fx:id="labelObjetMessage" style="-fx-font-size: 20px; -fx-font-weight: bold;" text="URGENT: Nouvelle procédure de sécurité" />
-                     <Region HBox.hgrow="ALWAYS" />
-                     <Label style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-padding: 4 8; -fx-background-radius: 12; -fx-font-size: 10px;" text="PRIORITÉ HAUTE" />
-                  </HBox>
-                  
-                  <GridPane hgap="15.0" vgap="6.0">
-                     <columnConstraints>
-                        <ColumnConstraints hgrow="NEVER" minWidth="80.0" />
-                        <ColumnConstraints hgrow="ALWAYS" />
-                     </columnConstraints>
-                     
-                     <Label style="-fx-text-fill: #7f8c8d;" text="De:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                     <Label fx:id="labelExpediteurMsg" text="Direction Générale &lt;direction@entreprise.com&gt;" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-                     
-                     <Label style="-fx-text-fill: #7f8c8d;" text="À:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                     <Label fx:id="labelDestinataireMsg" text="Tous les utilisateurs" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                     
-                     <Label style="-fx-text-fill: #7f8c8d;" text="Date:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                     <Label fx:id="labelDateMessage" text="4 novembre 2025, 14:25" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-                     
-                     <Label style="-fx-text-fill: #7f8c8d;" text="Objet:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-                     <Label fx:id="labelObjetDetail" text="URGENT: Nouvelle procédure de sécurité" GridPane.columnIndex="1" GridPane.rowIndex="3" />
-                  </GridPane>
-               </VBox>
-               
-               <!-- Actions du message -->
-               <HBox spacing="10.0">
-                  <Button fx:id="btnRepondre" styleClass="button-primary" text="↩️ Répondre" />
-                  <Button fx:id="btnRepondreATous" styleClass="button-secondary" text="↩️ Répondre à tous" />
-                  <Button fx:id="btnTransferer" styleClass="button-info" text="➡️ Transférer" />
-                  <Region HBox.hgrow="ALWAYS" />
-                  <Button fx:id="btnMarquerImportant" text="⭐ Important" />
-                  <Button fx:id="btnArchiver" text="📁 Archiver" />
-                  <Button fx:id="btnSupprimer" styleClass="button-danger" text="🗑️ Supprimer" />
-               </HBox>
-               
-               <Separator />
-               
-               <!-- Contenu du message -->
-               <VBox spacing="10.0">
-                  <ScrollPane fx:id="scrollPaneContenu" fitToWidth="true" prefHeight="300.0">
-                     <!-- Le contenu sera ajouté dynamiquement -->
-                  </ScrollPane>
-               </VBox>
-               
+            <!-- Zone vide par défaut -->
+            <VBox fx:id="zoneVide" alignment="CENTER" spacing="20.0" VBox.vgrow="ALWAYS" style="-fx-padding: 50;">
+               <Label style="-fx-font-size: 64px;" text="📬" />
+               <Label style="-fx-font-size: 20px; -fx-text-fill: #7f8c8d;" text="Sélectionnez un message pour le lire" />
+               <Label style="-fx-font-size: 14px; -fx-text-fill: #95a5a6;" text="ou cliquez sur 'Nouveau message' pour composer" />
             </VBox>
             
-            <!-- Zone de composition (masquée par défaut) -->
-            <VBox fx:id="zoneComposition" spacing="15.0" styleClass="card" visible="false" managed="false">
-               
-               <HBox alignment="CENTER_LEFT" spacing="10.0">
-                  <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Nouveau message" />
-                  <Region HBox.hgrow="ALWAYS" />
-                  <Button fx:id="btnAnnulerComposition" text="❌ Annuler" />
-                  <Button fx:id="btnEnvoyerMessage" styleClass="button-success" text="📤 Envoyer" />
-               </HBox>
-               
-               <GridPane hgap="10.0" vgap="10.0">
-                  <columnConstraints>
-                     <ColumnConstraints hgrow="NEVER" minWidth="60.0" />
-                     <ColumnConstraints hgrow="ALWAYS" />
-                  </columnConstraints>
+            <!-- Zone de lecture du message (masquée par défaut) -->
+            <ScrollPane fx:id="scrollZoneMessage" fitToWidth="true" VBox.vgrow="ALWAYS" visible="false" managed="false" style="-fx-background-color: transparent;">
+               <VBox fx:id="zoneMessage" spacing="15.0" styleClass="card">
                   
-                  <Label text="À:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                  <ComboBox fx:id="comboDestinataire" prefWidth="400.0" 
-          				promptText="Sélectionner un destinataire..." 
-          				GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                  <!-- Informations du message -->
+                  <VBox spacing="8.0">
+                     <HBox alignment="CENTER_LEFT" spacing="15.0">
+                        <Label fx:id="labelObjetMessage" style="-fx-font-size: 20px; -fx-font-weight: bold;" text="" wrapText="true" />
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Label fx:id="labelPrioriteMessage" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-padding: 4 8; -fx-background-radius: 12; -fx-font-size: 10px;" text="" visible="false" />
+                     </HBox>
+                     
+                     <GridPane hgap="15.0" vgap="6.0">
+                        <columnConstraints>
+                           <ColumnConstraints hgrow="NEVER" minWidth="80.0" />
+                           <ColumnConstraints hgrow="ALWAYS" />
+                        </columnConstraints>
+                        
+                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-weight: bold;" text="De:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <Label fx:id="labelExpediteurMsg" text="" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        
+                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-weight: bold;" text="À:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <Label fx:id="labelDestinataireMsg" text="" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        
+                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-weight: bold;" text="Date:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <Label fx:id="labelDateMessage" text="" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        
+                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-weight: bold;" text="Objet:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                        <Label fx:id="labelObjetDetail" text="" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                     </GridPane>
+                  </VBox>
                   
-                  <Label text="Cc:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                  <TextField fx:id="champCc" promptText="Copie (optionnel)" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                  <!-- Actions du message - FlowPane pour éviter que les boutons soient coupés -->
+                  <FlowPane hgap="8.0" vgap="8.0">
+                     <Button fx:id="btnRepondre" styleClass="button-primary" text="↩️ Répondre" minWidth="110.0" />
+                     <Button fx:id="btnRepondreATous" styleClass="button-secondary" text="↩️ Répondre à tous" minWidth="140.0" />
+                     <Button fx:id="btnTransferer" styleClass="button-info" text="➡️ Transférer" minWidth="110.0" />
+                     <Button fx:id="btnMarquerImportant" text="⭐ Important" minWidth="110.0" />
+                     <Button fx:id="btnImprimer" onAction="#handleImprimer" text="🖨️ Imprimer" minWidth="110.0" />
+                     <Button fx:id="btnArchiver" text="📁 Archiver" minWidth="110.0" />
+                     <Button fx:id="btnSupprimer" styleClass="button-danger" text="🗑️ Supprimer" minWidth="110.0" />
+                  </FlowPane>
                   
-                  <Label text="Objet:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                  <TextField fx:id="champObjetComposition" promptText="Objet du message" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                  <Separator />
                   
-                  <Label text="Priorité:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-                  <ComboBox fx:id="comboPrioriteComposition" prefWidth="150.0" value="Normale" GridPane.columnIndex="1" GridPane.rowIndex="3">
-				    <items>
-				        <FXCollections fx:factory="observableArrayList">
-				            <String fx:value="Basse" />
-				            <String fx:value="Normale" />
-				            <String fx:value="Haute" />
-				            <String fx:value="Très haute" />
-				        </FXCollections>
-				    </items>
-				</ComboBox>
-               </GridPane>
-               
-               <VBox spacing="8.0">
-                  <HBox alignment="CENTER_LEFT" spacing="10.0">
-                     <Label text="Message:" />
-                     <Region HBox.hgrow="ALWAYS" />
-                     <Button text="B" />
-                     <Button text="I" />
-                     <Button text="U" />
-                     <Separator orientation="VERTICAL" />
-                     <Button text="📎 Joindre" />
-                  </HBox>
-                  <TextArea fx:id="textAreaMessage" prefRowCount="12" promptText="Tapez votre message ici..." wrapText="true" />
+                  <!-- Contenu du message -->
+                  <VBox spacing="10.0">
+                     <ScrollPane fx:id="scrollPaneContenu" fitToWidth="true" prefHeight="400.0" style="-fx-background-color: #f8f9fa; -fx-border-radius: 5;">
+                        <VBox style="-fx-padding: 15;">
+                           <Label text="Le contenu du message s'affichera ici..." style="-fx-text-fill: #7f8c8d;" />
+                        </VBox>
+                     </ScrollPane>
+                  </VBox>
+                  
                </VBox>
-               
-               <HBox alignment="CENTER_RIGHT" spacing="10.0">
-                  <Button fx:id="btnSauvegarderBrouillon" text="💾 Sauvegarder en brouillon" />
-                  <Button fx:id="btnAnnuler" styleClass="button-secondary" text="Annuler" />
-                  <Button fx:id="btnEnvoyer" styleClass="button-success" text="📤 Envoyer" />
-               </HBox>
-               
-            </VBox>
+            </ScrollPane>
+            
+            <!-- Zone de composition (masquée par défaut) -->
+            <ScrollPane fx:id="scrollZoneComposition" fitToWidth="true" VBox.vgrow="ALWAYS" 
+			            visible="false" managed="false" style="-fx-background-color: transparent;">
+			   <VBox fx:id="zoneComposition" spacing="15.0" styleClass="card">
+			      
+			      <HBox alignment="CENTER_LEFT" spacing="10.0">
+			         <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Nouveau message" />
+			         <Region HBox.hgrow="ALWAYS" />
+			         <Button fx:id="btnAnnulerComposition" styleClass="button-secondary" text="❌ Annuler" />
+			         <Button fx:id="btnEnvoyerMessage" styleClass="button-success" text="📤 Envoyer" />
+			      </HBox>
+			      
+			      <!-- NOUVELLE DISPOSITION AVEC SÉLECTION MULTIPLE -->
+			      <VBox spacing="12.0">
+			         
+			         <!-- Destinataires multiples -->
+			         <VBox spacing="5.0">
+			            <Label text="À:" style="-fx-font-weight: bold; -fx-font-size: 13px;" />
+			            <VBox fx:id="containerDestinataires" 
+			                  style="-fx-border-color: #ddd; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;">
+			               <!-- Le sélecteur sera ajouté dynamiquement -->
+			            </VBox>
+			         </VBox>
+			         
+			         <!-- Cc -->
+			         <HBox spacing="10.0" alignment="CENTER_LEFT">
+			            <Label text="Cc:" minWidth="30.0" />
+			            <TextField fx:id="champCc" promptText="Copie (optionnel)" HBox.hgrow="ALWAYS" />
+			         </HBox>
+			         
+			         <!-- Objet -->
+			         <HBox spacing="10.0" alignment="CENTER_LEFT">
+			            <Label text="Objet:" style="-fx-font-weight: bold;" minWidth="30.0" />
+			            <TextField fx:id="champObjetComposition" promptText="Objet du message" HBox.hgrow="ALWAYS" />
+			         </HBox>
+			         
+			         <!-- Priorité -->
+			         <HBox spacing="10.0" alignment="CENTER_LEFT">
+			            <Label text="Priorité:" minWidth="30.0" />
+			            <ComboBox fx:id="comboPrioriteComposition" prefWidth="150.0" value="Normale">
+			                <items>
+			                    <FXCollections fx:factory="observableArrayList">
+			                        <String fx:value="Basse" />
+			                        <String fx:value="Normale" />
+			                        <String fx:value="Haute" />
+			                        <String fx:value="Très haute" />
+			                    </FXCollections>
+			                </items>
+			             </ComboBox>
+			         </HBox>
+			         
+			      </VBox>
+			      
+			      <!-- Message -->
+			      <VBox spacing="8.0">
+			         <HBox alignment="CENTER_LEFT" spacing="10.0">
+			            <Label text="Message:" style="-fx-font-weight: bold;" />
+			            <Region HBox.hgrow="ALWAYS" />
+			            <Button text="B" style="-fx-font-weight: bold;" />
+			            <Button text="I" style="-fx-font-style: italic;" />
+			            <Button text="U" style="-fx-underline: true;" />
+			            <Separator orientation="VERTICAL" />
+			            <Button fx:id="btnJoindre" onAction="#handleJoindre" text="📎 Joindre" />
+			         </HBox>
+			         <TextArea fx:id="textAreaMessage" prefRowCount="15" promptText="Tapez votre message ici..." wrapText="true" />
+			      </VBox>
+			      
+			      <!-- Boutons d'action -->
+			      <HBox alignment="CENTER_RIGHT" spacing="10.0">
+			         <Button fx:id="btnSauvegarderBrouillon" text="💾 Sauvegarder en brouillon" />
+			         <Button fx:id="btnAnnuler" styleClass="button-secondary" text="Annuler" />
+			         <Button fx:id="btnEnvoyer" styleClass="button-success" text="📤 Envoyer" />
+			      </HBox>
+			      
+			   </VBox>
+			</ScrollPane>
             
          </VBox>
          
