@@ -10,6 +10,7 @@ import javafx.collections.ObservableList;
 import application.models.Reunion;
 import application.models.User;
 import application.services.ReunionService;
+import application.services.ReunionSyncService;
 import application.utils.SessionManager;
 import application.utils.AlertUtils;
 
@@ -18,7 +19,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.ResourceBundle;
 
-public class ReunionsController implements Initializable {
+public class ReunionsController implements Initializable, ReunionSyncService.ReunionListener {
     
     // Filtres
     @FXML private ComboBox<String> filtreStatut;
@@ -59,6 +60,7 @@ public class ReunionsController implements Initializable {
     
     private User currentUser;
     private ReunionService reunionService;
+    private ReunionSyncService reunionSyncService;
     private ObservableList<Reunion> reunions;
     private Reunion selectedReunion;
     
@@ -70,6 +72,8 @@ public class ReunionsController implements Initializable {
             currentUser = SessionManager.getInstance().getCurrentUser();
             reunionService = ReunionService.getInstance();
             reunions = FXCollections.observableArrayList();
+            reunionSyncService = ReunionSyncService.getInstance();
+            reunionSyncService.addReunionListener(this);
             
             if (currentUser == null) {
                 System.err.println("ERREUR: Aucun utilisateur en session");
@@ -141,6 +145,34 @@ public class ReunionsController implements Initializable {
                 }
             }
         );
+    }
+    
+ // NOUVEAU: Implémentation de ReunionListener
+    @Override
+    public void onReunionChanged(Reunion reunion, String action) {
+        javafx.application.Platform.runLater(() -> {
+            loadReunions();
+            showReunionNotification(reunion, action);
+        });
+    }
+    
+    @Override
+    public void onRefreshRequest() {
+        javafx.application.Platform.runLater(() -> {
+            loadReunions();
+        });
+    }
+    
+    // NOUVEAU: Afficher notification
+    private void showReunionNotification(Reunion reunion, String action) {
+        String message = switch (action) {
+            case "CREATED" -> "Nouvelle réunion: " + reunion.getTitre();
+            case "STARTED" -> "Réunion démarrée: " + reunion.getTitre();
+            case "ENDED" -> "Réunion terminée: " + reunion.getTitre();
+            default -> "Réunion mise à jour: " + reunion.getTitre();
+        };
+        
+        System.out.println("📅 " + message);
     }
     
     private void setupFilters() {
@@ -326,7 +358,7 @@ public class ReunionsController implements Initializable {
         
         selectedReunion.setStatut(application.models.StatutReunion.EN_COURS);
         
-        if (reunionService.saveReunion(selectedReunion)) {
+        if (reunionSyncService.demarrerReunion(selectedReunion)) {
             AlertUtils.showInfo("Réunion démarrée");
             loadReunions();
         } else {

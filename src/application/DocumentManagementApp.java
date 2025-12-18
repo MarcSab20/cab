@@ -6,7 +6,9 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import application.services.DatabaseService;
+import application.services.MessageSyncService;
 import application.services.NetworkService;
+import application.services.ReunionSyncService;
 import application.utils.DiagnosticUtils;
 
 /**
@@ -42,6 +44,9 @@ public class DocumentManagementApp extends Application {
             // Initialisation du service réseau
             NetworkService.getInstance().initialize();
             
+            MessageSyncService.getInstance();
+            ReunionSyncService.getInstance();
+            
             System.out.println("Services initialisés avec succès");
         } catch (Exception e) {
             System.err.println("Erreur lors de l'initialisation des services: " + e.getMessage());
@@ -74,6 +79,8 @@ public class DocumentManagementApp extends Application {
         // Gestion de la fermeture de l'application
         primaryStage.setOnCloseRequest(event -> {
             try {
+            	MessageSyncService.getInstance().shutdown();
+                ReunionSyncService.getInstance().shutdown();
                 NetworkService.getInstance().shutdown();
                 DatabaseService.getInstance().close();
             } catch (Exception e) {

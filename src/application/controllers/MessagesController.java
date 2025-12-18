@@ -9,18 +9,28 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import application.models.Message;
+import application.models.MessageGroup;
 import application.models.PrioriteMessage;
+import application.models.Role;
 import application.models.User;
+import application.models.UserPresence;
+import application.services.DatabaseService;
 import application.services.MessageService;
+import application.services.MessageSyncService;
 import application.utils.SessionManager;
 import application.utils.AlertUtils;
 
 import java.net.URL;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
-public class MessagesController implements Initializable {
+public class MessagesController implements Initializable, MessageSyncService.MessageListener {
     
     // Filtres
     @FXML private ComboBox<String> filtreDossier;
@@ -52,7 +62,7 @@ public class MessagesController implements Initializable {
     
     // Zone de composition
     @FXML private VBox zoneComposition;
-    @FXML private TextField champDestinataire;
+    @FXML private ComboBox<User> comboDestinataire;
     @FXML private TextField champCc;
     @FXML private TextField champObjetComposition;
     @FXML private ComboBox<String> comboPrioriteComposition;
@@ -65,6 +75,8 @@ public class MessagesController implements Initializable {
     
     private User currentUser;
     private MessageService messageService;
+    private MessageSyncService messageSyncService;
+    private ObservableList<User> listeUtilisateurs;
     private ObservableList<Message> messages;
     private Message selectedMessage;
     
@@ -76,7 +88,9 @@ public class MessagesController implements Initializable {
             currentUser = SessionManager.getInstance().getCurrentUser();
             messageService = MessageService.getInstance();
             messages = FXCollections.observableArrayList();
-            
+            messageSyncService = MessageSyncService.getInstance();
+            messageSyncService.addMessageListener(this);
+            messageSyncService.updatePresence(currentUser.getId(), UserPresence.Statut.ONLINE);
             if (currentUser == null) {
                 System.err.println("ERREUR: Aucun utilisateur en session");
                 return;
@@ -86,6 +100,8 @@ public class MessagesController implements Initializable {
             setupButtons();
             setupComposition();
             loadMessages();
+            chargerListeUtilisateurs();
+            configurerComboDestinataire();
             
         } catch (Exception e) {
             System.err.println("Erreur dans MessagesController.initialize(): " + e.getMessage());
@@ -413,18 +429,59 @@ public class MessagesController implements Initializable {
             AlertUtils.showWarning("Veuillez sélectionner un message");
             return;
         }
-        
+
         showCompositionForm();
+
+        // Utiliser comboDestinataire avec setValue()
+        if (comboDestinataire != null) {
+            // Sélectionner l'expéditeur du message comme destinataire
+            User expediteur = selectedMessage.getExpediteur();
+            comboDestinataire.setValue(expediteur);
+        }
         
-        if (champDestinataire != null) {
-            champDestinataire.setText(selectedMessage.getExpediteur().getNomComplet());
-        }
         if (champObjetComposition != null) {
-            champObjetComposition.setText("RE: " + selectedMessage.getObjet());
+            String objet = selectedMessage.getObjet();
+            // Éviter les "RE: RE: RE:" multiples
+            if (!objet.startsWith("RE:")) {
+                champObjetComposition.setText("RE: " + objet);
+            } else {
+                champObjetComposition.setText(objet);
+            }
         }
+        
         if (textAreaMessage != null) {
             textAreaMessage.setText("\n\n--- Message original ---\n" + selectedMessage.getContenu());
+            // Positionner le curseur au début pour faciliter la rédaction
+            textAreaMessage.positionCaret(0);
         }
+    }
+    
+    @Override
+    public void onNewMessage(Message message) {
+        javafx.application.Platform.runLater(() -> {
+            loadMessages();
+            
+            // Afficher une notification
+            if (message.getDestinataire().getId() == currentUser.getId()) {
+                showNewMessageNotification(message);
+            }
+        });
+    }
+    
+    /**
+     * Affiche une notification pour un nouveau message
+     */
+    private void showNewMessageNotification(Message message) {
+        System.out.println("📬 Nouveau message de: " + message.getExpediteur().getNomComplet());
+        // Vous pouvez ajouter une notification visuelle ici
+    }
+    
+    @Override
+    public void onRefreshRequest() {
+        javafx.application.Platform.runLater(() -> {
+            loadMessages();
+            chargerListeUtilisateurs(); // Rafraîchir aussi la liste
+        });
     }
     
     @FXML
@@ -438,14 +495,37 @@ public class MessagesController implements Initializable {
             AlertUtils.showWarning("Veuillez sélectionner un message");
             return;
         }
-        
+
         showCompositionForm();
+
+        // Laisser le destinataire vide (l'utilisateur choisira)
+        if (comboDestinataire != null) {
+            comboDestinataire.setValue(null);
+        }
         
         if (champObjetComposition != null) {
-            champObjetComposition.setText("TR: " + selectedMessage.getObjet());
+            String objet = selectedMessage.getObjet();
+            if (!objet.startsWith("TR:")) {
+                champObjetComposition.setText("TR: " + objet);
+            } else {
+                champObjetComposition.setText(objet);
+            }
         }
+        
         if (textAreaMessage != null) {
-            textAreaMessage.setText("\n\n--- Message transféré ---\n" + selectedMessage.getContenu());
+            String transfertInfo = String.format(
+                "--- Message transféré ---\n" +
+                "De: %s\n" +
+                "Date: %s\n" +
+                "Objet: %s\n" +
+                "---\n\n%s",
+                selectedMessage.getExpediteur().getNomComplet(),
+                selectedMessage.getDateEnvoi(),
+                selectedMessage.getObjet(),
+                selectedMessage.getContenu()
+            );
+            textAreaMessage.setText(transfertInfo);
+            textAreaMessage.positionCaret(0);
         }
     }
     
@@ -524,12 +604,119 @@ public class MessagesController implements Initializable {
         }
     }
     
-    @FXML
+    /**
+     * Charge la liste de tous les utilisateurs actifs
+     */
+    private void chargerListeUtilisateurs() {
+        try {
+            List<User> users = getAllActiveUsers();
+            listeUtilisateurs = FXCollections.observableArrayList(users);
+            
+            if (comboDestinataire != null) {
+                comboDestinataire.setItems(listeUtilisateurs);
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur lors du chargement des utilisateurs: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Configure le ComboBox pour afficher les noms complets
+     */
+    private void configurerComboDestinataire() {
+        if (comboDestinataire != null) {
+            // Définir comment afficher les utilisateurs
+            comboDestinataire.setCellFactory(param -> new ListCell<User>() {
+                @Override
+                protected void updateItem(User user, boolean empty) {
+                    super.updateItem(user, empty);
+                    if (empty || user == null) {
+                        setText(null);
+                    } else {
+                        // Afficher avec icône de statut
+                        UserPresence presence = messageSyncService.getUserPresence(user.getId());
+                        String statut = presence != null ? presence.getStatut().getIcone() : "⚫";
+                        setText(statut + " " + user.getNomComplet() + " (" + user.getCode() + ")");
+                    }
+                }
+            });
+            
+            // Définir comment afficher l'élément sélectionné
+            comboDestinataire.setButtonCell(new ListCell<User>() {
+                @Override
+                protected void updateItem(User user, boolean empty) {
+                    super.updateItem(user, empty);
+                    if (empty || user == null) {
+                        setText(null);
+                    } else {
+                        setText(user.getNomComplet());
+                    }
+                }
+            });
+        }
+    }
+    
+    /**
+     * Récupère tous les utilisateurs actifs sauf l'utilisateur courant
+     */
+    private List<User> getAllActiveUsers() {
+        List<User> users = new ArrayList<>();
+        
+        try {
+            String query = """
+                SELECT u.*, r.nom as role_nom, r.description as role_desc, 
+                       r.permissions, r.actif as role_actif
+                FROM users u 
+                LEFT JOIN roles r ON u.role_id = r.id 
+                WHERE u.actif = 1 AND u.id != ?
+                ORDER BY u.nom, u.prenom
+            """;
+            
+            DatabaseService dbService = DatabaseService.getInstance();
+            
+            try (Connection conn = dbService.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(query)) {
+                
+                stmt.setInt(1, currentUser.getId());
+                
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        User user = new User();
+                        user.setId(rs.getInt("id"));
+                        user.setCode(rs.getString("code"));
+                        user.setNom(rs.getString("nom"));
+                        user.setPrenom(rs.getString("prenom"));
+                        user.setEmail(rs.getString("email"));
+                        user.setActif(rs.getBoolean("actif"));
+                        
+                        // Mapper le rôle si nécessaire
+                        String roleNom = rs.getString("role_nom");
+                        if (roleNom != null) {
+                            Role role = new Role();
+                            role.setId(rs.getInt("role_id"));
+                            role.setNom(roleNom);
+                            role.setDescription(rs.getString("role_desc"));
+                            user.setRole(role);
+                        }
+                        
+                        users.add(user);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la récupération des utilisateurs: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return users;
+    }
+    
+   @FXML
     private void handleEnvoyerMessage() {
         try {
-            // Validation
-            if (champDestinataire == null || champDestinataire.getText().isEmpty()) {
-                AlertUtils.showWarning("Veuillez saisir un destinataire");
+            // Validation du destinataire
+            if (comboDestinataire == null || comboDestinataire.getValue() == null) {
+                AlertUtils.showWarning("Veuillez sélectionner un destinataire");
                 return;
             }
             
@@ -543,16 +730,28 @@ public class MessagesController implements Initializable {
                 return;
             }
             
+            // Récupérer le destinataire sélectionné
+            User destinataire = comboDestinataire.getValue();
+            
             // Créer le message
             Message message = new Message();
             message.setExpediteur(currentUser);
-            // TODO: Récupérer le destinataire réel par son nom
-            message.setDestinataire(currentUser); // Temporaire
+            message.setDestinataire(destinataire);
             message.setObjet(champObjetComposition.getText());
             message.setContenu(textAreaMessage.getText());
             
-            if (messageService.saveMessage(message)) {
-                AlertUtils.showInfo("Message envoyé avec succès");
+            // Définir la priorité si sélectionnée
+            if (comboPrioriteComposition != null && comboPrioriteComposition.getValue() != null) {
+                String prioriteStr = comboPrioriteComposition.getValue();
+                PrioriteMessage priorite = PrioriteMessage.fromLibelle(prioriteStr);
+                if (priorite != null) {
+                    message.setPriorite(priorite);
+                }
+            }
+            
+            // Envoyer via le service de synchronisation
+            if (messageSyncService.envoyerMessage(message)) {
+                AlertUtils.showInfo("Message envoyé avec succès à " + destinataire.getNomComplet());
                 clearCompositionForm();
                 loadMessages();
             } else {
@@ -561,7 +760,66 @@ public class MessagesController implements Initializable {
             
         } catch (Exception e) {
             System.err.println("Erreur lors de l'envoi: " + e.getMessage());
-            AlertUtils.showError("Erreur lors de l'envoi du message");
+            e.printStackTrace();
+            AlertUtils.showError("Erreur lors de l'envoi du message: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Efface le formulaire de composition
+     */
+    private void clearCompositionForm() {
+        if (comboDestinataire != null) comboDestinataire.setValue(null);
+        if (champCc != null) champCc.clear();
+        if (champObjetComposition != null) champObjetComposition.clear();
+        if (textAreaMessage != null) textAreaMessage.clear();
+        if (comboPrioriteComposition != null) comboPrioriteComposition.setValue("Normale");
+        
+        if (zoneComposition != null) {
+            zoneComposition.setVisible(false);
+            zoneComposition.setManaged(false);
+        }
+    }
+    
+    @FXML
+    private void handleCreerGroupe() {
+        // Demander le nom du groupe
+        Optional<String> result = AlertUtils.showTextInput(
+            "Nouveau groupe",
+            "Nom du groupe:",
+            ""
+        );
+        
+        if (result.isPresent() && !result.get().trim().isEmpty()) {
+            MessageGroup groupe = new MessageGroup(result.get(), currentUser);
+            groupe.setDescription("Groupe de discussion");
+            groupe.setTypeGroupe(MessageGroup.TypeGroupe.PRIVE);
+            
+            if (messageSyncService.creerGroupe(groupe)) {
+                AlertUtils.showInfo("Groupe créé avec succès");
+                // Ajouter des membres...
+            }
+        }
+    }
+    
+    @FXML
+    private void handleEnvoyerMessageGroupe(MessageGroup groupe) {
+        Message message = new Message();
+        message.setExpediteur(currentUser);
+        message.setObjet(champObjetComposition.getText());
+        message.setContenu(textAreaMessage.getText());
+        
+        if (messageSyncService.envoyerMessageGroupe(message, groupe)) {
+            AlertUtils.showInfo("Message envoyé au groupe");
+        }
+    }
+    
+    private void afficherStatutPresence(User user, Label statusLabel) {
+        UserPresence presence = messageSyncService.getUserPresence(user.getId());
+        
+        if (presence != null) {
+            statusLabel.setText(presence.getStatutAvecIcone());
+            statusLabel.setStyle(presence.getStyleStatut());
         }
     }
     
@@ -582,15 +840,4 @@ public class MessagesController implements Initializable {
         }
     }
     
-    private void clearCompositionForm() {
-        if (champDestinataire != null) champDestinataire.clear();
-        if (champCc != null) champCc.clear();
-        if (champObjetComposition != null) champObjetComposition.clear();
-        if (textAreaMessage != null) textAreaMessage.clear();
-        
-        if (zoneComposition != null) {
-            zoneComposition.setVisible(false);
-            zoneComposition.setManaged(false);
-        }
-    }
 }

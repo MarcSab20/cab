@@ -183,7 +183,9 @@
                   </columnConstraints>
                   
                   <Label text="À:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                  <TextField fx:id="champDestinataire" promptText="Sélectionner les destinataires..." GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                  <ComboBox fx:id="comboDestinataire" prefWidth="400.0" 
+          				promptText="Sélectionner un destinataire..." 
+          				GridPane.columnIndex="1" GridPane.rowIndex="0" />
                   
                   <Label text="Cc:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
                   <TextField fx:id="champCc" promptText="Copie (optionnel)" GridPane.columnIndex="1" GridPane.rowIndex="1" />
