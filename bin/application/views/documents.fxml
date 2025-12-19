@@ -92,7 +92,7 @@
       <HBox>
          
          <!-- Arborescence des dossiers -->
-         <VBox prefWidth="250.0" spacing="10.0" style="-fx-padding: 20; -fx-border-color: #e9ecef; -fx-border-width: 0 1 0 0;">
+         <VBox prefWidth="410.0" spacing="10.0" style="-fx-padding: 20; -fx-border-color: #e9ecef; -fx-border-width: 0 1 0 0;">
             
             <HBox alignment="CENTER_LEFT" spacing="10.0">
                <Label style="-fx-font-weight: bold;" text="Arborescence" />
@@ -135,7 +135,7 @@
          </VBox>
          
          <!-- Zone centrale avec liste/grille de documents -->
-         <VBox HBox.hgrow="ALWAYS" spacing="15.0" style="-fx-padding: 20;">
+         <VBox HBox.hgrow="ALWAYS" spacing="5.0" style="-fx-padding: 20;">
             
             <!-- En-tête de la liste -->
             <HBox alignment="CENTER_LEFT" spacing="15.0">
@@ -144,7 +144,7 @@
                <Region HBox.hgrow="ALWAYS" />
                
                <Label text="Trier par:" />
-               <ComboBox fx:id="comboTriDocuments" prefWidth="120.0" value="Nom">
+               <ComboBox fx:id="comboTriDocuments" prefWidth="100.0" value="Nom">
 				    <items>
 				        <FXCollections fx:factory="observableArrayList">
 				            <String fx:value="Nom" />
@@ -213,11 +213,11 @@
          </VBox>
          
          <!-- Panneau de détails du document -->
-         <VBox prefWidth="350.0" spacing="15.0" style="-fx-padding: 20; -fx-background-color: #f8f9fa; -fx-border-color: #e9ecef; -fx-border-width: 1 0 0 1;">
+         <VBox prefWidth="370.0" spacing="15.0" style="-fx-padding: 20; -fx-background-color: #f8f9fa; -fx-border-color: #e9ecef; -fx-border-width: 1 0 0 1;">
             
             <!-- En-tête des détails -->
             <HBox alignment="CENTER_LEFT" spacing="10.0">
-               <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Détails du document" />
+               <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Détails" />
                <Region HBox.hgrow="ALWAYS" />
                <Button fx:id="btnFermerDetails" text="✕" />
             </HBox>
