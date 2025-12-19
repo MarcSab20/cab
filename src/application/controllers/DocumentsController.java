@@ -5,6 +5,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
+import javafx.scene.input.MouseEvent;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.stage.FileChooser;
@@ -33,6 +34,39 @@ import java.util.stream.Collectors;
  */
 public class DocumentsController implements Initializable {
     
+    // Boutons d'action principaux
+    @FXML private Button btnNouveauDossier;
+    @FXML private Button btnNouveauDocument;
+    @FXML private Button btnImporter;
+    @FXML private Button btnRechercher;
+    
+    // Boutons d'actions rapides
+    @FXML private Button btnToutSelectionner;
+    @FXML private Button btnTelechargerSelection;
+    @FXML private Button btnDeplacerSelection;
+    @FXML private Button btnSupprimerSelection;
+    @FXML private Button btnRafraichirArbre;
+    @FXML private Button btnCreerSousDossier;
+    @FXML private Button btnActualiser;
+    @FXML private Button btnAjouterPremierDoc;
+    
+    // Boutons de pagination
+    @FXML private Button btnPagePrecedente;
+    @FXML private Button btnPageSuivante;
+    @FXML private Label labelPagination;
+    @FXML private ComboBox<String> comboElementsParPage;
+    
+    // Boutons d'affichage
+    @FXML private ToggleButton btnAffichageListe;
+    @FXML private ToggleButton btnAffichageGrille;
+    @FXML private ToggleButton btnAffichageDetails;
+    
+    // Raccourcis
+    @FXML private HBox raccourciFavoris;
+    @FXML private HBox raccourciRecents;
+    @FXML private HBox raccourciCorbeille;
+    @FXML private HBox raccourciPartages;
+    
     // Filtres et recherche
     @FXML private ComboBox<String> filtreType;
     @FXML private ComboBox<String> filtreStatutDoc;
@@ -42,18 +76,28 @@ public class DocumentsController implements Initializable {
     @FXML private TreeView<Dossier> arborescenceDossiers;
     @FXML private Label labelDossierActuel;
     
+    // Breadcrumbs
+    @FXML private Hyperlink breadcrumbRoot;
+    @FXML private Label breadcrumbSeparator1;
+    @FXML private Hyperlink breadcrumbLevel1;
+    @FXML private Label breadcrumbSeparator2;
+    @FXML private Hyperlink breadcrumbLevel2;
+    
     // Affichage
     @FXML private ToggleGroup toggleAffichage;
-    @FXML private ToggleButton btnAffichageListe;
     @FXML private TableView<Document> tableauDocuments;
+    @FXML private ScrollPane vueGrille;
+    @FXML private FlowPane grilleDocuments;
     
     // Colonnes
+    @FXML private TableColumn<Document, String> colonneSelection;
     @FXML private TableColumn<Document, String> colonneNomDocument;
     @FXML private TableColumn<Document, String> colonneTypeDocument;
     @FXML private TableColumn<Document, String> colonneTailleDocument;
     @FXML private TableColumn<Document, String> colonneAuteurDocument;
     @FXML private TableColumn<Document, String> colonneDateModification;
     @FXML private TableColumn<Document, String> colonneStatutDocument;
+    @FXML private TableColumn<Document, Void> colonneActionsDocument;
     
     // Tri et pagination
     @FXML private ComboBox<String> comboTriDocuments;
@@ -61,6 +105,8 @@ public class DocumentsController implements Initializable {
     
     // Détails du document
     @FXML private VBox panneauDetailsDocument;
+    @FXML private VBox zoneApercu;
+    @FXML private Label labelCodeDocument;
     @FXML private Label labelNomFichier;
     @FXML private Label labelTypeFichier;
     @FXML private Label labelTailleFichier;
@@ -68,18 +114,22 @@ public class DocumentsController implements Initializable {
     @FXML private Label labelDateModification;
     @FXML private Label labelAuteur;
     @FXML private Label labelStatutDocument;
-    @FXML private Label labelCodeDocument;
     @FXML private TextArea textAreaDescription;
     @FXML private FlowPane flowPaneMotsCles;
     @FXML private VBox listeVersions;
+    @FXML private VBox listePermissions;
+    @FXML private VBox listeActivites;
     
-    // Boutons d'action
+    // Boutons de détails
+    @FXML private Button btnApercuComplet;
     @FXML private Button btnTelecharger;
     @FXML private Button btnModifierDocument;
     @FXML private Button btnPartagerDocument;
+    @FXML private Button btnPartagerDetails;
     @FXML private Button btnDeplacerDocument;
     @FXML private Button btnSupprimerDocument;
     @FXML private Button btnFermerDetails;
+    @FXML private Button btnNouvelleVersion;
     
     private User currentUser;
     private DocumentService documentService;
@@ -87,6 +137,11 @@ public class DocumentsController implements Initializable {
     private ObservableList<Document> documents;
     private Document selectedDocument;
     private Dossier dossierActuel;
+    
+    // Variables de pagination
+    private int currentPage = 1;
+    private int elementsPerPage = 25;
+    private int totalPages = 1;
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -109,6 +164,8 @@ public class DocumentsController implements Initializable {
             setupTableColumns();
             setupFilters();
             setupButtons();
+            setupBreadcrumbs();
+            setupPagination();
             loadArborescenceDossiers();
             loadDocuments();
             
@@ -135,6 +192,12 @@ public class DocumentsController implements Initializable {
             ));
             comboTriDocuments.setValue("Date modification");
             comboTriDocuments.setOnAction(e -> handleTriChange());
+        }
+        
+        // Configuration de la vue grille (masquée par défaut)
+        if (vueGrille != null) {
+            vueGrille.setVisible(false);
+            vueGrille.setManaged(false);
         }
     }
     
@@ -238,6 +301,25 @@ public class DocumentsController implements Initializable {
     }
     
     /**
+     * Configure le fil d'Ariane (breadcrumbs)
+     */
+    private void setupBreadcrumbs() {
+        if (breadcrumbRoot != null) {
+            breadcrumbRoot.setOnAction(e -> naviguerVersDossier(null));
+        }
+    }
+    
+    /**
+     * Configure la pagination
+     */
+    private void setupPagination() {
+        if (comboElementsParPage != null) {
+            comboElementsParPage.setValue(String.valueOf(elementsPerPage));
+        }
+        updatePaginationControls();
+    }
+    
+    /**
      * Charge l'arborescence des dossiers
      */
     private void loadArborescenceDossiers() {
@@ -281,6 +363,7 @@ public class DocumentsController implements Initializable {
                     if (newVal != null) {
                         dossierActuel = newVal.getValue();
                         loadDocumentsDossier(dossierActuel.getId());
+                        updateBreadcrumbs();
                     }
                 }
             );
@@ -324,11 +407,8 @@ public class DocumentsController implements Initializable {
             List<Document> list = documentService.getDocumentsByDossier(dossierId);
             documents.clear();
             documents.addAll(list);
-            tableauDocuments.setItems(documents);
             
-            if (labelNombreDocuments != null) {
-                labelNombreDocuments.setText("(" + documents.size() + " documents)");
-            }
+            updatePaginationAndDisplay();
             
         } catch (Exception e) {
             System.err.println("Erreur lors du chargement des documents du dossier: " + e.getMessage());
@@ -343,16 +423,77 @@ public class DocumentsController implements Initializable {
             List<Document> list = documentService.getAllDocuments();
             documents.clear();
             documents.addAll(list);
-            tableauDocuments.setItems(documents);
             
-            if (labelNombreDocuments != null) {
-                labelNombreDocuments.setText("(" + documents.size() + " documents)");
-            }
+            updatePaginationAndDisplay();
             
         } catch (Exception e) {
             System.err.println("Erreur lors du chargement des documents: " + e.getMessage());
             AlertUtils.showError("Erreur lors du chargement des documents");
         }
+    }
+    
+    /**
+     * Met à jour le fil d'Ariane
+     */
+    private void updateBreadcrumbs() {
+        if (dossierActuel == null) {
+            // Racine seulement
+            if (breadcrumbSeparator1 != null) breadcrumbSeparator1.setVisible(false);
+            if (breadcrumbLevel1 != null) breadcrumbLevel1.setVisible(false);
+            if (breadcrumbSeparator2 != null) breadcrumbSeparator2.setVisible(false);
+            if (breadcrumbLevel2 != null) breadcrumbLevel2.setVisible(false);
+            return;
+        }
+        
+        // TODO: Implémenter la logique du fil d'Ariane complet
+    }
+    
+    /**
+     * Met à jour la pagination et l'affichage
+     */
+    private void updatePaginationAndDisplay() {
+        totalPages = (int) Math.ceil((double) documents.size() / elementsPerPage);
+        if (totalPages == 0) totalPages = 1;
+        
+        currentPage = Math.min(currentPage, totalPages);
+        
+        updatePaginationControls();
+        updateTableDisplay();
+        
+        if (labelNombreDocuments != null) {
+            labelNombreDocuments.setText("(" + documents.size() + " documents)");
+        }
+    }
+    
+    /**
+     * Met à jour les contrôles de pagination
+     */
+    private void updatePaginationControls() {
+        if (labelPagination != null) {
+            labelPagination.setText("Page " + currentPage + " sur " + totalPages);
+        }
+        
+        if (btnPagePrecedente != null) {
+            btnPagePrecedente.setDisable(currentPage <= 1);
+        }
+        
+        if (btnPageSuivante != null) {
+            btnPageSuivante.setDisable(currentPage >= totalPages);
+        }
+    }
+    
+    /**
+     * Met à jour l'affichage du tableau avec la pagination
+     */
+    private void updateTableDisplay() {
+        int startIndex = (currentPage - 1) * elementsPerPage;
+        int endIndex = Math.min(startIndex + elementsPerPage, documents.size());
+        
+        ObservableList<Document> pageDocuments = FXCollections.observableArrayList(
+            documents.subList(startIndex, endIndex)
+        );
+        
+        tableauDocuments.setItems(pageDocuments);
     }
     
     /**
@@ -384,9 +525,8 @@ public class DocumentsController implements Initializable {
             documents.clear();
             documents.addAll(filtered);
             
-            if (labelNombreDocuments != null) {
-                labelNombreDocuments.setText("(" + documents.size() + " documents)");
-            }
+            currentPage = 1;
+            updatePaginationAndDisplay();
             
         } catch (Exception e) {
             System.err.println("Erreur lors de l'application des filtres: " + e.getMessage());
@@ -431,155 +571,33 @@ public class DocumentsController implements Initializable {
                 break;
         }
         
-        tableauDocuments.refresh();
+        updateTableDisplay();
     }
     
+    // ==================== GESTIONNAIRES D'ÉVÉNEMENTS ====================
+    
     /**
-     * Affiche les détails d'un document
+     * Gère le bouton Nouveau Dossier
      */
-    private void showDocumentDetails(Document document) {
-        selectedDocument = document;
+    @FXML
+    private void handleNouveauDossier() {
+        DossierFormDialog dialog = new DossierFormDialog(null, dossierActuel);
+        Optional<Dossier> result = dialog.showAndWait();
         
-        if (panneauDetailsDocument != null) {
-            panneauDetailsDocument.setVisible(true);
-            panneauDetailsDocument.setManaged(true);
-        }
-        
-        // Informations de base
-        if (labelCodeDocument != null) {
-            labelCodeDocument.setText(document.getCodeDocument());
-        }
-        
-        if (labelNomFichier != null) {
-            labelNomFichier.setText(document.getTitre());
-        }
-        
-        if (labelTypeFichier != null) {
-            String type = document.getExtension() != null ? 
-                "Document " + document.getExtension().toUpperCase() : "Document";
-            labelTypeFichier.setText(type);
-        }
-        
-        if (labelTailleFichier != null) {
-            labelTailleFichier.setText(document.getTailleFormatee());
-        }
-        
-        if (labelDateCreation != null && document.getDateCreation() != null) {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMMM yyyy HH:mm");
-            labelDateCreation.setText(document.getDateCreation().format(formatter));
-        }
-        
-        if (labelDateModification != null) {
-            labelDateModification.setText(document.getDateModificationFormatee());
-        }
-        
-        if (labelAuteur != null) {
-            labelAuteur.setText(document.getNomAuteur());
-        }
-        
-        if (labelStatutDocument != null) {
-            labelStatutDocument.setText(document.getStatut().getIcone() + " " + 
-                                       document.getStatut().getLibelle());
-        }
-        
-        if (textAreaDescription != null) {
-            textAreaDescription.setText(document.getDescription() != null ? document.getDescription() : "");
-        }
-        
-        // Mots-clés
-        if (flowPaneMotsCles != null) {
-            flowPaneMotsCles.getChildren().clear();
-            if (document.getMotsCles() != null) {
-                String[] mots = document.getMotsCles().split(",");
-                for (String mot : mots) {
-                    Label tag = new Label(mot.trim());
-                    tag.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; " +
-                               "-fx-padding: 2 6; -fx-background-radius: 10; -fx-font-size: 11px;");
-                    flowPaneMotsCles.getChildren().add(tag);
-                }
+        result.ifPresent(dossier -> {
+            boolean success = dossierService.createDossier(dossier, currentUser);
+            
+            if (success) {
+                AlertUtils.showInfo("Dossier créé avec succès!");
+                loadArborescenceDossiers();
+            } else {
+                AlertUtils.showError("Erreur lors de la création du dossier");
             }
-        }
-        
-        // Charger les versions
-        loadVersions(document.getId());
-        
-        // Gérer les permissions des boutons
-        updateButtonPermissions();
+        });
     }
     
     /**
-     * Charge les versions d'un document
-     */
-    private void loadVersions(int documentId) {
-        if (listeVersions == null) return;
-        
-        listeVersions.getChildren().clear();
-        
-        List<VersionDocument> versions = documentService.getVersionsDocument(documentId);
-        
-        for (VersionDocument version : versions) {
-            HBox versionBox = new HBox(10);
-            versionBox.setStyle("-fx-padding: 8; -fx-background-color: " + 
-                              (version.estVersionActuelle(selectedDocument.getVersion()) ? 
-                               "#e8f5e8" : "white") + 
-                              "; -fx-background-radius: 4;");
-            
-            VBox infoBox = new VBox(2);
-            Label labelVersion = new Label(version.getLibelleVersion());
-            labelVersion.setStyle("-fx-font-weight: bold;");
-            
-            Label labelDate = new Label(version.getDateCreationFormatee());
-            labelDate.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 12px;");
-            
-            infoBox.getChildren().addAll(labelVersion, labelDate);
-            
-            HBox.setHgrow(infoBox, Priority.ALWAYS);
-            versionBox.getChildren().add(infoBox);
-            
-            listeVersions.getChildren().add(versionBox);
-        }
-    }
-    
-    /**
-     * Met à jour les permissions des boutons
-     */
-    private void updateButtonPermissions() {
-        if (selectedDocument == null) return;
-        
-        boolean estProprietaire = selectedDocument.getCreePar() != null && 
-                                 selectedDocument.getCreePar().getId() == currentUser.getId();
-        boolean estNiveau01 = currentUser.getNiveauAutorite() <= 1;
-        
-        // Modifier : propriétaire ou niveau 0/1
-        if (btnModifierDocument != null) {
-            btnModifierDocument.setDisable(!estProprietaire && !estNiveau01);
-        }
-        
-        // Supprimer : uniquement niveau 0/1
-        if (btnSupprimerDocument != null) {
-            btnSupprimerDocument.setDisable(!estNiveau01);
-        }
-        
-        // Télécharger : tout le monde
-        if (btnTelecharger != null) {
-            btnTelecharger.setDisable(false);
-        }
-    }
-    
-    /**
-     * Masque les détails
-     */
-    private void hideDocumentDetails() {
-        selectedDocument = null;
-        
-        if (panneauDetailsDocument != null) {
-            panneauDetailsDocument.setVisible(false);
-            panneauDetailsDocument.setManaged(false);
-        }
-    }
-    
-    /**
-     * Gère l'import d'un nouveau document
+     * Gère le bouton Importer Document
      */
     @FXML
     private void handleImporterDocument() {
@@ -786,22 +804,388 @@ public class DocumentsController implements Initializable {
     }
     
     /**
-     * Gère la création d'un nouveau dossier
+     * Gère le bouton Tout Sélectionner
      */
     @FXML
-    private void handleNouveauDossier() {
-        DossierFormDialog dialog = new DossierFormDialog(null, dossierActuel);
-        Optional<Dossier> result = dialog.showAndWait();
+    private void handleToutSelectionner() {
+        tableauDocuments.getSelectionModel().selectAll();
+    }
+    
+    /**
+     * Gère le téléchargement de la sélection
+     */
+    @FXML
+    private void handleTelechargerSelection() {
+        ObservableList<Document> selection = tableauDocuments.getSelectionModel().getSelectedItems();
         
-        result.ifPresent(dossier -> {
-            boolean success = dossierService.createDossier(dossier, currentUser);
-            
-            if (success) {
-                AlertUtils.showInfo("Dossier créé avec succès!");
-                loadArborescenceDossiers();
-            } else {
-                AlertUtils.showError("Erreur lors de la création du dossier");
+        if (selection.isEmpty()) {
+            AlertUtils.showWarning("Aucun document sélectionné");
+            return;
+        }
+        
+        AlertUtils.showInfo("Téléchargement de " + selection.size() + " document(s) en cours...");
+        // TODO: Implémenter le téléchargement multiple
+    }
+    
+    /**
+     * Gère le déplacement de la sélection
+     */
+    @FXML
+    private void handleDeplacerSelection() {
+        ObservableList<Document> selection = tableauDocuments.getSelectionModel().getSelectedItems();
+        
+        if (selection.isEmpty()) {
+            AlertUtils.showWarning("Aucun document sélectionné");
+            return;
+        }
+        
+        AlertUtils.showInfo("Déplacement de " + selection.size() + " document(s)...");
+        // TODO: Implémenter le déplacement multiple
+    }
+    
+    /**
+     * Gère la suppression de la sélection
+     */
+    @FXML
+    private void handleSupprimerSelection() {
+        ObservableList<Document> selection = tableauDocuments.getSelectionModel().getSelectedItems();
+        
+        if (selection.isEmpty()) {
+            AlertUtils.showWarning("Aucun document sélectionné");
+            return;
+        }
+        
+        boolean confirm = AlertUtils.showConfirmation(
+            "Confirmation",
+            "Êtes-vous sûr de vouloir supprimer " + selection.size() + " document(s) ?"
+        );
+        
+        if (confirm) {
+            // TODO: Implémenter la suppression multiple
+            AlertUtils.showInfo("Suppression en cours...");
+        }
+    }
+    
+    /**
+     * Gère l'affichage en mode liste
+     */
+    @FXML
+    private void handleAffichageListe() {
+        if (tableauDocuments != null) {
+            tableauDocuments.setVisible(true);
+            tableauDocuments.setManaged(true);
+        }
+        if (vueGrille != null) {
+            vueGrille.setVisible(false);
+            vueGrille.setManaged(false);
+        }
+    }
+    
+    /**
+     * Gère l'affichage en mode grille
+     */
+    @FXML
+    private void handleAffichageGrille() {
+        if (tableauDocuments != null) {
+            tableauDocuments.setVisible(false);
+            tableauDocuments.setManaged(false);
+        }
+        if (vueGrille != null) {
+            vueGrille.setVisible(true);
+            vueGrille.setManaged(true);
+        }
+        // TODO: Peupler la grille avec les documents
+    }
+    
+    /**
+     * Gère l'affichage en mode détails
+     */
+    @FXML
+    private void handleAffichageDetails() {
+        AlertUtils.showInfo("Vue détaillée en cours de développement");
+    }
+    
+    /**
+     * Gère le rafraîchissement de l'arbre
+     */
+    @FXML
+    private void handleRafraichirArbre() {
+        loadArborescenceDossiers();
+    }
+    
+    /**
+     * Gère la création d'un sous-dossier
+     */
+    @FXML
+    private void handleCreerSousDossier() {
+        if (dossierActuel == null) {
+            AlertUtils.showWarning("Veuillez sélectionner un dossier parent");
+            return;
+        }
+        handleNouveauDossier();
+    }
+    
+    /**
+     * Gère l'actualisation de la liste
+     */
+    @FXML
+    private void handleActualiser() {
+        if (dossierActuel != null) {
+            loadDocumentsDossier(dossierActuel.getId());
+        } else {
+            loadDocuments();
+        }
+    }
+    
+    /**
+     * Gère le changement du nombre d'éléments par page
+     */
+    @FXML
+    private void handleElementsParPageChange() {
+        if (comboElementsParPage != null && comboElementsParPage.getValue() != null) {
+            elementsPerPage = Integer.parseInt(comboElementsParPage.getValue());
+            currentPage = 1;
+            updatePaginationAndDisplay();
+        }
+    }
+    
+    /**
+     * Gère la navigation vers la page précédente
+     */
+    @FXML
+    private void handlePagePrecedente() {
+        if (currentPage > 1) {
+            currentPage--;
+            updatePaginationAndDisplay();
+        }
+    }
+    
+    /**
+     * Gère la navigation vers la page suivante
+     */
+    @FXML
+    private void handlePageSuivante() {
+        if (currentPage < totalPages) {
+            currentPage++;
+            updatePaginationAndDisplay();
+        }
+    }
+    
+    /**
+     * Gère le raccourci Documents favoris
+     */
+    @FXML
+    private void handleRaccourciFavoris(MouseEvent event) {
+        AlertUtils.showInfo("Affichage des documents favoris");
+        // TODO: Implémenter le filtre favoris
+    }
+    
+    /**
+     * Gère le raccourci Récemment modifiés
+     */
+    @FXML
+    private void handleRaccourciRecents(MouseEvent event) {
+        // Trier par date de modification
+        comboTriDocuments.setValue("Date modification");
+        handleTriChange();
+    }
+    
+    /**
+     * Gère le raccourci Corbeille
+     */
+    @FXML
+    private void handleRaccourciCorbeille(MouseEvent event) {
+        Dossier corbeille = dossierService.getDossierByCode("CORBEILLE");
+        if (corbeille != null) {
+            loadDocumentsDossier(corbeille.getId());
+        }
+    }
+    
+    /**
+     * Gère le raccourci Partagés avec moi
+     */
+    @FXML
+    private void handleRaccourciPartages(MouseEvent event) {
+        AlertUtils.showInfo("Affichage des documents partagés");
+        // TODO: Implémenter le filtre partages
+    }
+    
+    /**
+     * Gère l'aperçu complet d'un document
+     */
+    @FXML
+    private void handleApercuComplet() {
+        if (selectedDocument == null) {
+            AlertUtils.showWarning("Aucun document sélectionné");
+            return;
+        }
+        AlertUtils.showInfo("Aperçu complet en cours de développement");
+    }
+    
+    /**
+     * Gère la création d'une nouvelle version
+     */
+    @FXML
+    private void handleNouvelleVersion() {
+        handleModifierDocument();
+    }
+    
+    /**
+     * Navigation vers un dossier
+     */
+    private void naviguerVersDossier(Dossier dossier) {
+        if (dossier == null) {
+            // Retour à la racine
+            dossierActuel = null;
+            loadDocuments();
+        } else {
+            dossierActuel = dossier;
+            loadDocumentsDossier(dossier.getId());
+        }
+        updateBreadcrumbs();
+    }
+    
+    /**
+     * Affiche les détails d'un document
+     */
+    private void showDocumentDetails(Document document) {
+        selectedDocument = document;
+        
+        if (panneauDetailsDocument != null) {
+            panneauDetailsDocument.setVisible(true);
+            panneauDetailsDocument.setManaged(true);
+        }
+        
+        // Informations de base
+        if (labelCodeDocument != null) {
+            labelCodeDocument.setText(document.getCodeDocument());
+        }
+        
+        if (labelNomFichier != null) {
+            labelNomFichier.setText(document.getTitre());
+        }
+        
+        if (labelTypeFichier != null) {
+            String type = document.getExtension() != null ? 
+                "Document " + document.getExtension().toUpperCase() : "Document";
+            labelTypeFichier.setText(type);
+        }
+        
+        if (labelTailleFichier != null) {
+            labelTailleFichier.setText(document.getTailleFormatee());
+        }
+        
+        if (labelDateCreation != null && document.getDateCreation() != null) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMMM yyyy HH:mm");
+            labelDateCreation.setText(document.getDateCreation().format(formatter));
+        }
+        
+        if (labelDateModification != null) {
+            labelDateModification.setText(document.getDateModificationFormatee());
+        }
+        
+        if (labelAuteur != null) {
+            labelAuteur.setText(document.getNomAuteur());
+        }
+        
+        if (labelStatutDocument != null) {
+            labelStatutDocument.setText(document.getStatut().getIcone() + " " + 
+                                       document.getStatut().getLibelle());
+        }
+        
+        if (textAreaDescription != null) {
+            textAreaDescription.setText(document.getDescription() != null ? document.getDescription() : "");
+        }
+        
+        // Mots-clés
+        if (flowPaneMotsCles != null) {
+            flowPaneMotsCles.getChildren().clear();
+            if (document.getMotsCles() != null) {
+                String[] mots = document.getMotsCles().split(",");
+                for (String mot : mots) {
+                    Label tag = new Label(mot.trim());
+                    tag.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; " +
+                               "-fx-padding: 2 6; -fx-background-radius: 10; -fx-font-size: 11px;");
+                    flowPaneMotsCles.getChildren().add(tag);
+                }
             }
-        });
+        }
+        
+        // Charger les versions
+        loadVersions(document.getId());
+        
+        // Gérer les permissions des boutons
+        updateButtonPermissions();
+    }
+    
+    /**
+     * Charge les versions d'un document
+     */
+    private void loadVersions(int documentId) {
+        if (listeVersions == null) return;
+        
+        listeVersions.getChildren().clear();
+        
+        List<VersionDocument> versions = documentService.getVersionsDocument(documentId);
+        
+        for (VersionDocument version : versions) {
+            HBox versionBox = new HBox(10);
+            versionBox.setStyle("-fx-padding: 8; -fx-background-color: " + 
+                              (version.estVersionActuelle(selectedDocument.getVersion()) ? 
+                               "#e8f5e8" : "white") + 
+                              "; -fx-background-radius: 4;");
+            
+            VBox infoBox = new VBox(2);
+            Label labelVersion = new Label(version.getLibelleVersion());
+            labelVersion.setStyle("-fx-font-weight: bold;");
+            
+            Label labelDate = new Label(version.getDateCreationFormatee());
+            labelDate.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 12px;");
+            
+            infoBox.getChildren().addAll(labelVersion, labelDate);
+            
+            HBox.setHgrow(infoBox, Priority.ALWAYS);
+            versionBox.getChildren().add(infoBox);
+            
+            listeVersions.getChildren().add(versionBox);
+        }
+    }
+    
+    /**
+     * Met à jour les permissions des boutons
+     */
+    private void updateButtonPermissions() {
+        if (selectedDocument == null) return;
+        
+        boolean estProprietaire = selectedDocument.getCreePar() != null && 
+                                 selectedDocument.getCreePar().getId() == currentUser.getId();
+        boolean estNiveau01 = currentUser.getNiveauAutorite() <= 1;
+        
+        // Modifier : propriétaire ou niveau 0/1
+        if (btnModifierDocument != null) {
+            btnModifierDocument.setDisable(!estProprietaire && !estNiveau01);
+        }
+        
+        // Supprimer : uniquement niveau 0/1
+        if (btnSupprimerDocument != null) {
+            btnSupprimerDocument.setDisable(!estNiveau01);
+        }
+        
+        // Télécharger : tout le monde
+        if (btnTelecharger != null) {
+            btnTelecharger.setDisable(false);
+        }
+    }
+    
+    /**
+     * Masque les détails
+     */
+    private void hideDocumentDetails() {
+        selectedDocument = null;
+        
+        if (panneauDetailsDocument != null) {
+            panneauDetailsDocument.setVisible(false);
+            panneauDetailsDocument.setManaged(false);
+        }
     }
 }

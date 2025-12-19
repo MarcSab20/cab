@@ -21,9 +21,9 @@
                </font>
             </Label>
             <Region HBox.hgrow="ALWAYS" />
-            <Button styleClass="button-success" text="📁 Nouveau dossier" />
-            <Button styleClass="button-primary" text="📄 Nouveau document" />
-            <Button styleClass="button-info" text="📤 Importer" />
+            <Button fx:id="btnNouveauDossier" onAction="#handleNouveauDossier" styleClass="button-success" text="📁 Nouveau dossier" />
+            <Button fx:id="btnNouveauDocument" styleClass="button-primary" text="📄 Nouveau document" />
+            <Button fx:id="btnImporter" onAction="#handleImporterDocument" styleClass="button-info" text="📤 Importer" />
          </HBox>
          
          <!-- Barre de navigation et filtres -->
@@ -67,21 +67,21 @@
 			    </items>
 			</ComboBox>
             <TextField fx:id="champRechercheDoc" prefWidth="250.0" promptText="🔍 Rechercher des documents..." />
-            <Button styleClass="button-primary" text="Rechercher" />
+            <Button fx:id="btnRechercher" onAction="#handleRecherche" styleClass="button-primary" text="Rechercher" />
          </HBox>
          
          <!-- Actions rapides -->
          <HBox alignment="CENTER_LEFT" spacing="10.0">
             <Label text="Actions:" />
-            <Button text="Tout sélectionner" />
-            <Button text="Télécharger sélection" />
-            <Button text="Déplacer" />
-            <Button text="Supprimer" />
+            <Button fx:id="btnToutSelectionner" onAction="#handleToutSelectionner" text="Tout sélectionner" />
+            <Button fx:id="btnTelechargerSelection" onAction="#handleTelechargerSelection" text="Télécharger sélection" />
+            <Button fx:id="btnDeplacerSelection" onAction="#handleDeplacerSelection" text="Déplacer" />
+            <Button fx:id="btnSupprimerSelection" onAction="#handleSupprimerSelection" text="Supprimer" />
             <Separator orientation="VERTICAL" />
             <Label text="Affichage:" />
-            <ToggleButton fx:id="btnAffichageListe" selected="true" text="📋" toggleGroup="$toggleAffichage" />
-            <ToggleButton fx:id="btnAffichageGrille" text="⊞" toggleGroup="$toggleAffichage" />
-            <ToggleButton fx:id="btnAffichageDetails" text="📊" toggleGroup="$toggleAffichage" />
+            <ToggleButton fx:id="btnAffichageListe" onAction="#handleAffichageListe" selected="true" text="📋" toggleGroup="$toggleAffichage" />
+            <ToggleButton fx:id="btnAffichageGrille" onAction="#handleAffichageGrille" text="⊞" toggleGroup="$toggleAffichage" />
+            <ToggleButton fx:id="btnAffichageDetails" onAction="#handleAffichageDetails" text="📊" toggleGroup="$toggleAffichage" />
          </HBox>
          
       </VBox>
@@ -97,8 +97,8 @@
             <HBox alignment="CENTER_LEFT" spacing="10.0">
                <Label style="-fx-font-weight: bold;" text="Arborescence" />
                <Region HBox.hgrow="ALWAYS" />
-               <Button text="🔄" />
-               <Button text="➕" />
+               <Button fx:id="btnRafraichirArbre" onAction="#handleRafraichirArbre" text="🔄" />
+               <Button fx:id="btnCreerSousDossier" onAction="#handleCreerSousDossier" text="➕" />
             </HBox>
             
             <TreeView fx:id="arborescenceDossiers" VBox.vgrow="ALWAYS">
@@ -110,22 +110,22 @@
                <Label style="-fx-font-weight: bold;" text="Raccourcis" />
                
                <VBox spacing="3.0">
-                  <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
+                  <HBox fx:id="raccourciFavoris" onMouseClicked="#handleRaccourciFavoris" alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
                      <Label style="-fx-font-size: 14px;" text="⭐" />
                      <Label text="Documents favoris" />
                   </HBox>
                   
-                  <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
+                  <HBox fx:id="raccourciRecents" onMouseClicked="#handleRaccourciRecents" alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
                      <Label style="-fx-font-size: 14px;" text="🕒" />
                      <Label text="Récemment modifiés" />
                   </HBox>
                   
-                  <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
+                  <HBox fx:id="raccourciCorbeille" onMouseClicked="#handleRaccourciCorbeille" alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
                      <Label style="-fx-font-size: 14px;" text="🗑️" />
                      <Label text="Corbeille" />
                   </HBox>
                   
-                  <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
+                  <HBox fx:id="raccourciPartages" onMouseClicked="#handleRaccourciPartages" alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
                      <Label style="-fx-font-size: 14px;" text="👥" />
                      <Label text="Partagés avec moi" />
                   </HBox>
@@ -157,7 +157,7 @@
 				</ComboBox>
 
                
-               <Button text="🔄 Actualiser" />
+               <Button fx:id="btnActualiser" onAction="#handleActualiser" text="🔄 Actualiser" />
             </HBox>
             
             <!-- Vue liste (par défaut) -->
@@ -179,7 +179,7 @@
                   <VBox alignment="CENTER" spacing="10.0">
                      <Label style="-fx-font-size: 48px; -fx-text-fill: #bdc3c7;" text="📂" />
                      <Label style="-fx-text-fill: #7f8c8d;" text="Ce dossier est vide" />
-                     <Button styleClass="button-primary" text="Ajouter le premier document" />
+                     <Button fx:id="btnAjouterPremierDoc" onAction="#handleImporterDocument" styleClass="button-primary" text="Ajouter le premier document" />
                   </VBox>
                </placeholder>
             </TableView>
@@ -193,12 +193,12 @@
             
             <!-- Pagination -->
             <HBox alignment="CENTER" spacing="10.0">
-               <Button text="‹ Précédent" />
-               <Label text="Page 1 sur 3" />
-               <Button text="Suivant ›" />
+               <Button fx:id="btnPagePrecedente" onAction="#handlePagePrecedente" text="‹ Précédent" />
+               <Label fx:id="labelPagination" text="Page 1 sur 3" />
+               <Button fx:id="btnPageSuivante" onAction="#handlePageSuivante" text="Suivant ›" />
                <Region HBox.hgrow="ALWAYS" />
                <Label text="Éléments par page:" />
-               <ComboBox prefWidth="60.0" value="25">
+               <ComboBox fx:id="comboElementsParPage" onAction="#handleElementsParPageChange" prefWidth="60.0" value="25">
 				    <items>
 				        <FXCollections fx:factory="observableArrayList">
 				            <String fx:value="10" />
@@ -213,7 +213,7 @@
          </VBox>
          
          <!-- Panneau de détails du document -->
-         <VBox prefWidth="370.0" spacing="15.0" style="-fx-padding: 20; -fx-background-color: #f8f9fa; -fx-border-color: #e9ecef; -fx-border-width: 1 0 0 1;">
+         <VBox fx:id="panneauDetailsDocument" prefWidth="370.0" spacing="15.0" style="-fx-padding: 20; -fx-background-color: #f8f9fa; -fx-border-color: #e9ecef; -fx-border-width: 1 0 0 1;">
             
             <!-- En-tête des détails -->
             <HBox alignment="CENTER_LEFT" spacing="10.0">
@@ -223,7 +223,7 @@
             </HBox>
             
             <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
-               <VBox fx:id="panneauDetailsDocument" spacing="15.0">
+               <VBox spacing="15.0">
                   
                   <!-- Aperçu du document -->
                   <VBox spacing="10.0" styleClass="card">
@@ -237,7 +237,7 @@
                      </VBox>
                      
                      <HBox spacing="8.0">
-                        <Button fx:id="btnApercuComplet" maxWidth="1.7976931348623157E308" styleClass="button-primary" text="👁️ Aperçu complet" HBox.hgrow="ALWAYS" />
+                        <Button fx:id="btnApercuComplet" onAction="#handleApercuComplet" maxWidth="1.7976931348623157E308" styleClass="button-primary" text="👁️ Aperçu complet" HBox.hgrow="ALWAYS" />
                         <Button fx:id="btnTelecharger" styleClass="button-secondary" text="💾" />
                      </HBox>
                   </VBox>
@@ -252,26 +252,29 @@
                            <ColumnConstraints hgrow="ALWAYS" />
                         </columnConstraints>
                         
-                        <Label text="Nom:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                        <Label fx:id="labelNomFichier" style="-fx-font-weight: bold;" text="Rapport_mensuel.pdf" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        <Label text="Code:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <Label fx:id="labelCodeDocument" style="-fx-font-weight: bold; -fx-font-size: 11px;" text="DOC-2025-0001" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="0" />
                         
-                        <Label text="Type:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                        <Label fx:id="labelTypeFichier" text="Document PDF" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <Label text="Nom:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <Label fx:id="labelNomFichier" style="-fx-font-weight: bold;" text="Rapport_mensuel.pdf" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                         
-                        <Label text="Taille:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                        <Label fx:id="labelTailleFichier" text="2.3 MB" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        <Label text="Type:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <Label fx:id="labelTypeFichier" text="Document PDF" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                         
-                        <Label text="Créé le:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-                        <Label fx:id="labelDateCreation" text="28 octobre 2025" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                        <Label text="Taille:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                        <Label fx:id="labelTailleFichier" text="2.3 MB" GridPane.columnIndex="1" GridPane.rowIndex="3" />
                         
-                        <Label text="Modifié le:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
-                        <Label fx:id="labelDateModification" text="2 novembre 2025" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                        <Label text="Créé le:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                        <Label fx:id="labelDateCreation" text="28 octobre 2025" GridPane.columnIndex="1" GridPane.rowIndex="4" />
                         
-                        <Label text="Auteur:" GridPane.columnIndex="0" GridPane.rowIndex="5" />
-                        <Label fx:id="labelAuteur" text="Jean Dupont" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+                        <Label text="Modifié le:" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+                        <Label fx:id="labelDateModification" text="2 novembre 2025" GridPane.columnIndex="1" GridPane.rowIndex="5" />
                         
-                        <Label text="Statut:" GridPane.columnIndex="0" GridPane.rowIndex="6" />
-                        <Label fx:id="labelStatutDocument" style="-fx-text-fill: #27ae60; -fx-font-weight: bold;" text="✅ Validé" GridPane.columnIndex="1" GridPane.rowIndex="6" />
+                        <Label text="Auteur:" GridPane.columnIndex="0" GridPane.rowIndex="6" />
+                        <Label fx:id="labelAuteur" text="Jean Dupont" GridPane.columnIndex="1" GridPane.rowIndex="6" />
+                        
+                        <Label text="Statut:" GridPane.columnIndex="0" GridPane.rowIndex="7" />
+                        <Label fx:id="labelStatutDocument" style="-fx-text-fill: #27ae60; -fx-font-weight: bold;" text="✅ Validé" GridPane.columnIndex="1" GridPane.rowIndex="7" />
                      </GridPane>
                   </VBox>
                   
@@ -283,9 +286,6 @@
                      <Label style="-fx-font-weight: bold;" text="Mots-clés" />
                      <FlowPane fx:id="flowPaneMotsCles" hgap="5.0" vgap="5.0">
                         <!-- Les mots-clés seront ajoutés dynamiquement comme des labels avec style de tag -->
-                        <Label style="-fx-background-color: #007bff; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 10; -fx-font-size: 11px;" text="rapport" />
-                        <Label style="-fx-background-color: #007bff; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 10; -fx-font-size: 11px;" text="mensuel" />
-                        <Label style="-fx-background-color: #007bff; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 10; -fx-font-size: 11px;" text="informatique" />
                      </FlowPane>
                   </VBox>
                   
@@ -294,35 +294,11 @@
                      <HBox alignment="CENTER_LEFT" spacing="10.0">
                         <Label style="-fx-font-weight: bold;" text="Versions" />
                         <Region HBox.hgrow="ALWAYS" />
-                        <Button styleClass="button-info" text="+ Nouvelle version" />
+                        <Button fx:id="btnNouvelleVersion" onAction="#handleNouvelleVersion" styleClass="button-info" text="+ Nouvelle version" />
                      </HBox>
                      
                      <VBox fx:id="listeVersions" spacing="5.0">
-                        <!-- Version actuelle -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 8; -fx-background-color: #e8f5e8; -fx-background-radius: 4;">
-                           <VBox alignment="CENTER" spacing="2.0">
-                              <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="v3.0" />
-                              <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="actuelle" />
-                           </VBox>
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="Version finale" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="2 nov. 2025 par Jean Dupont" />
-                           </VBox>
-                           <Button text="💾" />
-                        </HBox>
-                        
-                        <!-- Version précédente -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 8; -fx-background-color: white; -fx-background-radius: 4;">
-                           <VBox alignment="CENTER" spacing="2.0">
-                              <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="v2.1" />
-                              <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="précédente" />
-                           </VBox>
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label text="Révision après relecture" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="1 nov. 2025 par Marie Martin" />
-                           </VBox>
-                           <Button text="👁️" />
-                        </HBox>
+                        <!-- Les versions seront ajoutées dynamiquement -->
                      </VBox>
                   </VBox>
                   
@@ -331,29 +307,11 @@
                      <HBox alignment="CENTER_LEFT" spacing="10.0">
                         <Label style="-fx-font-weight: bold;" text="Partage et permissions" />
                         <Region HBox.hgrow="ALWAYS" />
-                        <Button styleClass="button-info" text="👥 Partager" />
+                        <Button fx:id="btnPartagerDetails" onAction="#handlePartagerDocument" styleClass="button-info" text="👥 Partager" />
                      </HBox>
                      
-                     <VBox spacing="5.0">
-                        <!-- Propriétaire -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 6; -fx-background-color: white; -fx-background-radius: 4;">
-                           <Label style="-fx-font-size: 16px;" text="👤" />
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="Jean Dupont" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Propriétaire" />
-                           </VBox>
-                           <Label style="-fx-background-color: #28a745; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 10; -fx-font-size: 10px;" text="COMPLET" />
-                        </HBox>
-                        
-                        <!-- Utilisateur partagé -->
-                        <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 6; -fx-background-color: white; -fx-background-radius: 4;">
-                           <Label style="-fx-font-size: 16px;" text="👥" />
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="Équipe comptabilité" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="5 membres" />
-                           </VBox>
-                           <Label style="-fx-background-color: #007bff; -fx-text-fill: white; -fx-padding: 2 6; -fx-background-radius: 10; -fx-font-size: 10px;" text="LECTURE" />
-                        </HBox>
+                     <VBox fx:id="listePermissions" spacing="5.0">
+                        <!-- Les permissions seront ajoutées dynamiquement -->
                      </VBox>
                   </VBox>
                   
@@ -361,39 +319,8 @@
                   <VBox spacing="10.0" styleClass="card">
                      <Label style="-fx-font-weight: bold;" text="Activité récente" />
                      
-                     <VBox spacing="6.0">
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                           <VBox alignment="CENTER">
-                              <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="14:30" />
-                              <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="02/11" />
-                           </VBox>
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="Document validé" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Par Marie Martin" />
-                           </VBox>
-                        </HBox>
-                        
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                           <VBox alignment="CENTER">
-                              <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="09:15" />
-                              <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="01/11" />
-                           </VBox>
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="Nouvelle version" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="v2.1 par Marie Martin" />
-                           </VBox>
-                        </HBox>
-                        
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                           <VBox alignment="CENTER">
-                              <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="16:45" />
-                              <Label style="-fx-font-size: 10px; -fx-text-fill: #7f8c8d;" text="28/10" />
-                           </VBox>
-                           <VBox HBox.hgrow="ALWAYS">
-                              <Label style="-fx-font-weight: bold;" text="Document créé" />
-                              <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Par Jean Dupont" />
-                           </VBox>
-                        </HBox>
+                     <VBox fx:id="listeActivites" spacing="6.0">
+                        <!-- Les activités seront ajoutées dynamiquement -->
                      </VBox>
                   </VBox>
                   
