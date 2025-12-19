@@ -21,6 +21,9 @@ import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.time.format.TextStyle;
+import java.util.Locale;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -225,6 +228,10 @@ public class DashboardController implements Initializable {
         try {
             loadStatisticsSafely();
             loadChartsSafely();
+            
+            // NOUVEAU : Forcer les dimensions APRÈS le chargement des données
+            forceChartsDimensions();
+            
             loadWorkflowSafely();
             loadActivitiesSafely();
         } catch (Exception e) {
@@ -310,59 +317,6 @@ public class DashboardController implements Initializable {
             
         } catch (Exception e) {
             System.err.println("Erreur chargement statistiques: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-    
-    /**
-     * Charge les graphiques de manière sécurisée
-     */
-    private void loadChartsSafely() {
-        try {
-            System.out.println("Chargement des graphiques...");
-            
-            // Graphique d'évolution
-            if (evolutionChart != null) {
-                try {
-                    XYChart.Series<String, Number> series = new XYChart.Series<>();
-                    series.setName("Courriers traités");
-                    
-                    String[] jours = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"};
-                    int[] valeurs = {12, 15, 10, 18, 14, 8, 11};
-                    
-                    for (int i = 0; i < jours.length; i++) {
-                        series.getData().add(new XYChart.Data<>(jours[i], valeurs[i]));
-                    }
-                    
-                    evolutionChart.getData().clear();
-                    evolutionChart.getData().add(series);
-                    
-                    System.out.println("✓ Graphique d'évolution chargé");
-                } catch (Exception e) {
-                    System.err.println("⚠ Erreur graphique évolution: " + e.getMessage());
-                }
-            }
-            
-            // Graphique de répartition
-            if (repartitionChart != null) {
-                try {
-                    ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList(
-                        new PieChart.Data("En attente (5)", 5),
-                        new PieChart.Data("En cours (8)", 8),
-                        new PieChart.Data("Traités (32)", 32),
-                        new PieChart.Data("Archivés (15)", 15)
-                    );
-                    
-                    repartitionChart.setData(pieChartData);
-                    
-                    System.out.println("✓ Graphique de répartition chargé");
-                } catch (Exception e) {
-                    System.err.println("⚠ Erreur graphique répartition: " + e.getMessage());
-                }
-            }
-            
-        } catch (Exception e) {
-            System.err.println("Erreur chargement graphiques: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -594,6 +548,426 @@ public class DashboardController implements Initializable {
         } catch (Exception e) {
             System.err.println("⚠ Erreur démarrage auto-refresh: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Force les dimensions et le layout des graphiques
+     */
+    private void forceChartsDimensions() {
+        System.out.println("\n[LAYOUT] Forçage des dimensions des graphiques...");
+        
+        Platform.runLater(() -> {
+            try {
+                // Forcer les dimensions du LineChart
+                if (evolutionChart != null) {
+                    evolutionChart.setMinHeight(250);
+                    evolutionChart.setPrefHeight(300);
+                    evolutionChart.setMaxHeight(400);
+                    
+                    evolutionChart.setMinWidth(400);
+                    evolutionChart.setPrefWidth(600);
+                    
+                    // Contraintes de croissance
+                    VBox.setVgrow(evolutionChart, Priority.ALWAYS);
+                    HBox.setHgrow(evolutionChart, Priority.ALWAYS);
+                    
+                    // Forcer le parent à se redimensionner
+                    if (evolutionChart.getParent() != null) {
+                        VBox parent = (VBox) evolutionChart.getParent();
+                        parent.setMinHeight(Region.USE_COMPUTED_SIZE);
+                        parent.setPrefHeight(Region.USE_COMPUTED_SIZE);
+                        VBox.setVgrow(parent, Priority.ALWAYS);
+                        HBox.setHgrow(parent, Priority.ALWAYS);
+                    }
+                    
+                    System.out.println("    ✓ LineChart dimensions forcées");
+                }
+                
+                // Forcer les dimensions du PieChart
+                if (repartitionChart != null) {
+                    repartitionChart.setMinHeight(250);
+                    repartitionChart.setPrefHeight(300);
+                    repartitionChart.setMaxHeight(400);
+                    
+                    repartitionChart.setMinWidth(300);
+                    repartitionChart.setPrefWidth(400);
+                    
+                    // Contraintes de croissance
+                    VBox.setVgrow(repartitionChart, Priority.ALWAYS);
+                    HBox.setHgrow(repartitionChart, Priority.ALWAYS);
+                    
+                    // Forcer le parent à se redimensionner
+                    if (repartitionChart.getParent() != null) {
+                        VBox parent = (VBox) repartitionChart.getParent();
+                        parent.setMinHeight(Region.USE_COMPUTED_SIZE);
+                        parent.setPrefHeight(Region.USE_COMPUTED_SIZE);
+                        VBox.setVgrow(parent, Priority.ALWAYS);
+                        HBox.setHgrow(parent, Priority.ALWAYS);
+                    }
+                    
+                    System.out.println("    ✓ PieChart dimensions forcées");
+                }
+                
+                // Forcer le layout du conteneur chartsRow1
+                if (evolutionChart != null && evolutionChart.getParent() != null 
+                    && evolutionChart.getParent().getParent() != null) {
+                    
+                    HBox chartsRow = (HBox) evolutionChart.getParent().getParent();
+                    chartsRow.setMinHeight(Region.USE_COMPUTED_SIZE);
+                    chartsRow.setPrefHeight(Region.USE_COMPUTED_SIZE);
+                    
+                    // Forcer le recalcul du layout
+                    chartsRow.requestLayout();
+                    
+                    System.out.println("    ✓ Conteneur parent layout forcé");
+                }
+                
+                // Attendre un peu puis vérifier
+                Platform.runLater(() -> {
+                    try {
+                        Thread.sleep(200);
+                        
+                        System.out.println("\n[VÉRIFICATION] Nouvelles dimensions:");
+                        if (evolutionChart != null) {
+                            System.out.println("    LineChart: " + 
+                                evolutionChart.getWidth() + "x" + evolutionChart.getHeight());
+                        }
+                        if (repartitionChart != null) {
+                            System.out.println("    PieChart: " + 
+                                repartitionChart.getWidth() + "x" + repartitionChart.getHeight());
+                        }
+                        
+                    } catch (Exception e) {
+                        System.err.println("    ⚠ Erreur vérification: " + e.getMessage());
+                    }
+                });
+                
+            } catch (Exception e) {
+                System.err.println("    ❌ Erreur forçage dimensions: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
+    
+    /**
+     * Charge les graphiques avec les vraies données - VERSION DEBUG
+     */
+    private void loadChartsSafely() {
+        System.out.println("\n========================================");
+        System.out.println("=== DÉBUT CHARGEMENT GRAPHIQUES ===");
+        System.out.println("========================================");
+        
+        try {
+            // Vérification 1 : Les graphiques existent-ils ?
+            System.out.println("\n[1] Vérification de l'existence des graphiques...");
+            System.out.println("    evolutionChart est null ? " + (evolutionChart == null));
+            System.out.println("    repartitionChart est null ? " + (repartitionChart == null));
+            
+            if (evolutionChart == null && repartitionChart == null) {
+                System.err.println("    ❌ ERREUR CRITIQUE: Les deux graphiques sont NULL !");
+                System.err.println("    → Vérifiez que les fx:id dans le FXML correspondent aux @FXML");
+                return;
+            }
+            
+            // Vérification 2 : Les graphiques sont-ils visibles ?
+            if (evolutionChart != null) {
+                System.out.println("\n[2] État du LineChart:");
+                System.out.println("    Visible : " + evolutionChart.isVisible());
+                System.out.println("    Managed : " + evolutionChart.isManaged());
+                System.out.println("    Width : " + evolutionChart.getWidth());
+                System.out.println("    Height : " + evolutionChart.getHeight());
+                System.out.println("    Parent : " + (evolutionChart.getParent() != null));
+            }
+            
+            if (repartitionChart != null) {
+                System.out.println("\n[3] État du PieChart:");
+                System.out.println("    Visible : " + repartitionChart.isVisible());
+                System.out.println("    Managed : " + repartitionChart.isManaged());
+                System.out.println("    Width : " + repartitionChart.getWidth());
+                System.out.println("    Height : " + repartitionChart.getHeight());
+                System.out.println("    Parent : " + (repartitionChart.getParent() != null));
+            }
+            
+            // Vérification 3 : Chargement des données
+            System.out.println("\n[4] Tentative de chargement des données...");
+            
+            // Graphique d'évolution
+            if (evolutionChart != null) {
+                System.out.println("\n[5] Chargement du graphique d'évolution...");
+                loadEvolutionChartWithRealData();
+                
+                System.out.println("    Nombre de séries : " + evolutionChart.getData().size());
+                for (int i = 0; i < evolutionChart.getData().size(); i++) {
+                    XYChart.Series<String, Number> series = evolutionChart.getData().get(i);
+                    System.out.println("    Série " + i + " (" + series.getName() + ") : " + 
+                                     series.getData().size() + " points");
+                }
+            }
+            
+            // Graphique de répartition
+            if (repartitionChart != null) {
+                System.out.println("\n[6] Chargement du graphique de répartition...");
+                loadRepartitionChartWithRealData();
+                
+                System.out.println("    Nombre de sections : " + 
+                                 (repartitionChart.getData() != null ? repartitionChart.getData().size() : 0));
+                if (repartitionChart.getData() != null) {
+                    for (PieChart.Data data : repartitionChart.getData()) {
+                        System.out.println("    - " + data.getName() + " : " + data.getPieValue());
+                    }
+                }
+            }
+            
+            System.out.println("\n========================================");
+            System.out.println("=== FIN CHARGEMENT GRAPHIQUES ===");
+            System.out.println("========================================\n");
+            
+        } catch (Exception e) {
+            System.err.println("\n❌ EXCEPTION lors du chargement des graphiques:");
+            e.printStackTrace();
+            loadDemoCharts();
+        }
+    }
+
+    /**
+     * Charge le graphique d'évolution avec les vraies données
+     */
+    private void loadEvolutionChartWithRealData() {
+        try {
+            evolutionChart.getData().clear();
+            
+            if (courrierService == null) {
+                System.err.println("⚠ CourrierService non disponible, chargement démo");
+                loadDemoEvolutionChart();
+                return;
+            }
+            
+            // Récupérer tous les courriers visibles
+            List<Courrier> tousLesCourriers = getCourriersVisibles();
+            
+            if (tousLesCourriers.isEmpty()) {
+                System.out.println("⚠ Aucun courrier trouvé, affichage graphique vide");
+                loadDemoEvolutionChart();
+                return;
+            }
+            
+            // Calculer les statistiques par mois (derniers 6 mois)
+            Map<String, Integer> courriersParMois = new TreeMap<>();
+            Map<String, Integer> traitesParMois = new TreeMap<>();
+            
+            LocalDateTime maintenant = LocalDateTime.now();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM yyyy", Locale.FRENCH);
+            
+            // Initialiser les 6 derniers mois à 0
+            for (int i = 5; i >= 0; i--) {
+                LocalDateTime mois = maintenant.minusMonths(i);
+                String moisStr = mois.format(formatter);
+                courriersParMois.put(moisStr, 0);
+                traitesParMois.put(moisStr, 0);
+            }
+            
+            // Compter les courriers par mois
+            for (Courrier courrier : tousLesCourriers) {
+                try {
+                    if (courrier.getDateReception() == null) continue;
+                    
+                    LocalDateTime dateReception = courrier.getDateReception();
+                    
+                    // Vérifier si le courrier est dans les 6 derniers mois
+                    if (dateReception.isAfter(maintenant.minusMonths(6))) {
+                        String moisStr = dateReception.format(formatter);
+                        
+                        // Incrémenter le compteur de courriers reçus
+                        courriersParMois.merge(moisStr, 1, Integer::sum);
+                        
+                        // Incrémenter le compteur de courriers traités si applicable
+                        if (courrier.getStatut() == StatutCourrier.TRAITE || 
+                            courrier.getStatut() == StatutCourrier.ARCHIVE) {
+                            traitesParMois.merge(moisStr, 1, Integer::sum);
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("⚠ Erreur traitement courrier: " + e.getMessage());
+                }
+            }
+            
+            // Créer les séries
+            XYChart.Series<String, Number> serieRecus = new XYChart.Series<>();
+            serieRecus.setName("Courriers reçus");
+            
+            XYChart.Series<String, Number> serieTraites = new XYChart.Series<>();
+            serieTraites.setName("Courriers traités");
+            
+            // Remplir les séries
+            for (String mois : courriersParMois.keySet()) {
+                serieRecus.getData().add(new XYChart.Data<>(mois, courriersParMois.get(mois)));
+                serieTraites.getData().add(new XYChart.Data<>(mois, traitesParMois.getOrDefault(mois, 0)));
+            }
+            
+            evolutionChart.getData().addAll(serieRecus, serieTraites);
+            
+            // Configuration du graphique
+            evolutionChart.setTitle("Évolution sur 6 mois");
+            evolutionChart.setAnimated(true);
+            
+            System.out.println("✓ Graphique d'évolution chargé avec " + tousLesCourriers.size() + " courriers");
+            
+        } catch (Exception e) {
+            System.err.println("⚠ Erreur graphique évolution: " + e.getMessage());
+            e.printStackTrace();
+            loadDemoEvolutionChart();
+        }
+    }
+
+    /**
+     * Charge le graphique de répartition avec les vraies données
+     */
+    private void loadRepartitionChartWithRealData() {
+        try {
+            repartitionChart.getData().clear();
+            
+            if (courrierService == null) {
+                System.err.println("⚠ CourrierService non disponible, chargement démo");
+                loadDemoRepartitionChart();
+                return;
+            }
+            
+            // Récupérer tous les courriers visibles
+            List<Courrier> tousLesCourriers = getCourriersVisibles();
+            
+            if (tousLesCourriers.isEmpty()) {
+                System.out.println("⚠ Aucun courrier trouvé, affichage graphique vide");
+                loadDemoRepartitionChart();
+                return;
+            }
+            
+            // Compter les courriers par statut
+            Map<StatutCourrier, Long> repartitionParStatut = tousLesCourriers.stream()
+                .collect(Collectors.groupingBy(Courrier::getStatut, Collectors.counting()));
+            
+            // Créer les données du PieChart
+            ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList();
+            
+            for (Map.Entry<StatutCourrier, Long> entry : repartitionParStatut.entrySet()) {
+                StatutCourrier statut = entry.getKey();
+                long count = entry.getValue();
+                
+                String label = String.format("%s (%d)", statut.getLibelle(), count);
+                pieChartData.add(new PieChart.Data(label, count));
+            }
+            
+            repartitionChart.setData(pieChartData);
+            repartitionChart.setTitle("Répartition par statut");
+            repartitionChart.setLegendVisible(true);
+            repartitionChart.setLabelsVisible(true);
+            repartitionChart.setAnimated(true);
+            
+            // Appliquer les couleurs après le rendu
+            Platform.runLater(() -> {
+                applyPieChartColors();
+            });
+            
+            System.out.println("✓ Graphique de répartition chargé avec " + repartitionParStatut.size() + " statuts");
+            
+        } catch (Exception e) {
+            System.err.println("⚠ Erreur graphique répartition: " + e.getMessage());
+            e.printStackTrace();
+            loadDemoRepartitionChart();
+        }
+    }
+
+    /**
+     * Applique les couleurs au graphique en camembert
+     */
+    private void applyPieChartColors() {
+        try {
+            String[] colors = {
+                "#e74c3c",  // Rouge (En attente)
+                "#f39c12",  // Orange (En cours)
+                "#3498db",  // Bleu (Nouveau)
+                "#27ae60",  // Vert (Traité)
+                "#9b59b6",  // Violet (Archivé)
+                "#1abc9c",  // Turquoise
+                "#34495e"   // Gris foncé
+            };
+            
+            int index = 0;
+            for (PieChart.Data data : repartitionChart.getData()) {
+                if (data.getNode() != null) {
+                    data.getNode().setStyle("-fx-pie-color: " + colors[index % colors.length] + ";");
+                }
+                index++;
+            }
+            
+        } catch (Exception e) {
+            System.err.println("⚠ Erreur application couleurs: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Charge des données de démonstration pour l'évolution (fallback)
+     */
+    private void loadDemoEvolutionChart() {
+        try {
+            XYChart.Series<String, Number> serieRecus = new XYChart.Series<>();
+            serieRecus.setName("Courriers reçus");
+            
+            XYChart.Series<String, Number> serieTraites = new XYChart.Series<>();
+            serieTraites.setName("Courriers traités");
+            
+            String[] mois = {"Juil 2024", "Août 2024", "Sept 2024", "Oct 2024", "Nov 2024", "Déc 2024"};
+            int[] recus = {12, 15, 10, 18, 14, 11};
+            int[] traites = {10, 13, 9, 16, 12, 10};
+            
+            for (int i = 0; i < mois.length; i++) {
+                serieRecus.getData().add(new XYChart.Data<>(mois[i], recus[i]));
+                serieTraites.getData().add(new XYChart.Data<>(mois[i], traites[i]));
+            }
+            
+            evolutionChart.getData().clear();
+            evolutionChart.getData().addAll(serieRecus, serieTraites);
+            evolutionChart.setTitle("Évolution mensuelle (Démo)");
+            
+            System.out.println("✓ Graphique d'évolution chargé en mode démo");
+            
+        } catch (Exception e) {
+            System.err.println("⚠ Erreur chargement démo évolution: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Charge des données de démonstration pour la répartition (fallback)
+     */
+    private void loadDemoRepartitionChart() {
+        try {
+            ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList(
+                new PieChart.Data("En attente (5)", 5),
+                new PieChart.Data("En cours (8)", 8),
+                new PieChart.Data("Nouveau (12)", 12),
+                new PieChart.Data("Traité (32)", 32),
+                new PieChart.Data("Archivé (15)", 15)
+            );
+            
+            repartitionChart.setData(pieChartData);
+            repartitionChart.setTitle("Répartition par statut (Démo)");
+            
+            Platform.runLater(() -> {
+                applyPieChartColors();
+            });
+            
+            System.out.println("✓ Graphique de répartition chargé en mode démo");
+            
+        } catch (Exception e) {
+            System.err.println("⚠ Erreur chargement démo répartition: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Charge tous les graphiques en mode démo (fallback général)
+     */
+    private void loadDemoCharts() {
+        loadDemoEvolutionChart();
+        loadDemoRepartitionChart();
     }
     
     /**

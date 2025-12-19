@@ -16,7 +16,7 @@
          <VBox alignment="CENTER" spacing="15.0">
             <Label style="-fx-font-size: 48px;" text="📋" />
             <Label style="-fx-font-size: 28px; -fx-text-fill: #2c3e50; -fx-font-weight: bold;" 
-                   text="Système de Gestion Documentaire" />
+                   text="Système de Gestion de Courrier" />
             <Label fx:id="labelBienvenue" style="-fx-font-size: 16px; -fx-text-fill: #7f8c8d;" 
                    text="Bienvenue dans votre espace de travail" />
          </VBox>

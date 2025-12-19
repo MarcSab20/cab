@@ -8,12 +8,18 @@ import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * Modèle représentant un document dans le système
+ * Modèle représentant un document dans le système - VERSION AMÉLIORÉE
+ * Ajouts:
+ * - Code document unique (DOC-TYPE-ANNÉE-SEQ-SERVICE)
+ * - Organisation en dossiers (dossierId)
+ * - Gestion complète des versions
  */
 public class Document {
     private int id;
+    private String codeDocument; // Code unique: DOC-TYPE-ANNÉE-SEQ-SERVICE
     private String titre;
     private String typeDocument;
+    private Integer dossierId; // ID du dossier parent
     private String cheminFichier;
     private long tailleFichier;
     private LocalDateTime dateCreation;
@@ -63,6 +69,14 @@ public class Document {
         this.id = id;
     }
     
+    public String getCodeDocument() {
+        return codeDocument;
+    }
+    
+    public void setCodeDocument(String codeDocument) {
+        this.codeDocument = codeDocument;
+    }
+    
     public String getTitre() {
         return titre;
     }
@@ -77,6 +91,14 @@ public class Document {
     
     public void setTypeDocument(String typeDocument) {
         this.typeDocument = typeDocument;
+    }
+    
+    public Integer getDossierId() {
+        return dossierId;
+    }
+    
+    public void setDossierId(Integer dossierId) {
+        this.dossierId = dossierId;
     }
     
     public String getCheminFichier() {
@@ -437,6 +459,7 @@ public class Document {
     public String toString() {
         return "Document{" +
                 "id=" + id +
+                ", codeDocument='" + codeDocument + '\'' +
                 ", titre='" + titre + '\'' +
                 ", typeDocument='" + typeDocument + '\'' +
                 ", extension='" + extension + '\'' +

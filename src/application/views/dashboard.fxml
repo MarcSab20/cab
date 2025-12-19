@@ -21,7 +21,7 @@
          <!-- En-tête du dashboard -->
          <HBox alignment="CENTER_LEFT" spacing="20.0" styleClass="header-bar responsive-header" 
                style="-fx-padding: 20; -fx-background-radius: 10;">
-            <Label styleClass="header-title" style="-fx-text-fill: white;" 
+            <Label styleClass="header-title" style="-fx-text-fill: black;" 
                    text="📊 Tableau de Bord - Suivi des Workflows">
                <font>
                   <Font size="28.0" />
@@ -47,7 +47,6 @@
                <Label fx:id="statCourriersEnAttente" styleClass="stat-value" 
                       style="-fx-text-fill: #e74c3c;" text="0" />
                <Label styleClass="stat-label" text="Courriers en attente" />
-               <Label fx:id="trendCourriers" styleClass="stat-trend" text="↗ +5 aujourd'hui" />
             </VBox>
             
             <!-- Carte Documents actifs -->
@@ -57,7 +56,6 @@
                <Label fx:id="statDocumentsActifs" styleClass="stat-value" 
                       style="-fx-text-fill: #3498db;" text="0" />
                <Label styleClass="stat-label" text="Documents actifs" />
-               <Label fx:id="trendDocuments" styleClass="stat-trend" text="↗ +12 cette semaine" />
             </VBox>
             
             <!-- Carte Réunions -->
@@ -67,7 +65,6 @@
                <Label fx:id="statReunionsMois" styleClass="stat-value" 
                       style="-fx-text-fill: #f39c12;" text="0" />
                <Label styleClass="stat-label" text="Réunions ce mois" />
-               <Label style="-fx-text-fill: #7f8c8d;" text="→ 3 à venir" />
             </VBox>
             
             <!-- Carte Messages non lus -->
@@ -77,7 +74,6 @@
                <Label fx:id="statMessagesNonLus" styleClass="stat-value" 
                       style="-fx-text-fill: #27ae60;" text="0" />
                <Label styleClass="stat-label" text="Messages non lus" />
-               <Label style="-fx-text-fill: #7f8c8d;" text="↘ -8 depuis hier" />
             </VBox>
          </FlowPane>
          
@@ -143,32 +139,25 @@
          </VBox>
          
          <!-- Graphiques et analyses - RESPONSIVE -->
-         <VBox fx:id="chartsContainer" spacing="20" VBox.vgrow="ALWAYS">
-            
-            <!-- Ligne 1 : Graphique d'évolution et Répartition -->
-            <HBox fx:id="chartsRow1" spacing="20" styleClass="charts-row">
-               
-               <!-- Graphique d'évolution -->
-               <VBox spacing="15.0" styleClass="section-card chart-card" 
-                     style="-fx-padding: 20;" minWidth="300" HBox.hgrow="ALWAYS">
-                  <Label styleClass="section-title" text="Évolution mensuelle" />
-                  <LineChart fx:id="evolutionChart" prefHeight="250.0" minHeight="200">
-                     <xAxis>
-                        <CategoryAxis side="BOTTOM" />
-                     </xAxis>
-                     <yAxis>
-                        <NumberAxis side="LEFT" />
-                     </yAxis>
-                  </LineChart>
-               </VBox>
-               
-               <!-- Répartition par statut -->
-               <VBox spacing="15.0" styleClass="section-card chart-card" 
-                     style="-fx-padding: 20;" minWidth="250" HBox.hgrow="ALWAYS">
-                  <Label styleClass="section-title" text="Répartition des courriers" />
-                  <PieChart fx:id="repartitionChart" prefHeight="250.0" minHeight="200" />
-               </VBox>
-            </HBox>
+         <HBox spacing="20" styleClass="charts-row" VBox.vgrow="ALWAYS">
+	         <VBox spacing="15.0" styleClass="section-card chart-card" style="-fx-padding: 20;" minWidth="300" prefWidth="600" minHeight="300" prefHeight="350" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
+			   <Label styleClass="section-title" text="Évolution mensuelle" />
+			   <LineChart fx:id="evolutionChart" prefHeight="300.0" minHeight="250" prefWidth="500" minWidth="400" VBox.vgrow="ALWAYS">
+			      <xAxis>
+			         <CategoryAxis side="BOTTOM" />
+			      </xAxis>
+			      <yAxis>
+			         <NumberAxis side="LEFT" />
+			      </yAxis>
+			   </LineChart>
+			</VBox>
+	               
+	               <!-- Répartition par statut -->
+	        <VBox spacing="15.0" styleClass="section-card chart-card" style="-fx-padding: 20;" minWidth="250" prefWidth="450" minHeight="300" prefHeight="350" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
+			   <Label styleClass="section-title" text="Répartition des courriers" />
+			   <PieChart fx:id="repartitionChart" prefHeight="300.0" minHeight="250" prefWidth="400" minWidth="300" VBox.vgrow="ALWAYS"/>
+			</VBox>
+        </HBox>
             
             <!-- Ligne 2 : Activités récentes et Indicateurs -->
             <HBox fx:id="chartsRow2" spacing="20" styleClass="charts-row">
@@ -260,6 +249,5 @@
             </HBox>
          </VBox>
          
-      </VBox>
    </content>
 </ScrollPane>
