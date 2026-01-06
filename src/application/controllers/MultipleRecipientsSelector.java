@@ -10,7 +10,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import application.models.User;
 import application.models.UserPresence;
-import application.services.MessageSyncService;
 
 import java.net.URL;
 import java.util.*;
@@ -22,7 +21,6 @@ public class MultipleRecipientsSelector {
     
     private ObservableList<User> availableUsers;
     private ObservableList<User> selectedUsers;
-    private MessageSyncService messageSyncService;
     
     // Composants UI
     private VBox mainContainer;
@@ -30,10 +28,9 @@ public class MultipleRecipientsSelector {
     private ListView<User> availableListView;
     private FlowPane selectedFlowPane;
     
-    public MultipleRecipientsSelector(List<User> users, MessageSyncService syncService) {
+    public MultipleRecipientsSelector(List<User> users) {
         this.availableUsers = FXCollections.observableArrayList(users);
         this.selectedUsers = FXCollections.observableArrayList();
-        this.messageSyncService = syncService;
         
         createUI();
     }
@@ -164,11 +161,7 @@ public class MultipleRecipientsSelector {
         chip.setStyle("-fx-background-color: #3498db; -fx-background-radius: 15; -fx-cursor: hand;");
         
         // Icône de présence
-        UserPresence presence = messageSyncService.getUserPresence(user.getId());
-        String statusIcon = presence != null ? presence.getStatut().getIcone() : "⚫";
         
-        Label nameLabel = new Label(statusIcon + " " + user.getNomComplet());
-        nameLabel.setStyle("-fx-text-fill: white; -fx-font-size: 12px;");
         
         Button removeButton = new Button("✕");
         removeButton.setStyle(
@@ -179,10 +172,7 @@ public class MultipleRecipientsSelector {
             "-fx-padding: 0 5 0 5; " +
             "-fx-cursor: hand;"
         );
-        removeButton.setOnAction(e -> removeRecipient(user));
-        
-        chip.getChildren().addAll(nameLabel, removeButton);
-        
+        removeButton.setOnAction(e -> removeRecipient(user));        
         return chip;
     }
     
@@ -250,11 +240,6 @@ public class MultipleRecipientsSelector {
                 container.setAlignment(Pos.CENTER_LEFT);
                 container.setPadding(new Insets(5));
                 
-                // Icône de présence
-                UserPresence presence = messageSyncService.getUserPresence(user.getId());
-                String statusIcon = presence != null ? presence.getStatut().getIcone() : "⚫";
-                Label statusLabel = new Label(statusIcon);
-                statusLabel.setStyle("-fx-font-size: 12px;");
                 
                 // Nom
                 VBox nameBox = new VBox(2);
@@ -275,10 +260,8 @@ public class MultipleRecipientsSelector {
                     Region spacer = new Region();
                     HBox.setHgrow(spacer, Priority.ALWAYS);
                     
-                    container.getChildren().addAll(statusLabel, nameBox, spacer, selectedLabel);
-                    setStyle("-fx-background-color: #e8f5e9;");
+
                 } else {
-                    container.getChildren().addAll(statusLabel, nameBox);
                     setStyle("");
                 }
                 

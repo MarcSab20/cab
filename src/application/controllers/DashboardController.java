@@ -65,7 +65,6 @@ public class DashboardController implements Initializable {
     private WorkflowService workflowService;
     private CourrierService courrierService;
     private DocumentService documentService;
-    private MessageService messageService;
     
     // Données
     private ServiceHierarchy userService;
@@ -160,14 +159,6 @@ public class DashboardController implements Initializable {
             } catch (Exception e) {
                 System.err.println("⚠ Erreur DocumentService: " + e.getMessage());
                 documentService = null;
-            }
-            
-            try {
-                messageService = MessageService.getInstance();
-                System.out.println("✓ MessageService initialisé");
-            } catch (Exception e) {
-                System.err.println("⚠ Erreur MessageService: " + e.getMessage());
-                messageService = null;
             }
             
             // Charger le service de l'utilisateur
@@ -298,16 +289,6 @@ public class DashboardController implements Initializable {
             
             // Messages non lus
             int nonLus = 0;
-            if (messageService != null && currentUser != null) {
-                try {
-                    List<Message> messages = messageService.getMessagesForUser(currentUser.getId());
-                    nonLus = (int) messages.stream()
-                        .filter(m -> !m.isLu())
-                        .count();
-                } catch (Exception e) {
-                    System.err.println("⚠ Erreur comptage messages: " + e.getMessage());
-                }
-            }
             
             if (statMessagesNonLus != null) {
                 statMessagesNonLus.setText(String.valueOf(nonLus));

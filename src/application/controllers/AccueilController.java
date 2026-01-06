@@ -32,7 +32,6 @@ public class AccueilController implements Initializable {
     private User currentUser;
     private CourrierService courrierService;
     private DocumentService documentService;
-    private MessageService messageService;
     private MainController mainController;
     
     @Override
@@ -51,7 +50,6 @@ public class AccueilController implements Initializable {
             // Initialisation des services
             courrierService = CourrierService.getInstance();
             documentService = DocumentService.getInstance();
-            messageService = MessageService.getInstance();
             
             // Affichage du message de bienvenue personnalisé
             labelBienvenue.setText("Bienvenue, " + currentUser.getPrenom() + " " + currentUser.getNom());
@@ -98,12 +96,6 @@ public class AccueilController implements Initializable {
             // Documents
             int totalDocuments = documentService.getAllDocuments().size();
             statDocuments.setText(String.valueOf(totalDocuments));
-            
-            // Messages non lus
-            int messagesNonLus = (int) messageService.getMessagesForUser(currentUser.getId()).stream()
-                .filter(m -> !m.isLu())
-                .count();
-            statMessages.setText(String.valueOf(messagesNonLus));
             
         } catch (Exception e) {
             System.err.println("Erreur lors du chargement des statistiques: " + e.getMessage());
