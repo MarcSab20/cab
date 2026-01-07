@@ -134,7 +134,7 @@
                   </font>
                </Button>
                
-               <Button fx:id="btnReunions" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="👥 Réunions">
+               <Button fx:id="btnReunions" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="courrier confidentiel">
                   <padding>
                      <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
                   </padding>
@@ -143,7 +143,7 @@
                   </font>
                </Button>
                
-               <Button fx:id="btnMessages" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="💬 Messages">
+               <Button fx:id="btnMessages" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="document confidentiel">
                   <padding>
                      <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
                   </padding>
