@@ -12,7 +12,6 @@ import javafx.stage.Stage;
 import application.models.User;
 import application.services.AuthenticationService;
 import application.utils.SessionManager;
-import application.utils.WorkflowVisualizationHelper;
 import application.utils.AlertUtils;
 import java.io.IOException;
 import java.net.URL;
@@ -77,7 +76,6 @@ public class MainController implements Initializable {
             // Configuration de l'interface utilisateur
             setupUserInterface();
             setupNavigation();
-            setupPermissions();
             
             // Chargement de la vue par défaut
             loadView("accueil");
@@ -134,54 +132,9 @@ public class MainController implements Initializable {
                 btnAccueil.setOnAction(e -> loadView("accueil"));
             }
             
-            if (btnDashboard != null) {
-                btnDashboard.setOnAction(e -> loadView("dashboard"));
-            }
-            
-            if (btnWorkflowVisualization != null) {
-                btnWorkflowVisualization.setOnAction(e -> {
-                    WorkflowVisualizationHelper.openVisualizationWindowSafe(currentUser);
-                });
-            }
-            
-            if (btnWorkflowDashboard != null) {
-                btnWorkflowDashboard.setOnAction(e -> loadView("workflow_suivi")); // Utilise le même dashboard
-            }
-            
-            if (btnCourrier != null) {
-                btnCourrier.setOnAction(e -> loadView("courrier"));
-            }
             
             if (btnDocuments != null) {
                 btnDocuments.setOnAction(e -> loadView("documents"));
-            }
-            
-            if (btnReunions != null) {
-                btnReunions.setOnAction(e -> loadView("reunions"));
-            }
-            
-            if (btnMessages != null) {
-                btnMessages.setOnAction(e -> loadView("messages"));
-            }
-            
-            if (btnRecherche != null) {
-                btnRecherche.setOnAction(e -> loadView("recherche"));
-            }
-            
-            if (btnParametres != null) {
-                btnParametres.setOnAction(e -> loadView("parametres"));
-            }
-            
-            if (btnWorkflowGraph != null) {
-                btnWorkflowGraph.setOnAction(e -> loadView("workflow_graph"));
-            }
-            
-            if (btnAdmin != null) {
-                btnAdmin.setOnAction(e -> loadView("admin"));
-            }
-            
-            if (btnAdminHierarchy != null) {
-                btnAdminHierarchy.setOnAction(e -> loadView("admin_hierarchy"));
             }
             
             if (btnDeconnexion != null) {
@@ -192,97 +145,6 @@ public class MainController implements Initializable {
             
         } catch (Exception e) {
             System.err.println("Erreur lors de la configuration de la navigation: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-    
-    /**
-     * Gère l'ouverture de la vue Analyse Workflow
-     */
-    @FXML
-    private void handleWorkflowGraph() {
-        try {
-            System.out.println("Chargement de la vue Workflow Graph...");
-            
-            // Charger simplement la vue - le contrôleur gèrera tout
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/application/views/workflow_graph.fxml"));
-            Parent root = loader.load();
-            
-            // Remplacer le contenu
-            contentArea.setCenter(root);
-            currentView = "workflow_graph";
-            
-            // Mise à jour du statut
-            if (statusLabel != null) {
-                statusLabel.setText("Vue active: Analyse Workflow");
-            }
-            
-            // Mettre à jour les boutons de navigation
-            updateNavigationButtons("workflow_graph");
-            
-            System.out.println("Vue Workflow Graph chargée avec succès");
-            
-        } catch (IOException e) {
-            System.err.println("Erreur lors du chargement de la vue Analyse Workflow: " + e.getMessage());
-            e.printStackTrace();
-            showTemporaryMessage("Erreur lors du chargement de la vue Analyse Workflow");
-            AlertUtils.showError("Impossible de charger la vue Analyse Workflow: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Configure les permissions selon le rôle de l'utilisateur
-     */
-    private void setupPermissions() {
-        try {
-            String roleName = currentUser.getRole().getNom().toLowerCase();
-            int niveauAutorite = currentUser.getNiveauAutorite();
-            
-            // Masquer les fonctions d'administration pour les non-administrateurs
-            boolean isAdmin = roleName.contains("admin") || roleName.contains("administrateur");
-            boolean isNiveauZero = niveauAutorite == 0;
-            boolean isNiveauUn = niveauAutorite == -1;
-            if (btnAdmin != null) {
-                btnAdmin.setVisible(isAdmin || isNiveauZero);
-                btnAdmin.setManaged(isAdmin || isNiveauZero);
-            }
-            
-            if (btnWorkflowGraph != null) {
-                // Masquer pour le Service Courrier (niveau -1)
-                boolean accessible = currentUser.getNiveauAutorite() >= 0;
-                btnWorkflowGraph.setVisible(accessible);
-                btnWorkflowGraph.setManaged(accessible);
-            }
-            
-            
-            // La hiérarchie est accessible uniquement aux utilisateurs de niveau 0
-            if (btnAdminHierarchy != null) {
-                btnAdminHierarchy.setVisible(isNiveauZero);
-                btnAdminHierarchy.setManaged(isNiveauZero);
-                
-                if (!isNiveauZero) {
-                    System.out.println("Fonctions d'administration de hiérarchie masquées pour l'utilisateur: " + 
-                                     currentUser.getNomComplet() + " (niveau " + niveauAutorite + ")");
-                }
-            }
-            
-            // Le workflow dashboard est visible pour tous
-            if (btnWorkflowDashboard != null) {
-                boolean hasService = currentUser.getServiceCode() != null && !currentUser.getServiceCode().isEmpty();
-                if (!hasService) {
-                    System.out.println("ATTENTION: L'utilisateur n'a pas de service assigné");
-                }
-            }
-            
-            if (btnWorkflowVisualization != null) {
-                // Masquer pour le Service Courrier (niveau -1)
-                boolean accessible = currentUser.getNiveauAutorite() >= 0;
-                btnWorkflowVisualization.setVisible(accessible);
-                btnWorkflowVisualization.setManaged(accessible);
-            }
-            
-        } catch (Exception e) {
-            System.err.println("Erreur lors de la configuration des permissions: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -406,17 +268,7 @@ public class MainController implements Initializable {
     private Button getButtonForView(String viewName) {
         switch (viewName.toLowerCase()) {
             case "accueil": return btnAccueil;
-            case "dashboard": return btnDashboard;
-            case "workflow_dashboard": return btnWorkflowDashboard;
-            case "courrier": return btnCourrier;
             case "documents": return btnDocuments;
-            case "reunions": return btnReunions;
-            case "messages": return btnMessages;
-            case "recherche": return btnRecherche;
-            case "workflow_graph": return btnWorkflowGraph;
-            case "parametres": return btnParametres;
-            case "admin": return btnAdmin;
-            case "admin_hierarchy": return btnAdminHierarchy;
             default: return null;
         }
     }

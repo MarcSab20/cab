@@ -7,7 +7,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import application.services.DatabaseService;
-import application.services.StructureInitService;
 
 /**
  * Utilitaires de diagnostic complet du système
@@ -43,9 +42,6 @@ public class DiagnosticUtils {
         
         // 5. Services applicatifs
         diagnosticServices();
-        
-        // 6. Structure documentaire
-        diagnosticStructureDocumentaire();
         
         System.out.println();
         System.out.println("╔" + SEPARATEUR + "╗");
@@ -308,47 +304,6 @@ public class DiagnosticUtils {
             
         } catch (Exception e) {
             afficherErreur("Erreur: " + e.getMessage());
-        }
-        
-        System.out.println();
-    }
-    
-    /**
-     * Diagnostic et initialisation de la structure documentaire
-     */
-    private static void diagnosticStructureDocumentaire() {
-        afficherTitre("6. STRUCTURE DOCUMENTAIRE");
-        
-        try {
-            StructureInitService structureService = StructureInitService.getInstance();
-            
-            System.out.print("  → Vérification de la structure... ");
-            
-            // Initialiser la structure (ne fait rien si déjà présente)
-            boolean success = structureService.initialiserStructure(false);
-            
-            if (success) {
-                afficherSucces("OK");
-                afficherInfo("État", "✓ Structure opérationnelle");
-                
-                // Réparer l'encodage si nécessaire
-                System.out.print("  → Vérification des icônes... ");
-                structureService.reparerEncodageIcones();
-                afficherSucces("OK");
-                
-                System.out.println();
-                
-                // Afficher un résumé de la structure
-                structureService.afficherStructure();
-                
-            } else {
-                afficherErreur("ÉCHEC");
-                afficherWarning("Échec de l'initialisation de la structure");
-            }
-            
-        } catch (Exception e) {
-            afficherErreur("Erreur: " + e.getMessage());
-            e.printStackTrace();
         }
         
         System.out.println();
