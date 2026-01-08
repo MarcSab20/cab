@@ -14,7 +14,6 @@ import application.services.AuthenticationService;
 import application.utils.SessionManager;
 import application.utils.WorkflowVisualizationHelper;
 import application.utils.AlertUtils;
-import application.controllers.WorkflowGraphController;
 import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
