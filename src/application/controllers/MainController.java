@@ -137,6 +137,7 @@ public class MainController implements Initializable {
                 btnDocuments.setOnAction(e -> loadView("documents"));
             }
             
+            
             if (btnDeconnexion != null) {
                 btnDeconnexion.setOnAction(e -> handleDeconnexion());
             }
@@ -148,6 +149,7 @@ public class MainController implements Initializable {
             e.printStackTrace();
         }
     }
+    
     
     /**
      * Charge une vue dans la zone de contenu principale

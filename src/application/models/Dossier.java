@@ -4,9 +4,10 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * Modèle représentant un dossier dans le système de gestion documentaire
+ * Modèle Dossier pour l'arborescence hiérarchique
  */
 public class Dossier {
+    
     private int id;
     private String codeDossier;
     private String nomDossier;
@@ -21,26 +22,22 @@ public class Dossier {
     private LocalDateTime dateCreation;
     private LocalDateTime dateModification;
     
-    // Champs calculés (non en base)
+    // Informations supplémentaires (depuis la vue)
     private int nombreDocuments;
     private int nombreSousDossiers;
+    private String nomDossierParent;
+    private int niveauHierarchie;
     
-    // Constructeurs
     public Dossier() {
         this.actif = true;
         this.systeme = false;
-        this.icone = "📁";
         this.ordreAffichage = 0;
+        this.icone = "📁";
         this.dateCreation = LocalDateTime.now();
     }
     
-    public Dossier(String codeDossier, String nomDossier) {
-        this();
-        this.codeDossier = codeDossier;
-        this.nomDossier = nomDossier;
-    }
+    // ============ GETTERS ET SETTERS ============
     
-    // Getters et Setters
     public int getId() {
         return id;
     }
@@ -145,6 +142,8 @@ public class Dossier {
         this.dateModification = dateModification;
     }
     
+    // Informations supplémentaires
+    
     public int getNombreDocuments() {
         return nombreDocuments;
     }
@@ -161,57 +160,43 @@ public class Dossier {
         this.nombreSousDossiers = nombreSousDossiers;
     }
     
-    // Méthodes utilitaires
+    public String getNomDossierParent() {
+        return nomDossierParent;
+    }
+    
+    public void setNomDossierParent(String nomDossierParent) {
+        this.nomDossierParent = nomDossierParent;
+    }
+    
+    public int getNiveauHierarchie() {
+        return niveauHierarchie;
+    }
+    
+    public void setNiveauHierarchie(int niveauHierarchie) {
+        this.niveauHierarchie = niveauHierarchie;
+    }
+    
+    // ============ MÉTHODES UTILITAIRES ============
     
     /**
-     * Vérifie si c'est un dossier racine
+     * Vérifie si le dossier est un dossier racine
      */
-    public boolean isRacine() {
-        return dossierParentId == null || dossierParentId == 0;
+    public boolean estRacine() {
+        return dossierParentId == null;
     }
     
     /**
-     * Vérifie si le dossier peut être supprimé
+     * Vérifie si le dossier contient des éléments
      */
-    public boolean peutEtreSupprime() {
-        return !systeme && actif;
+    public boolean contientElements() {
+        return nombreDocuments > 0 || nombreSousDossiers > 0;
     }
     
     /**
-     * Vérifie si le dossier peut être modifié
-     */
-    public boolean peutEtreModifie() {
-        return !systeme && actif;
-    }
-    
-    /**
-     * Retourne une représentation textuelle du chemin
-     */
-    public String getCheminFormate() {
-        if (cheminComplet == null) return nomDossier;
-        return cheminComplet.replace("/ROOT/", "").replace("/", " > ");
-    }
-    
-    /**
-     * Retourne le nom complet avec icône
+     * Retourne le nom complet avec l'icône
      */
     public String getNomCompletAvecIcone() {
         return icone + " " + nomDossier;
-    }
-    
-    /**
-     * Retourne le niveau du dossier dans l'arborescence
-     */
-    public int getNiveau() {
-        if (cheminComplet == null) return 0;
-        return cheminComplet.split("/").length - 1;
-    }
-    
-    /**
-     * Vérifie si le dossier est vide
-     */
-    public boolean estVide() {
-        return nombreDocuments == 0 && nombreSousDossiers == 0;
     }
     
     @Override
@@ -229,14 +214,6 @@ public class Dossier {
     
     @Override
     public String toString() {
-        return "Dossier{" +
-                "id=" + id +
-                ", codeDossier='" + codeDossier + '\'' +
-                ", nomDossier='" + nomDossier + '\'' +
-                ", cheminComplet='" + cheminComplet + '\'' +
-                ", nombreDocuments=" + nombreDocuments +
-                ", nombreSousDossiers=" + nombreSousDossiers +
-                ", systeme=" + systeme +
-                '}';
+        return nomDossier;
     }
 }
