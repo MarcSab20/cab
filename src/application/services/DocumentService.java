@@ -10,6 +10,8 @@ import java.sql.*;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
+import application.models.User;
+import application.models.StatutDocument;
 
 /**
  * Service de gestion des documents avec nomenclature automatique et stockage réseau
@@ -475,6 +477,321 @@ public class DocumentService {
             return "application/octet-stream";
         }
     }
+    
+    /**
+     * Met à jour les métadonnées d'un document (sans le code)
+     */
+    public boolean updateDocument(Document document, int userId) {
+        String query = "UPDATE documents SET " +
+                      "titre = ?, description = ?, mots_cles = ?, " +
+                      "statut = ?, confidentiel = ?, modifie_par = ?, " +
+                      "date_modification = NOW() " +
+                      "WHERE id = ?";
+        
+        try (Connection conn = databaseService.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setString(1, document.getTitre());
+            stmt.setString(2, document.getDescription());
+            stmt.setString(3, document.getMotsCles());
+            stmt.setString(4, document.getStatut());
+            stmt.setBoolean(5, document.isConfidentiel());
+            stmt.setInt(6, userId);
+            stmt.setInt(7, document.getId());
+            
+            int rowsAffected = stmt.executeUpdate();
+            
+            if (rowsAffected > 0) {
+                enregistrerActivite(document.getId(), userId, "modification", 
+                                  "Document modifié: " + document.getTitre());
+                return true;
+            }
+            
+            return false;
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur mise à jour document: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Change le statut d'un document
+     */
+    public boolean changeStatut(int documentId, String nouveauStatut, int userId) {
+        String query = "UPDATE documents SET statut = ?, modifie_par = ?, " +
+                      "date_modification = NOW() WHERE id = ?";
+        
+        try (Connection conn = databaseService.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setString(1, nouveauStatut);
+            stmt.setInt(2, userId);
+            stmt.setInt(3, documentId);
+            
+            int rowsAffected = stmt.executeUpdate();
+            
+            if (rowsAffected > 0) {
+                enregistrerActivite(documentId, userId, "changement_statut", 
+                                  "Statut changé vers: " + nouveauStatut);
+                return true;
+            }
+            
+            return false;
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur changement statut: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Récupère les documents de la corbeille
+     */
+    public List<Document> getDocumentsCorbeille() {
+        List<Document> documents = new ArrayList<>();
+        String query = "SELECT * FROM v_documents_complets WHERE statut = 'supprime' " +
+                      "ORDER BY date_modification DESC";
+        
+        try (Connection conn = databaseService.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+            
+            while (rs.next()) {
+                documents.add(mapResultSetToDocument(rs));
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération corbeille: " + e.getMessage());
+        }
+        
+        return documents;
+    }
+    
+    /**
+     * Restaure un document de la corbeille
+     */
+    public boolean restaurerDocument(int documentId, int userId) {
+        String query = "UPDATE documents SET statut = 'actif', modifie_par = ?, " +
+                      "date_modification = NOW() WHERE id = ? AND statut = 'supprime'";
+        
+        try (Connection conn = databaseService.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setInt(1, userId);
+            stmt.setInt(2, documentId);
+            
+            int rowsAffected = stmt.executeUpdate();
+            
+            if (rowsAffected > 0) {
+                enregistrerActivite(documentId, userId, "restauration", 
+                                  "Document restauré de la corbeille");
+                return true;
+            }
+            
+            return false;
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur restauration document: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Supprime définitivement un document (ADMIN SEULEMENT)
+     */
+    public boolean supprimerDefinitivement(int documentId, User user) {
+        // Vérifier que l'utilisateur est administrateur
+        if (user == null || !user.getRole().getNom().equals("Administrateur")) {
+            System.err.println("Permission refusée: seul un administrateur peut supprimer définitivement");
+            return false;
+        }
+        
+        try (Connection conn = databaseService.getConnection()) {
+            conn.setAutoCommit(false);
+            
+            try {
+                // Récupérer les informations du document avant suppression
+                Document doc = getDocumentById(documentId);
+                
+                if (doc == null) {
+                    conn.rollback();
+                    return false;
+                }
+                
+                // Supprimer les activités liées
+                String deleteActivites = "DELETE FROM activites_documents WHERE document_id = ?";
+                try (PreparedStatement stmt = conn.prepareStatement(deleteActivites)) {
+                    stmt.setInt(1, documentId);
+                    stmt.executeUpdate();
+                }
+                
+                // Supprimer les versions
+                String deleteVersions = "DELETE FROM versions_documents WHERE document_id = ?";
+                try (PreparedStatement stmt = conn.prepareStatement(deleteVersions)) {
+                    stmt.setInt(1, documentId);
+                    stmt.executeUpdate();
+                }
+                
+                // Supprimer le document
+                String deleteDoc = "DELETE FROM documents WHERE id = ?";
+                try (PreparedStatement stmt = conn.prepareStatement(deleteDoc)) {
+                    stmt.setInt(1, documentId);
+                    stmt.executeUpdate();
+                }
+                
+                // Supprimer le fichier physique si possible
+                try {
+                    File fichier = new File(doc.getCheminFichier());
+                    if (fichier.exists()) {
+                        fichier.delete();
+                    }
+                } catch (Exception e) {
+                    System.err.println("Impossible de supprimer le fichier physique: " + e.getMessage());
+                }
+                
+                conn.commit();
+                
+                System.out.println("Document supprimé définitivement: " + doc.getCodeDocument());
+                return true;
+                
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur suppression définitive: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Déplace un document vers un autre dossier
+     */
+    public boolean deplacerDocument(int documentId, int nouveauDossierId, int userId) {
+        String query = "UPDATE documents SET dossier_id = ?, modifie_par = ?, " +
+                      "date_modification = NOW() WHERE id = ?";
+        
+        try (Connection conn = databaseService.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setInt(1, nouveauDossierId);
+            stmt.setInt(2, userId);
+            stmt.setInt(3, documentId);
+            
+            int rowsAffected = stmt.executeUpdate();
+            
+            if (rowsAffected > 0) {
+                enregistrerActivite(documentId, userId, "deplacement", 
+                                  "Document déplacé vers dossier ID: " + nouveauDossierId);
+                return true;
+            }
+            
+            return false;
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur déplacement document: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Récupère les documents récents
+     */
+    public List<Document> getDocumentsRecents(int limite) {
+        List<Document> documents = new ArrayList<>();
+        String query = "SELECT * FROM v_documents_complets WHERE statut != 'supprime' " +
+                      "ORDER BY date_modification DESC LIMIT ?";
+        
+        try (Connection conn = databaseService.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setInt(1, limite);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    documents.add(mapResultSetToDocument(rs));
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération documents récents: " + e.getMessage());
+        }
+        
+        return documents;
+    }
+    
+    /**
+     * Récupère les documents favoris d'un utilisateur
+     */
+    public List<Document> getDocumentsFavoris(int userId) {
+        List<Document> documents = new ArrayList<>();
+        String query = "SELECT d.* FROM v_documents_complets d " +
+                      "INNER JOIN documents_favoris df ON d.id = df.document_id " +
+                      "WHERE df.user_id = ? AND d.statut != 'supprime' " +
+                      "ORDER BY df.date_ajout DESC";
+        
+        try (Connection conn = databaseService.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setInt(1, userId);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    documents.add(mapResultSetToDocument(rs));
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur récupération favoris: " + e.getMessage());
+        }
+        
+        return documents;
+    }
+    
+    /**
+     * Ajoute/Retire un document des favoris
+     */
+    public boolean toggleFavori(int documentId, int userId) {
+        try (Connection conn = databaseService.getConnection()) {
+            // Vérifier si déjà dans les favoris
+            String checkQuery = "SELECT COUNT(*) FROM documents_favoris WHERE document_id = ? AND user_id = ?";
+            
+            try (PreparedStatement stmt = conn.prepareStatement(checkQuery)) {
+                stmt.setInt(1, documentId);
+                stmt.setInt(2, userId);
+                
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        // Retirer des favoris
+                        String deleteQuery = "DELETE FROM documents_favoris WHERE document_id = ? AND user_id = ?";
+                        try (PreparedStatement deleteStmt = conn.prepareStatement(deleteQuery)) {
+                            deleteStmt.setInt(1, documentId);
+                            deleteStmt.setInt(2, userId);
+                            deleteStmt.executeUpdate();
+                        }
+                        return false; // Retiré
+                    } else {
+                        // Ajouter aux favoris
+                        String insertQuery = "INSERT INTO documents_favoris (document_id, user_id) VALUES (?, ?)";
+                        try (PreparedStatement insertStmt = conn.prepareStatement(insertQuery)) {
+                            insertStmt.setInt(1, documentId);
+                            insertStmt.setInt(2, userId);
+                            insertStmt.executeUpdate();
+                        }
+                        return true; // Ajouté
+                    }
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur gestion favoris: " + e.getMessage());
+            return false;
+        }
+    }
+
+
     
     // Getters
     

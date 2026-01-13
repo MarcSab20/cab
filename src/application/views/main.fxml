@@ -72,7 +72,7 @@
             <VBox spacing="2.0" style="-fx-padding: 20 0;">
                
                <!-- Section principale -->
-               <Label style="-fx-text-fill: #bdc3c7; -fx-font-weight: bold; -fx-padding: 0 20 10 20; -fx-font-size: 12px;" text="NAVIGATION PRINCIPALE" />
+               <Label style="-fx-text-fill: #bdc3c7; -fx-font-weight: bold; -fx-padding: 0 20 10 20; -fx-font-size: 12px;" text="" />
                
                <Button fx:id="btnAccueil" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" styleClass="sidebar-button" text="🏠 Accueil">
                   <padding>
@@ -91,6 +91,14 @@
                      <Font size="14.0" />
                   </font>
                </Button>
+               
+               <Button fx:id="btnAdmin" alignment="BASELINE_LEFT" 
+				        maxWidth="1.7976931348623157E308" styleClass="sidebar-button" 
+				        text="⚙️ Administration">
+				   <padding>
+				      <Insets bottom="15.0" left="25.0" right="25.0" top="15.0" />
+				   </padding>
+				</Button>
                
             </VBox>
             

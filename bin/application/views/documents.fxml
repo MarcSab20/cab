@@ -140,7 +140,7 @@
             <!-- En-tête de la liste -->
             <HBox alignment="CENTER_LEFT" spacing="15.0">
                <Label fx:id="labelDossierActuel" style="-fx-font-weight: bold; -fx-font-size: 16px;" text="📁 Dossier racine" />
-               <Label fx:id="labelNombreDocuments" style="-fx-text-fill: #7f8c8d;" text="(45 documents)" />
+               <Label fx:id="labelNombreDocuments" style="-fx-text-fill: #7f8c8d;" />
                <Region HBox.hgrow="ALWAYS" />
                
                <Label text="Trier par:" />

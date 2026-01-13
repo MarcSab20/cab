@@ -49,6 +49,7 @@ public class MainController implements Initializable {
     @FXML private Button btnAdminHierarchy;
     @FXML private Button btnDeconnexion;
     
+    
     // Services et données
     private User currentUser;
     private AuthenticationService authService;
@@ -135,6 +136,10 @@ public class MainController implements Initializable {
             
             if (btnDocuments != null) {
                 btnDocuments.setOnAction(e -> loadView("documents"));
+            }
+            
+            if (btnAdmin != null) {
+                btnAdmin.setOnAction(e -> loadView("administration"));
             }
             
             

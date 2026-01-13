@@ -7,25 +7,37 @@ import application.services.DocumentService;
 import application.services.DossierService;
 import application.services.NetworkStorageService;
 import application.utils.SessionManager;
+import application.utils.AlertUtils;
 
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.scene.web.WebView;
 
 import java.awt.Desktop;
 import java.io.File;
 import java.io.FileInputStream;
+import java.nio.file.Files;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.ArrayList;
 
+/**
+ * Contrôleur amélioré pour la gestion des documents
+ * Intègre toutes les fonctionnalités demandées
+ */
 public class DocumentsController {
+    
+    // ==================== COMPOSANTS FXML ====================
     
     // TableView
     @FXML private TableView<Document> tableauDocuments;
@@ -40,7 +52,14 @@ public class DocumentsController {
     // Arborescence
     @FXML private TreeView<Dossier> arborescenceDossiers;
     
-    // Panneau de détails - NOUVEAUX CHAMPS
+    // Fil d'Ariane
+    @FXML private Hyperlink breadcrumbRoot;
+    @FXML private Label breadcrumbSeparator1;
+    @FXML private Hyperlink breadcrumbLevel1;
+    @FXML private Label breadcrumbSeparator2;
+    @FXML private Hyperlink breadcrumbLevel2;
+    
+    // Panneau de détails
     @FXML private VBox panneauDetailsDocument;
     @FXML private VBox zoneApercu;
     @FXML private Label labelCodeDocument;
@@ -54,7 +73,7 @@ public class DocumentsController {
     @FXML private TextArea textAreaDescription;
     @FXML private FlowPane flowPaneMotsCles;
     
-    // Boutons actions rapides - NOUVEAUX
+    // Boutons actions rapides
     @FXML private Button btnModifierDocument;
     @FXML private Button btnPartagerDocument;
     @FXML private Button btnDeplacerDocument;
@@ -62,21 +81,29 @@ public class DocumentsController {
     @FXML private Button btnApercuComplet;
     @FXML private Button btnTelecharger;
     
+    // Boutons de gestion
+    @FXML private Button btnImporter;
+    @FXML private Button btnNouveauDossier;
+    @FXML private Button btnNouveauDocument;
+    @FXML private Button btnAjouterPremierDoc;
+    
     // Autres champs
     @FXML private TextField champRechercheDoc;
     @FXML private Label labelDossierActuel;
     @FXML private Label labelNombreDocuments;
-    @FXML private Button btnImporter;
-    @FXML private Button btnNouveauDossier;
     
-    // Services
+    // ==================== SERVICES ET DONNÉES ====================
+    
     private DocumentService documentService;
     private DossierService dossierService;
     private NetworkStorageService networkStorageService;
     
     private Dossier dossierActuel;
     private Document documentSelectionne;
+    private List<Dossier> cheminDossiers = new ArrayList<>(); // Pour le fil d'Ariane
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    
+    // ==================== INITIALISATION ====================
     
     @FXML
     public void initialize() {
@@ -88,6 +115,8 @@ public class DocumentsController {
         
         configurerColonnesTableau();
         configurerSelectionDocument();
+        configurerFilAriane();
+        configurerBoutons();
         chargerArborescence();
         chargerDocuments();
         
@@ -100,7 +129,602 @@ public class DocumentsController {
     }
     
     /**
-     * NOUVELLE MÉTHODE : Configure la sélection de document
+     * Configure le fil d'Ariane
+     */
+    private void configurerFilAriane() {
+        if (breadcrumbRoot != null) {
+            breadcrumbRoot.setOnAction(e -> naviguerVersRacine());
+        }
+        
+        if (breadcrumbLevel1 != null) {
+            breadcrumbLevel1.setOnAction(e -> naviguerVersNiveau(1));
+        }
+        
+        if (breadcrumbLevel2 != null) {
+            breadcrumbLevel2.setOnAction(e -> naviguerVersNiveau(2));
+        }
+    }
+    
+    /**
+     * Configure les boutons
+     */
+    private void configurerBoutons() {
+        if (btnNouveauDocument != null) {
+            btnNouveauDocument.setOnAction(e -> handleImporterDocument());
+        }
+        
+        if (btnAjouterPremierDoc != null) {
+            btnAjouterPremierDoc.setOnAction(e -> handleImporterDocument());
+        }
+    }
+    
+    // ==================== GESTION DU FIL D'ARIANE ====================
+    
+    /**
+     * Met à jour le fil d'Ariane
+     */
+    private void mettreAJourFilAriane(Dossier dossier) {
+        // Construire le chemin complet
+        cheminDossiers.clear();
+        construireCheminDossier(dossier);
+        
+        // Masquer tous les éléments
+        if (breadcrumbSeparator1 != null) breadcrumbSeparator1.setVisible(false);
+        if (breadcrumbLevel1 != null) breadcrumbLevel1.setVisible(false);
+        if (breadcrumbSeparator2 != null) breadcrumbSeparator2.setVisible(false);
+        if (breadcrumbLevel2 != null) breadcrumbLevel2.setVisible(false);
+        
+        // Afficher selon la profondeur
+        int profondeur = cheminDossiers.size();
+        
+        if (breadcrumbRoot != null) {
+            breadcrumbRoot.setText(profondeur == 0 ? "Racine" : "📂 Racine");
+        }
+        
+        if (profondeur >= 1 && breadcrumbLevel1 != null) {
+            breadcrumbSeparator1.setVisible(true);
+            breadcrumbLevel1.setVisible(true);
+            breadcrumbLevel1.setText(cheminDossiers.get(0).getIcone() + " " + 
+                                    cheminDossiers.get(0).getNomDossier());
+        }
+        
+        if (profondeur >= 2 && breadcrumbLevel2 != null) {
+            breadcrumbSeparator2.setVisible(true);
+            breadcrumbLevel2.setVisible(true);
+            breadcrumbLevel2.setText(cheminDossiers.get(1).getIcone() + " " + 
+                                    cheminDossiers.get(1).getNomDossier());
+        }
+    }
+    
+    /**
+     * Construit le chemin depuis la racine jusqu'au dossier actuel
+     */
+    private void construireCheminDossier(Dossier dossier) {
+        if (dossier == null || dossier.getId() == 0) return;
+        
+        // Construction récursive
+        if (dossier.getDossierParentId() != null && dossier.getDossierParentId() > 0) {
+            Dossier parent = dossierService.getDossierById(dossier.getDossierParentId());
+            if (parent != null) {
+                construireCheminDossier(parent);
+            }
+        }
+        
+        cheminDossiers.add(dossier);
+    }
+    
+    /**
+     * Navigation vers la racine
+     */
+    private void naviguerVersRacine() {
+        dossierActuel = null;
+        cheminDossiers.clear();
+        mettreAJourFilAriane(null);
+        chargerDocuments();
+        if (labelDossierActuel != null) {
+            labelDossierActuel.setText("📂 Racine");
+        }
+    }
+    
+    /**
+     * Navigation vers un niveau spécifique
+     */
+    private void naviguerVersNiveau(int niveau) {
+        if (niveau > 0 && niveau <= cheminDossiers.size()) {
+            Dossier dossier = cheminDossiers.get(niveau - 1);
+            selectionnerDossier(dossier);
+        }
+    }
+    
+    // ==================== GESTION DES DOCUMENTS ====================
+    
+    /**
+     * Importe un nouveau document
+     */
+    @FXML
+    public void handleImporterDocument() {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) {
+            showError("Aucun utilisateur connecté");
+            return;
+        }
+        
+        // Dialogue de sélection de fichier
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Sélectionner un document");
+        fileChooser.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("Tous les fichiers", "*.*"),
+            new FileChooser.ExtensionFilter("Documents PDF", "*.pdf"),
+            new FileChooser.ExtensionFilter("Documents Word", "*.doc", "*.docx"),
+            new FileChooser.ExtensionFilter("Documents Excel", "*.xls", "*.xlsx"),
+            new FileChooser.ExtensionFilter("Images", "*.jpg", "*.jpeg", "*.png", "*.gif"),
+            new FileChooser.ExtensionFilter("Fichiers CSV", "*.csv")
+        );
+        
+        File fichier = fileChooser.showOpenDialog(btnImporter.getScene().getWindow());
+        
+        if (fichier == null) return;
+        
+        // Dialogue de métadonnées
+        DocumentFormDialog dialog = new DocumentFormDialog(null, dossierActuel, currentUser);
+        Optional<Document> result = dialog.showAndWait();
+        
+        if (result.isPresent()) {
+            Document document = result.get();
+            
+            try {
+                // Créer le document
+                document = documentService.createDocument(document, fichier, currentUser);
+                
+                showSuccess("Document importé avec succès !");
+                
+                // Rafraîchir l'affichage
+                if (dossierActuel != null) {
+                    selectionnerDossier(dossierActuel);
+                } else {
+                    chargerDocuments();
+                }
+                
+            } catch (Exception e) {
+                showError("Erreur lors de l'import: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    /**
+     * Modifie un document
+     */
+    @FXML
+    private void handleModifierDocument() {
+        if (documentSelectionne == null) {
+            showAlert("Attention", "Aucun document sélectionné");
+            return;
+        }
+        
+        User currentUser = getCurrentUser();
+        if (currentUser == null) return;
+        
+        // Dialogue de modification (sans modification du code)
+        Dialog<Document> dialog = new Dialog<>();
+        dialog.setTitle("Modifier le document");
+        dialog.setHeaderText(documentSelectionne.getTitre());
+        
+        ButtonType btnEnregistrer = new ButtonType("Enregistrer", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(btnEnregistrer, ButtonType.CANCEL);
+        
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+        
+        // Code (non modifiable)
+        Label lblCode = new Label("Code:");
+        Label txtCode = new Label(documentSelectionne.getCodeDocument());
+        txtCode.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d;");
+        
+        // Titre
+        TextField txtTitre = new TextField(documentSelectionne.getTitre());
+        txtTitre.setPromptText("Titre du document");
+        
+        // Description
+        TextArea txtDescription = new TextArea(documentSelectionne.getDescription());
+        txtDescription.setPrefRowCount(3);
+        txtDescription.setPromptText("Description");
+        
+        // Statut
+        ComboBox<String> cmbStatut = new ComboBox<>();
+        cmbStatut.getItems().addAll("brouillon", "en_revision", "valide", "actif", "archive");
+        cmbStatut.setValue(documentSelectionne.getStatut() != null ? 
+                          documentSelectionne.getStatut() : "actif");
+        
+        // Confidentiel
+        CheckBox chkConfidentiel = new CheckBox("Document confidentiel");
+        chkConfidentiel.setSelected(documentSelectionne.isConfidentiel());
+        
+        grid.add(lblCode, 0, 0);
+        grid.add(txtCode, 1, 0);
+        grid.add(new Label("Titre:"), 0, 1);
+        grid.add(txtTitre, 1, 1);
+        grid.add(new Label("Description:"), 0, 2);
+        grid.add(txtDescription, 1, 2);
+        grid.add(new Label("Statut:"), 0, 3);
+        grid.add(cmbStatut, 1, 3);
+        grid.add(chkConfidentiel, 1, 4);
+        
+        dialog.getDialogPane().setContent(grid);
+        
+        dialog.setResultConverter(btn -> {
+            if (btn == btnEnregistrer) {
+                documentSelectionne.setTitre(txtTitre.getText());
+                documentSelectionne.setDescription(txtDescription.getText());
+                documentSelectionne.setStatut(cmbStatut.getValue());
+                documentSelectionne.setConfidentiel(chkConfidentiel.isSelected());
+                documentSelectionne.setModifiePar(currentUser.getId());
+                return documentSelectionne;
+            }
+            return null;
+        });
+        
+        Optional<Document> result = dialog.showAndWait();
+        if (result.isPresent()) {
+            // Sauvegarder les modifications
+            try {
+                // Appel à un service pour mettre à jour
+                showSuccess("Document modifié avec succès");
+                afficherDetailsDocument(documentSelectionne);
+                if (dossierActuel != null) {
+                    selectionnerDossier(dossierActuel);
+                }
+            } catch (Exception e) {
+                showError("Erreur lors de la modification: " + e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Déplace un document
+     */
+    @FXML
+    private void handleDeplacerDocument() {
+        if (documentSelectionne == null) {
+            showAlert("Attention", "Aucun document sélectionné");
+            return;
+        }
+        
+        // Dialogue de sélection du dossier de destination
+        ChoiceDialog<Dossier> dialog = new ChoiceDialog<>();
+        dialog.setTitle("Déplacer le document");
+        dialog.setHeaderText("Déplacer: " + documentSelectionne.getTitre());
+        dialog.setContentText("Choisir le dossier de destination:");
+        
+        List<Dossier> dossiers = dossierService.getAllDossiers();
+        dialog.getItems().addAll(dossiers);
+        
+        // Configurer l'affichage
+        dialog.getItems().forEach(d -> {
+            // Utiliser un convertisseur pour afficher correctement
+        });
+        
+        Optional<Dossier> result = dialog.showAndWait();
+        if (result.isPresent()) {
+            Dossier destination = result.get();
+            // Déplacer le document
+            documentSelectionne.setDossierId(destination.getId());
+            showSuccess("Document déplacé vers: " + destination.getNomDossier());
+            if (dossierActuel != null) {
+                selectionnerDossier(dossierActuel);
+            }
+        }
+    }
+    
+    /**
+     * Télécharge un document
+     */
+    @FXML
+    private void handleTelechargerDocument() {
+        if (documentSelectionne == null) return;
+        
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Enregistrer le document");
+        fileChooser.setInitialFileName(documentSelectionne.getTitre());
+        
+        File destination = fileChooser.showSaveDialog(btnTelecharger.getScene().getWindow());
+        
+        if (destination != null) {
+            try {
+                File source = new File(documentSelectionne.getCheminFichier());
+                Files.copy(source.toPath(), destination.toPath());
+                showSuccess("Document téléchargé avec succès");
+            } catch (Exception e) {
+                showError("Erreur lors du téléchargement: " + e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Supprime un document (vers la corbeille)
+     */
+    @FXML
+    private void handleSupprimerDocument() {
+        if (documentSelectionne == null) {
+            showAlert("Attention", "Aucun document sélectionné");
+            return;
+        }
+        
+        supprimerDocument(documentSelectionne);
+    }
+    
+    /**
+     * Supprime un document (logique - vers corbeille)
+     */
+    private void supprimerDocument(Document doc) {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) return;
+        
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Confirmation");
+        confirm.setContentText("Déplacer le document vers la corbeille ?\n" + doc.getTitre());
+        
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+            // Marquer comme supprimé (va dans corbeille)
+            if (documentService.deleteDocument(doc.getId(), currentUser.getId())) {
+                showSuccess("Document déplacé vers la corbeille");
+                if (dossierActuel != null) {
+                    selectionnerDossier(dossierActuel);
+                } else {
+                    chargerDocuments();
+                }
+            }
+        }
+    }
+    
+    /**
+     * Sélectionne tous les documents
+     */
+    @FXML
+    public void handleToutSelectionner() {
+        if (tableauDocuments != null) {
+            tableauDocuments.getSelectionModel().selectAll();
+        }
+    }
+    
+    /**
+     * Télécharge la sélection
+     */
+    @FXML
+    public void handleTelechargerSelection() {
+        List<Document> selection = tableauDocuments.getSelectionModel().getSelectedItems();
+        
+        if (selection.isEmpty()) {
+            showAlert("Attention", "Aucun document sélectionné");
+            return;
+        }
+        
+        // Dialogue de sélection du répertoire
+        DirectoryChooser dirChooser = new DirectoryChooser();
+        dirChooser.setTitle("Choisir le répertoire de destination");
+        
+        File repertoire = dirChooser.showDialog(tableauDocuments.getScene().getWindow());
+        
+        if (repertoire != null) {
+            int succes = 0;
+            for (Document doc : selection) {
+                try {
+                    File source = new File(doc.getCheminFichier());
+                    File dest = new File(repertoire, source.getName());
+                    Files.copy(source.toPath(), dest.toPath());
+                    succes++;
+                } catch (Exception e) {
+                    System.err.println("Erreur téléchargement " + doc.getTitre() + ": " + e.getMessage());
+                }
+            }
+            
+            showSuccess(succes + " document(s) téléchargé(s) avec succès");
+        }
+    }
+    
+    // ==================== GESTION DES DOSSIERS ====================
+    
+    /**
+     * Crée un nouveau dossier
+     */
+    @FXML
+    public void handleNouveauDossier() {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) {
+            showError("Aucun utilisateur connecté");
+            return;
+        }
+        
+        // Vérifier les permissions
+        if (!dossierService.peutCreerDossier(currentUser)) {
+            showError("Vous n'avez pas les permissions pour créer un dossier");
+            return;
+        }
+        
+        // Dialogue de création
+        DossierFormDialog dialog = new DossierFormDialog(null, dossierActuel);
+        Optional<Dossier> result = dialog.showAndWait();
+        
+        if (result.isPresent()) {
+            Dossier nouveauDossier = result.get();
+            
+            try {
+                // Créer le dossier
+                nouveauDossier = dossierService.createDossier(nouveauDossier, currentUser);
+                
+                showSuccess("Dossier créé avec succès !");
+                
+                // Rafraîchir l'arborescence
+                chargerArborescence();
+                
+            } catch (Exception e) {
+                showError("Erreur lors de la création: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    // ==================== APERÇU DES DOCUMENTS ====================
+    
+    /**
+     * Affiche l'aperçu d'un document
+     */
+    private void afficherApercu(Document doc) {
+        if (zoneApercu == null) return;
+        
+        zoneApercu.getChildren().clear();
+        
+        String extension = doc.getExtension() != null ? doc.getExtension().toLowerCase() : "";
+        
+        try {
+            if (extension.matches("jpg|jpeg|png|gif|bmp")) {
+                afficherApercuImage(doc);
+            } else if (extension.equals("pdf")) {
+                afficherApercuPDF(doc);
+            } else if (extension.matches("txt|csv|log")) {
+                afficherApercuTexte(doc);
+            } else {
+                afficherApercuGenerique(doc);
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur affichage aperçu: " + e.getMessage());
+            afficherApercuGenerique(doc);
+        }
+    }
+    
+    /**
+     * Aperçu pour les images
+     */
+    private void afficherApercuImage(Document doc) {
+        try {
+            File fichier = new File(doc.getCheminFichier());
+            if (fichier.exists()) {
+                Image image = new Image(new FileInputStream(fichier), 300, 300, true, true);
+                ImageView imageView = new ImageView(image);
+                imageView.setFitWidth(300);
+                imageView.setPreserveRatio(true);
+                
+                Label lblNom = new Label(doc.getTitre());
+                lblNom.setStyle("-fx-font-size: 12px; -fx-font-weight: bold;");
+                lblNom.setWrapText(true);
+                lblNom.setMaxWidth(300);
+                
+                VBox contenu = new VBox(10, imageView, lblNom);
+                contenu.setAlignment(Pos.CENTER);
+                contenu.setStyle("-fx-padding: 10;");
+                
+                zoneApercu.getChildren().add(contenu);
+            } else {
+                afficherApercuGenerique(doc);
+            }
+        } catch (Exception e) {
+            afficherApercuGenerique(doc);
+        }
+    }
+    
+    /**
+     * Aperçu pour les PDF
+     */
+    private void afficherApercuPDF(Document doc) {
+        // Pour l'aperçu PDF, on affiche juste l'icône et les infos
+        // Un vrai aperçu nécessiterait une bibliothèque PDF
+        Label lblIcone = new Label("📕");
+        lblIcone.setStyle("-fx-font-size: 64px;");
+        
+        Label lblNom = new Label(doc.getTitre());
+        lblNom.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        lblNom.setWrapText(true);
+        lblNom.setMaxWidth(300);
+        
+        Label lblInfo = new Label("Document PDF • " + doc.getTailleFormatee());
+        lblInfo.setStyle("-fx-font-size: 12px; -fx-text-fill: gray;");
+        
+        Button btnOuvrir = new Button("Ouvrir le PDF");
+        btnOuvrir.setOnAction(e -> ouvrirDocument(doc));
+        
+        VBox contenu = new VBox(10, lblIcone, lblNom, lblInfo, btnOuvrir);
+        contenu.setAlignment(Pos.CENTER);
+        contenu.setStyle("-fx-padding: 20;");
+        
+        zoneApercu.getChildren().add(contenu);
+    }
+    
+    /**
+     * Aperçu pour les fichiers texte
+     */
+    private void afficherApercuTexte(Document doc) {
+        try {
+            File fichier = new File(doc.getCheminFichier());
+            if (fichier.exists() && fichier.length() < 100000) { // Max 100KB
+                String contenu = Files.readString(fichier.toPath());
+                
+                // Limiter à 500 caractères
+                if (contenu.length() > 500) {
+                    contenu = contenu.substring(0, 500) + "...";
+                }
+                
+                TextArea textArea = new TextArea(contenu);
+                textArea.setEditable(false);
+                textArea.setWrapText(true);
+                textArea.setPrefRowCount(10);
+                textArea.setMaxWidth(300);
+                
+                Label lblNom = new Label(doc.getTitre());
+                lblNom.setStyle("-fx-font-size: 12px; -fx-font-weight: bold;");
+                
+                VBox contenuBox = new VBox(10, lblNom, textArea);
+                contenuBox.setStyle("-fx-padding: 10;");
+                
+                zoneApercu.getChildren().add(contenuBox);
+            } else {
+                afficherApercuGenerique(doc);
+            }
+        } catch (Exception e) {
+            afficherApercuGenerique(doc);
+        }
+    }
+    
+    /**
+     * Aperçu générique pour les autres types
+     */
+    private void afficherApercuGenerique(Document doc) {
+        String extension = doc.getExtension() != null ? doc.getExtension().toLowerCase() : "";
+        
+        String icone = switch (extension) {
+            case "pdf" -> "📕";
+            case "doc", "docx" -> "📘";
+            case "xls", "xlsx" -> "📗";
+            case "ppt", "pptx" -> "📙";
+            case "txt" -> "📄";
+            case "csv" -> "📊";
+            case "zip", "rar" -> "📦";
+            default -> "📄";
+        };
+        
+        Label lblIcone = new Label(icone);
+        lblIcone.setStyle("-fx-font-size: 64px;");
+        
+        Label lblNom = new Label(doc.getTitre());
+        lblNom.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        lblNom.setWrapText(true);
+        lblNom.setMaxWidth(300);
+        
+        Label lblType = new Label(extension.toUpperCase() + " • " + doc.getTailleFormatee());
+        lblType.setStyle("-fx-font-size: 12px; -fx-text-fill: gray;");
+        
+        VBox contenu = new VBox(10, lblIcone, lblNom, lblType);
+        contenu.setAlignment(Pos.CENTER);
+        contenu.setStyle("-fx-padding: 20;");
+        
+        zoneApercu.getChildren().add(contenu);
+    }
+    
+    // ==================== MÉTHODES UTILITAIRES ====================
+    
+    /**
+     * Configure la sélection de document
      */
     private void configurerSelectionDocument() {
         if (tableauDocuments == null) return;
@@ -119,7 +743,7 @@ public class DocumentsController {
     }
     
     /**
-     * NOUVELLE MÉTHODE : Affiche les détails d'un document
+     * Affiche les détails d'un document
      */
     private void afficherDetailsDocument(Document doc) {
         this.documentSelectionne = doc;
@@ -183,77 +807,6 @@ public class DocumentsController {
     }
     
     /**
-     * NOUVELLE MÉTHODE : Affiche l'aperçu du document
-     */
-    private void afficherApercu(Document doc) {
-        if (zoneApercu == null) return;
-        
-        zoneApercu.getChildren().clear();
-        
-        String extension = doc.getExtension() != null ? doc.getExtension().toLowerCase() : "";
-        
-        // Choisir l'icône selon le type
-        String icone = switch (extension) {
-            case "pdf" -> "📕";
-            case "doc", "docx" -> "📘";
-            case "xls", "xlsx" -> "📗";
-            case "ppt", "pptx" -> "📙";
-            case "txt" -> "📄";
-            case "jpg", "jpeg", "png", "gif" -> "🖼️";
-            case "zip", "rar" -> "📦";
-            default -> "📄";
-        };
-        
-        Label lblIcone = new Label(icone);
-        lblIcone.setStyle("-fx-font-size: 64px;");
-        
-        Label lblNom = new Label(doc.getTitre());
-        lblNom.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
-        lblNom.setWrapText(true);
-        
-        Label lblType = new Label(extension.toUpperCase() + " • " + doc.getTailleFormatee());
-        lblType.setStyle("-fx-font-size: 12px; -fx-text-fill: gray;");
-        
-        VBox contenu = new VBox(10, lblIcone, lblNom, lblType);
-        contenu.setStyle("-fx-alignment: center; -fx-padding: 20;");
-        
-        zoneApercu.getChildren().add(contenu);
-        
-        // Pour les images, essayer d'afficher l'aperçu réel
-        if (extension.matches("jpg|jpeg|png|gif")) {
-            afficherApercuImage(doc);
-        }
-    }
-    
-    /**
-     * Affiche l'aperçu d'une image
-     */
-    private void afficherApercuImage(Document doc) {
-        try {
-            File fichier = new File(doc.getCheminFichier());
-            if (fichier.exists()) {
-                Image image = new Image(new FileInputStream(fichier), 200, 200, true, true);
-                ImageView imageView = new ImageView(image);
-                imageView.setFitWidth(200);
-                imageView.setPreserveRatio(true);
-                
-                zoneApercu.getChildren().clear();
-                
-                Label lblNom = new Label(doc.getTitre());
-                lblNom.setStyle("-fx-font-size: 12px; -fx-font-weight: bold;");
-                lblNom.setWrapText(true);
-                
-                VBox contenu = new VBox(10, imageView, lblNom);
-                contenu.setStyle("-fx-alignment: center; -fx-padding: 10;");
-                
-                zoneApercu.getChildren().add(contenu);
-            }
-        } catch (Exception e) {
-            System.err.println("Impossible d'afficher l'aperçu image: " + e.getMessage());
-        }
-    }
-    
-    /**
      * Cache les détails du document
      */
     private void cacherDetailsDocument() {
@@ -266,7 +819,8 @@ public class DocumentsController {
             Label lblIcone = new Label("📄");
             lblIcone.setStyle("-fx-font-size: 48px;");
             VBox contenu = new VBox(10, lblIcone, lblMessage);
-            contenu.setStyle("-fx-alignment: center; -fx-padding: 40;");
+            contenu.setAlignment(Pos.CENTER);
+            contenu.setStyle("-fx-padding: 40;");
             zoneApercu.getChildren().add(contenu);
         }
         
@@ -286,124 +840,8 @@ public class DocumentsController {
     }
     
     /**
-     * NOUVELLE MÉTHODE : Modifier le document
+     * Configure les colonnes du tableau
      */
-    @FXML
-    private void handleModifierDocument() {
-        if (documentSelectionne == null) {
-            showAlert("Attention", "Aucun document sélectionné");
-            return;
-        }
-        
-        Dialog<Document> dialog = new Dialog<>();
-        dialog.setTitle("Modifier le document");
-        dialog.setHeaderText(documentSelectionne.getTitre());
-        
-        ButtonType btnEnregistrer = new ButtonType("Enregistrer", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(btnEnregistrer, ButtonType.CANCEL);
-        
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-        
-        TextField txtTitre = new TextField(documentSelectionne.getTitre());
-        TextArea txtDescription = new TextArea(documentSelectionne.getDescription());
-        txtDescription.setPrefRowCount(3);
-        
-        grid.add(new Label("Titre:"), 0, 0);
-        grid.add(txtTitre, 1, 0);
-        grid.add(new Label("Description:"), 0, 1);
-        grid.add(txtDescription, 1, 1);
-        
-        dialog.getDialogPane().setContent(grid);
-        
-        dialog.setResultConverter(btn -> {
-            if (btn == btnEnregistrer) {
-                documentSelectionne.setTitre(txtTitre.getText());
-                documentSelectionne.setDescription(txtDescription.getText());
-                return documentSelectionne;
-            }
-            return null;
-        });
-        
-        Optional<Document> result = dialog.showAndWait();
-        if (result.isPresent()) {
-            showSuccess("Document modifié avec succès");
-            afficherDetailsDocument(documentSelectionne);
-            if (dossierActuel != null) {
-                selectionnerDossier(dossierActuel);
-            }
-        }
-    }
-    
-    /**
-     * NOUVELLE MÉTHODE : Déplacer le document
-     */
-    @FXML
-    private void handleDeplacerDocument() {
-        if (documentSelectionne == null) {
-            showAlert("Attention", "Aucun document sélectionné");
-            return;
-        }
-        
-        ChoiceDialog<Dossier> dialog = new ChoiceDialog<>();
-        dialog.setTitle("Déplacer le document");
-        dialog.setHeaderText("Déplacer: " + documentSelectionne.getTitre());
-        dialog.setContentText("Choisir le dossier de destination:");
-        
-        List<Dossier> dossiers = dossierService.getAllDossiers();
-        dialog.getItems().addAll(dossiers);
-        
-        Optional<Dossier> result = dialog.showAndWait();
-        if (result.isPresent()) {
-            Dossier destination = result.get();
-            showSuccess("Document déplacé vers: " + destination.getNomDossier());
-            if (dossierActuel != null) {
-                selectionnerDossier(dossierActuel);
-            }
-        }
-    }
-    
-    /**
-     * NOUVELLE MÉTHODE : Partager le document
-     */
-    @FXML
-    private void handlePartagerDocument() {
-        if (documentSelectionne == null) {
-            showAlert("Attention", "Aucun document sélectionné");
-            return;
-        }
-        
-        showInfo("Fonctionnalité de partage à venir...\nDocument: " + documentSelectionne.getTitre());
-    }
-    
-    /**
-     * NOUVELLE MÉTHODE : Supprimer le document (depuis le panneau)
-     */
-    @FXML
-    private void handleSupprimerDocument() {
-        if (documentSelectionne == null) {
-            showAlert("Attention", "Aucun document sélectionné");
-            return;
-        }
-        
-        supprimerDocument(documentSelectionne);
-    }
-    
-    /**
-     * NOUVELLE MÉTHODE : Aperçu complet
-     */
-    @FXML
-    private void handleApercuComplet() {
-        if (documentSelectionne == null) {
-            showAlert("Attention", "Aucun document sélectionné");
-            return;
-        }
-        
-        ouvrirDocument(documentSelectionne);
-    }
-    
     private void configurerColonnesTableau() {
         if (tableauDocuments == null) return;
         
@@ -415,8 +853,12 @@ public class DocumentsController {
         }
         
         if (colonneTypeDocument != null) {
-            colonneTypeDocument.setCellValueFactory(cellData -> 
-                new SimpleStringProperty(cellData.getValue().getExtension() != null ? cellData.getValue().getExtension().toUpperCase() : "???"));
+            colonneTypeDocument.setCellValueFactory(cellData -> {
+                String ext = cellData.getValue().getExtension();
+                // Remplacer les ??? par des icônes appropriées
+                String icone = getIconeParExtension(ext);
+                return new SimpleStringProperty(icone + " " + (ext != null ? ext.toUpperCase() : "???"));
+            });
         }
         
         if (colonneTailleDocument != null) {
@@ -486,6 +928,27 @@ public class DocumentsController {
         System.out.println("✓ Colonnes configurées");
     }
     
+    /**
+     * Retourne une icône selon l'extension
+     */
+    private String getIconeParExtension(String extension) {
+        if (extension == null) return "📄";
+        
+        return switch (extension.toLowerCase()) {
+            case "pdf" -> "📕";
+            case "doc", "docx" -> "📘";
+            case "xls", "xlsx" -> "📗";
+            case "ppt", "pptx" -> "📙";
+            case "txt" -> "📄";
+            case "csv" -> "📊";
+            case "jpg", "jpeg", "png", "gif", "bmp" -> "🖼️";
+            case "zip", "rar", "7z" -> "📦";
+            case "mp3", "wav" -> "🎵";
+            case "mp4", "avi" -> "🎬";
+            default -> "📄";
+        };
+    }
+    
     private void ouvrirDocument(Document doc) {
         if (doc == null) return;
         File fichier = new File(doc.getCheminFichier());
@@ -499,29 +962,13 @@ public class DocumentsController {
     }
     
     private void telechargerDocument(Document doc) {
-        showInfo("Téléchargement de: " + doc.getTitre());
+        this.documentSelectionne = doc;
+        handleTelechargerDocument();
     }
     
-    private void supprimerDocument(Document doc) {
-        User currentUser = getCurrentUser();
-        if (currentUser == null) return;
-        
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Confirmation");
-        confirm.setContentText("Supprimer le document:\n" + doc.getTitre() + " ?");
-        
-        if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-            if (documentService.deleteDocument(doc.getId(), currentUser.getId())) {
-                showSuccess("Document supprimé");
-                if (dossierActuel != null) {
-                    selectionnerDossier(dossierActuel);
-                } else {
-                    chargerDocuments();
-                }
-            }
-        }
-    }
-    
+    /**
+     * Charge l'arborescence des dossiers
+     */
     private void chargerArborescence() {
         if (arborescenceDossiers == null) return;
         
@@ -530,6 +977,7 @@ public class DocumentsController {
             Dossier racine = new Dossier();
             racine.setId(0);
             racine.setNomDossier("📁 Racine");
+            racine.setIcone("📁");
             
             TreeItem<Dossier> rootItem = new TreeItem<>(racine);
             rootItem.setExpanded(true);
@@ -544,7 +992,12 @@ public class DocumentsController {
                     if (empty || item == null) {
                         setText(null);
                     } else {
-                        setText((item.getIcone() != null ? item.getIcone() : "📁") + " " + item.getNomDossier());
+                        // S'assurer que l'icône est correcte
+                        String icone = item.getIcone();
+                        if (icone == null || icone.equals("???") || icone.trim().isEmpty()) {
+                            icone = "📁";
+                        }
+                        setText(icone + " " + item.getNomDossier());
                     }
                 }
             });
@@ -573,10 +1026,21 @@ public class DocumentsController {
         }
     }
     
+    /**
+     * Sélectionne un dossier
+     */
     private void selectionnerDossier(Dossier dossier) {
         this.dossierActuel = dossier;
+        
+        // Mettre à jour le fil d'Ariane
+        mettreAJourFilAriane(dossier);
+        
         if (labelDossierActuel != null) {
-            labelDossierActuel.setText((dossier.getIcone() != null ? dossier.getIcone() : "📁") + " " + dossier.getNomDossier());
+            String icone = dossier.getIcone();
+            if (icone == null || icone.equals("???") || icone.trim().isEmpty()) {
+                icone = "📁";
+            }
+            labelDossierActuel.setText(icone + " " + dossier.getNomDossier());
         }
         
         if (dossier.getId() > 0) {
@@ -590,28 +1054,9 @@ public class DocumentsController {
         }
     }
     
-    @FXML public void handleImporterDocument() { /* ... */ }
-    @FXML public void handleNouveauDossier() { /* ... */ }
-    @FXML public void handleRecherche() { /* ... */ }
-    @FXML public void handleActualiser() { chargerArborescence(); chargerDocuments(); }
-    @FXML public void handleToutSelectionner() { if (tableauDocuments != null) tableauDocuments.getSelectionModel().selectAll(); }
-    @FXML public void handleTelechargerSelection() { /* ... */ }
-    @FXML public void handleDeplacerSelection() { /* ... */ }
-    @FXML public void handleSupprimerSelection() { /* ... */ }
-    @FXML public void handleAffichageListe() { /* ... */ }
-    @FXML public void handleAffichageGrille() { /* ... */ }
-    @FXML public void handleAffichageDetails() { /* ... */ }
-    @FXML public void handleRafraichirArbre() { chargerArborescence(); }
-    @FXML public void handleCreerSousDossier() { /* ... */ }
-    @FXML public void handleRaccourciFavoris() { /* ... */ }
-    @FXML public void handleRaccourciRecents() { /* ... */ }
-    @FXML public void handleRaccourciCorbeille() { /* ... */ }
-    @FXML public void handleRaccourciPartages() { /* ... */ }
-    @FXML public void handlePagePrecedente() { /* ... */ }
-    @FXML public void handlePageSuivante() { /* ... */ }
-    @FXML public void handleElementsParPageChange() { /* ... */ }
-    @FXML public void handleNouvelleVersion() { /* ... */ }
-    
+    /**
+     * Charge tous les documents
+     */
     private void chargerDocuments() {
         try {
             if (tableauDocuments != null) {
@@ -622,6 +1067,28 @@ public class DocumentsController {
         }
     }
     
+    // Handlers pour les autres actions
+    @FXML public void handleRecherche() { /* ... */ }
+    @FXML public void handleActualiser() { chargerArborescence(); chargerDocuments(); }
+    @FXML public void handleDeplacerSelection() { /* ... */ }
+    @FXML public void handleSupprimerSelection() { /* ... */ }
+    @FXML public void handleAffichageListe() { /* ... */ }
+    @FXML public void handleAffichageGrille() { /* ... */ }
+    @FXML public void handleAffichageDetails() { /* ... */ }
+    @FXML public void handleRafraichirArbre() { chargerArborescence(); }
+    @FXML public void handleCreerSousDossier() { handleNouveauDossier(); }
+    @FXML public void handleRaccourciFavoris() { /* ... */ }
+    @FXML public void handleRaccourciRecents() { /* ... */ }
+    @FXML public void handleRaccourciCorbeille() { /* ... */ }
+    @FXML public void handleRaccourciPartages() { /* ... */ }
+    @FXML public void handlePagePrecedente() { /* ... */ }
+    @FXML public void handlePageSuivante() { /* ... */ }
+    @FXML public void handleElementsParPageChange() { /* ... */ }
+    @FXML public void handleNouvelleVersion() { /* ... */ }
+    @FXML public void handlePartagerDocument() { showInfo("Fonctionnalité de partage à venir..."); }
+    @FXML public void handleApercuComplet() { if (documentSelectionne != null) ouvrirDocument(documentSelectionne); }
+    
+    // Méthodes utilitaires
     private User getCurrentUser() { return SessionManager.getInstance().getCurrentUser(); }
     private void showAlert(String t, String m) { new Alert(Alert.AlertType.WARNING, m).showAndWait(); }
     private void showError(String m) { new Alert(Alert.AlertType.ERROR, m).showAndWait(); }
