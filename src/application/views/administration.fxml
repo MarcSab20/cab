@@ -113,6 +113,9 @@
                      <TableColumn fx:id="colLogAction" prefWidth="120.0" text="Action" />
                      <TableColumn fx:id="colLogDetails" prefWidth="300.0" text="Détails" />
                      <TableColumn fx:id="colLogIP" prefWidth="120.0" text="Adresse IP" />
+                     <TableColumn fx:id="colLogStatut" prefWidth="120.0" text="Statut" />
+                     
+
                   </columns>
                   
                   <placeholder>
@@ -161,6 +164,8 @@
                   <columns>
                      <TableColumn fx:id="colConnexionDate" prefWidth="150.0" text="Date/Heure" />
                      <TableColumn fx:id="colConnexionUtilisateur" prefWidth="180.0" text="Utilisateur" />
+                     <TableColumn fx:id="colConnexionRole" prefWidth="120.0" text="Role" />
+					 <TableColumn fx:id="colConnexionDuree" prefWidth="120.0" text="Duree" />
                      <TableColumn fx:id="colConnexionType" prefWidth="150.0" text="Type" />
                      <TableColumn fx:id="colConnexionIP" prefWidth="150.0" text="Adresse IP" />
                      <TableColumn fx:id="colConnexionStatut" prefWidth="150.0" text="Statut" />
