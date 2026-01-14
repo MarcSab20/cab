@@ -331,9 +331,9 @@
             <VBox spacing="8.0">
                <Label style="-fx-font-weight: bold;" text="Actions rapides" />
                <VBox spacing="5.0">
-                  <Button fx:id="btnModifierDocument" maxWidth="1.7976931348623157E308" styleClass="button-primary" text="✏️ Modifier" />
-                  <Button fx:id="btnPartagerDocument" maxWidth="1.7976931348623157E308" styleClass="button-info" text="👥 Partager" />
-                  <Button fx:id="btnDeplacerDocument" maxWidth="1.7976931348623157E308" styleClass="button-secondary" text="📁 Déplacer" />
+                  <Button fx:id="btnModifierDocument" maxWidth="1.7976931348623157E308" styleClass="button-primary" text="✏️ Modifier" onAction="#handleModifierDocument" />
+                  <Button fx:id="btnPartagerDocument" maxWidth="1.7976931348623157E308" styleClass="button-info" text="👥 Partager" onAction="#handlePartagerDocument"  />
+                  <Button fx:id="btnDeplacerDocument" maxWidth="1.7976931348623157E308" styleClass="button-secondary" text="📁 Déplacer" onAction="#handleDeplacerDocument" />
                   <Button fx:id="btnSupprimerDocument" maxWidth="1.7976931348623157E308" styleClass="button-danger" text="🗑️ Supprimer" />
                </VBox>
             </VBox>

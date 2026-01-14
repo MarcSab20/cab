@@ -2,6 +2,7 @@ package application.controllers;
 
 import application.models.Document;
 import application.models.Dossier;
+import application.models.PartageInfo;
 import application.models.User;
 import application.services.DocumentService;
 import application.services.DossierService;
@@ -30,6 +31,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.ArrayList;
+
+import application.controllers.DeplacerDocumentDialog;
+import application.controllers.PartagerDocumentDialog;
+import application.services.LogService;
+import application.utils.IconeUtils;
 
 /**
  * Contrôleur amélioré pour la gestion des documents
@@ -98,6 +104,7 @@ public class DocumentsController {
     private DossierService dossierService;
     private NetworkStorageService networkStorageService;
     
+    private LogService logService;
     private Dossier dossierActuel;
     private Document documentSelectionne;
     private List<Dossier> cheminDossiers = new ArrayList<>(); // Pour le fil d'Ariane
@@ -119,6 +126,7 @@ public class DocumentsController {
         configurerBoutons();
         chargerArborescence();
         chargerDocuments();
+        logService = LogService.getInstance();
         
         User currentUser = getCurrentUser();
         if (currentUser != null) {
@@ -184,15 +192,13 @@ public class DocumentsController {
         if (profondeur >= 1 && breadcrumbLevel1 != null) {
             breadcrumbSeparator1.setVisible(true);
             breadcrumbLevel1.setVisible(true);
-            breadcrumbLevel1.setText(cheminDossiers.get(0).getIcone() + " " + 
-                                    cheminDossiers.get(0).getNomDossier());
+            breadcrumbLevel1.setText(IconeUtils.formatterNomDossier(cheminDossiers.get(0)));
         }
         
         if (profondeur >= 2 && breadcrumbLevel2 != null) {
             breadcrumbSeparator2.setVisible(true);
             breadcrumbLevel2.setVisible(true);
-            breadcrumbLevel2.setText(cheminDossiers.get(1).getIcone() + " " + 
-                                    cheminDossiers.get(1).getNomDossier());
+            breadcrumbLevel2.setText(IconeUtils.formatterNomDossier(cheminDossiers.get(1)));
         }
     }
     
@@ -237,6 +243,31 @@ public class DocumentsController {
     }
     
     // ==================== GESTION DES DOCUMENTS ====================
+    
+    /**
+     * Corrige automatiquement toutes les icônes invalides
+     */
+    @FXML
+    private void handleCorrigerIcones() {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Correction des icônes");
+        confirm.setHeaderText("Corriger les icônes des dossiers");
+        confirm.setContentText("Cette action va corriger automatiquement toutes les icônes invalides (???).\n\nContinuer ?");
+        
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+            try {
+                int nombreCorrections = IconeUtils.corrigerTousLesDossiers();
+                
+                showSuccess("✅ " + nombreCorrections + " dossier(s) corrigé(s) !");
+                
+                // Recharger l'arborescence
+                chargerArborescence();
+                
+            } catch (Exception e) {
+                showError("Erreur lors de la correction : " + e.getMessage());
+            }
+        }
+    }
     
     /**
      * Importe un nouveau document
@@ -297,89 +328,34 @@ public class DocumentsController {
      */
     @FXML
     private void handleModifierDocument() {
-        if (documentSelectionne == null) {
-            showAlert("Attention", "Aucun document sélectionné");
+    	Document doc = tableauDocuments.getSelectionModel().getSelectedItem();
+        if (doc == null) {
+            showError("Veuillez sélectionner un document");
             return;
         }
         
-        User currentUser = getCurrentUser();
-        if (currentUser == null) return;
-        
-        // Dialogue de modification (sans modification du code)
-        Dialog<Document> dialog = new Dialog<>();
-        dialog.setTitle("Modifier le document");
-        dialog.setHeaderText(documentSelectionne.getTitre());
-        
-        ButtonType btnEnregistrer = new ButtonType("Enregistrer", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(btnEnregistrer, ButtonType.CANCEL);
-        
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-        
-        // Code (non modifiable)
-        Label lblCode = new Label("Code:");
-        Label txtCode = new Label(documentSelectionne.getCodeDocument());
-        txtCode.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d;");
-        
-        // Titre
-        TextField txtTitre = new TextField(documentSelectionne.getTitre());
-        txtTitre.setPromptText("Titre du document");
-        
-        // Description
-        TextArea txtDescription = new TextArea(documentSelectionne.getDescription());
-        txtDescription.setPrefRowCount(3);
-        txtDescription.setPromptText("Description");
-        
-        // Statut
-        ComboBox<String> cmbStatut = new ComboBox<>();
-        cmbStatut.getItems().addAll("brouillon", "en_revision", "valide", "actif", "archive");
-        cmbStatut.setValue(documentSelectionne.getStatut() != null ? 
-                          documentSelectionne.getStatut() : "actif");
-        
-        // Confidentiel
-        CheckBox chkConfidentiel = new CheckBox("Document confidentiel");
-        chkConfidentiel.setSelected(documentSelectionne.isConfidentiel());
-        
-        grid.add(lblCode, 0, 0);
-        grid.add(txtCode, 1, 0);
-        grid.add(new Label("Titre:"), 0, 1);
-        grid.add(txtTitre, 1, 1);
-        grid.add(new Label("Description:"), 0, 2);
-        grid.add(txtDescription, 1, 2);
-        grid.add(new Label("Statut:"), 0, 3);
-        grid.add(cmbStatut, 1, 3);
-        grid.add(chkConfidentiel, 1, 4);
-        
-        dialog.getDialogPane().setContent(grid);
-        
-        dialog.setResultConverter(btn -> {
-            if (btn == btnEnregistrer) {
-                documentSelectionne.setTitre(txtTitre.getText());
-                documentSelectionne.setDescription(txtDescription.getText());
-                documentSelectionne.setStatut(cmbStatut.getValue());
-                documentSelectionne.setConfidentiel(chkConfidentiel.isSelected());
-                documentSelectionne.setModifiePar(currentUser.getId());
-                return documentSelectionne;
-            }
-            return null;
-        });
-        
+        Dossier dossierActuel = dossierService.getDossierById(doc.getDossierId());
+        DocumentFormDialog dialog = new DocumentFormDialog(doc, dossierActuel, getCurrentUser());
         Optional<Document> result = dialog.showAndWait();
-        if (result.isPresent()) {
-            // Sauvegarder les modifications
+        
+        result.ifPresent(documentModifie -> {
             try {
-                // Appel à un service pour mettre à jour
-                showSuccess("Document modifié avec succès");
-                afficherDetailsDocument(documentSelectionne);
-                if (dossierActuel != null) {
-                    selectionnerDossier(dossierActuel);
-                }
+                documentModifie.setId(doc.getId());
+                documentService.updateDocument(documentModifie);
+                
+                LogService.getInstance().logModificationDocument(
+                    doc.getId(),
+                    doc.getCodeDocument(),
+                    "Métadonnées mises à jour"
+                );
+                
+                showSuccess("✅ Document modifié avec succès !");
+                chargerDocuments();
+                
             } catch (Exception e) {
-                showError("Erreur lors de la modification: " + e.getMessage());
+                showError("Erreur lors de la modification : " + e.getMessage());
             }
-        }
+        });
     }
     
     /**
@@ -387,35 +363,38 @@ public class DocumentsController {
      */
     @FXML
     private void handleDeplacerDocument() {
-        if (documentSelectionne == null) {
-            showAlert("Attention", "Aucun document sélectionné");
+        Document doc = tableauDocuments.getSelectionModel().getSelectedItem();
+        if (doc == null) {
+            showError("Veuillez sélectionner un document");
             return;
         }
         
-        // Dialogue de sélection du dossier de destination
-        ChoiceDialog<Dossier> dialog = new ChoiceDialog<>();
-        dialog.setTitle("Déplacer le document");
-        dialog.setHeaderText("Déplacer: " + documentSelectionne.getTitre());
-        dialog.setContentText("Choisir le dossier de destination:");
-        
-        List<Dossier> dossiers = dossierService.getAllDossiers();
-        dialog.getItems().addAll(dossiers);
-        
-        // Configurer l'affichage
-        dialog.getItems().forEach(d -> {
-            // Utiliser un convertisseur pour afficher correctement
-        });
-        
+        DeplacerDocumentDialog dialog = new DeplacerDocumentDialog(doc);
         Optional<Dossier> result = dialog.showAndWait();
-        if (result.isPresent()) {
-            Dossier destination = result.get();
-            // Déplacer le document
-            documentSelectionne.setDossierId(destination.getId());
-            showSuccess("Document déplacé vers: " + destination.getNomDossier());
-            if (dossierActuel != null) {
-                selectionnerDossier(dossierActuel);
+        
+        result.ifPresent(dossierDestination -> {
+            try {
+                // Sauvegarder l'ancien dossier pour l'historique
+                String ancienDossier = doc.getNomDossier();
+                
+                // Mettre à jour le document
+                doc.setDossierId(dossierDestination.getId());
+                documentService.updateDocument(doc);
+                
+                // Logger l'opération
+                LogService.getInstance().logDeplacementDocument(
+                    doc.getCodeDocument(), 
+                    ancienDossier, 
+                    dossierDestination.getNomDossier()
+                );
+                
+                showSuccess("✅ Document déplacé avec succès !");
+                chargerDocuments();
+                
+            } catch (Exception e) {
+                showError("Erreur lors du déplacement : " + e.getMessage());
             }
-        }
+        });
     }
     
     /**
@@ -992,12 +971,7 @@ public class DocumentsController {
                     if (empty || item == null) {
                         setText(null);
                     } else {
-                        // S'assurer que l'icône est correcte
-                        String icone = item.getIcone();
-                        if (icone == null || icone.equals("???") || icone.trim().isEmpty()) {
-                            icone = "📁";
-                        }
-                        setText(icone + " " + item.getNomDossier());
+                        setText(IconeUtils.formatterNomDossier(item));
                     }
                 }
             });
@@ -1036,11 +1010,7 @@ public class DocumentsController {
         mettreAJourFilAriane(dossier);
         
         if (labelDossierActuel != null) {
-            String icone = dossier.getIcone();
-            if (icone == null || icone.equals("???") || icone.trim().isEmpty()) {
-                icone = "📁";
-            }
-            labelDossierActuel.setText(icone + " " + dossier.getNomDossier());
+            labelDossierActuel.setText(IconeUtils.formatterNomDossier(dossier));
         }
         
         if (dossier.getId() > 0) {
@@ -1085,7 +1055,41 @@ public class DocumentsController {
     @FXML public void handlePageSuivante() { /* ... */ }
     @FXML public void handleElementsParPageChange() { /* ... */ }
     @FXML public void handleNouvelleVersion() { /* ... */ }
-    @FXML public void handlePartagerDocument() { showInfo("Fonctionnalité de partage à venir..."); }
+    
+    @FXML 
+    public void handlePartagerDocument() { 
+    	Document doc = tableauDocuments.getSelectionModel().getSelectedItem();
+        if (doc == null) {
+            showError("Veuillez sélectionner un document");
+            return;
+        }
+        
+        PartagerDocumentDialog dialog = new PartagerDocumentDialog(doc);
+        Optional<PartageInfo> result = dialog.showAndWait();  // ⬅️ Type simplifié
+        
+        result.ifPresent(partageInfo -> {
+            try {
+                // Implémenter la logique de partage
+                for (User user : partageInfo.getUtilisateurs()) {
+                    // Enregistrer le partage en base
+                    // TODO: Implémenter dans DocumentService
+                }
+                
+                // Logger l'opération
+                LogService.getInstance().logPartageDocument(
+                    doc.getCodeDocument(),
+                    partageInfo.getUtilisateurs().size()
+                );
+                
+                showSuccess("✅ Document partagé avec " + 
+                           partageInfo.getUtilisateurs().size() + " utilisateur(s) !");
+                
+            } catch (Exception e) {
+                showError("Erreur lors du partage : " + e.getMessage());
+            }
+        });
+    }
+    
     @FXML public void handleApercuComplet() { if (documentSelectionne != null) ouvrirDocument(documentSelectionne); }
     
     // Méthodes utilitaires

@@ -185,6 +185,36 @@ public class DossierService {
         return null;
     }
     
+    public boolean updateDossier(Dossier dossier) throws Exception {
+        if (dossier == null || dossier.getId() <= 0) {
+            throw new Exception("Dossier invalide");
+        }
+        
+        String query = "UPDATE dossiers SET " +
+                      "nom_dossier = ?, " +
+                      "description = ?, " +
+                      "icone = ?, " +
+                      "ordre_affichage = ?, " +
+                      "date_modification = NOW() " +
+                      "WHERE id = ?";
+        
+        try (Connection conn = databaseService.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setString(1, dossier.getNomDossier());
+            stmt.setString(2, dossier.getDescription());
+            stmt.setString(3, dossier.getIcone());
+            stmt.setInt(4, dossier.getOrdreAffichage());
+            stmt.setInt(5, dossier.getId());
+            
+            return stmt.executeUpdate() > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("Erreur mise à jour dossier: " + e.getMessage());
+            throw new Exception("Erreur lors de la mise à jour du dossier", e);
+        }
+    }
+    
     /**
      * Récupère tous les dossiers actifs
      */

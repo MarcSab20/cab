@@ -40,9 +40,9 @@
                     </image>
                 </ImageView>
                 
-                <Label text="SYGEDO/AA" style="-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;"/>
+                <Label text="SYGEDOA/AA" style="-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;"/>
                 
-                <Label text="Bienvenue à SYGEDO/AA" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;"/>
+                <Label text="Bienvenue à SYGEDOA/AA" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #2C3E50;"/>
                 
                 <Label text="Système de gestion des Documents Armée de l'Air" 
                        style="-fx-font-size: 18px; -fx-text-fill: #7A7A7A;"

@@ -2,6 +2,7 @@ package application.services;
 
 import application.models.Document;
 import application.models.User;
+import application.utils.SessionManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,7 +22,7 @@ public class DocumentService {
     private static DocumentService instance;
     private final DatabaseService databaseService;
     private final NetworkStorageService networkStorageService;
-    
+    private SessionManager sessionManager;
     private String cheminStockageLocal;
     
     private DocumentService() {
@@ -481,37 +482,28 @@ public class DocumentService {
     /**
      * Met à jour les métadonnées d'un document (sans le code)
      */
-    public boolean updateDocument(Document document, int userId) {
+    public boolean updateDocument(Document document) throws Exception {
         String query = "UPDATE documents SET " +
-                      "titre = ?, description = ?, mots_cles = ?, " +
-                      "statut = ?, confidentiel = ?, modifie_par = ?, " +
-                      "date_modification = NOW() " +
+                      "titre = ?, type_document = ?, description = ?, " +
+                      "mots_cles = ?, confidentiel = ?, dossier_id = ?, " +
+                      "modifie_par = ?, date_modification = NOW() " +
                       "WHERE id = ?";
         
         try (Connection conn = databaseService.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             
             stmt.setString(1, document.getTitre());
-            stmt.setString(2, document.getDescription());
-            stmt.setString(3, document.getMotsCles());
-            stmt.setString(4, document.getStatut());
+            stmt.setString(2, document.getTypeDocument());
+            stmt.setString(3, document.getDescription());
+            stmt.setString(4, document.getMotsCles());
             stmt.setBoolean(5, document.isConfidentiel());
-            stmt.setInt(6, userId);
-            stmt.setInt(7, document.getId());
+            stmt.setInt(6, document.getDossierId());
             
-            int rowsAffected = stmt.executeUpdate();
+            User currentUser = sessionManager.getCurrentUser();
+            stmt.setInt(7, currentUser.getId());
+            stmt.setInt(8, document.getId());
             
-            if (rowsAffected > 0) {
-                enregistrerActivite(document.getId(), userId, "modification", 
-                                  "Document modifié: " + document.getTitre());
-                return true;
-            }
-            
-            return false;
-            
-        } catch (SQLException e) {
-            System.err.println("Erreur mise à jour document: " + e.getMessage());
-            return false;
+            return stmt.executeUpdate() > 0;
         }
     }
     
