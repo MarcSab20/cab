@@ -111,6 +111,16 @@ public class CourrierService {
             
             System.out.println("✓ Courrier créé: " + codeCourrier);
             
+            if (courrier.getStatut() == StatutCourrier.NOUVEAU) {
+                NotificationCourrierService notificationService = 
+                    NotificationCourrierService.getInstance();
+                
+                boolean notified = notificationService.notifierNouveauCourrier(courrier);
+                
+                if (notified) {
+                    System.out.println("✓ Responsable notifié pour le courrier: " + codeCourrier);
+                }
+            }
             return courrier;
             
         } catch (SQLException e) {

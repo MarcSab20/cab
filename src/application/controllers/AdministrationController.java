@@ -3,6 +3,7 @@ package application.controllers;
 import application.models.User;
 import application.services.DatabaseService;
 import application.services.NetworkStorageService;
+import application.services.NotificationCourrierService;
 import application.services.LogService;
 import application.utils.SessionManager;
 import application.utils.AlertUtils;
@@ -98,6 +99,16 @@ public class AdministrationController {
     @FXML private Label lblTotalDossiers;
     @FXML private Label lblEspaceUtilise;
     
+    @FXML private ComboBox<User> cmbResponsableCourrier;
+    @FXML private Button btnDefinirResponsable;
+    @FXML private Button btnSupprimerResponsable;
+    @FXML private Button btnActualiserResponsable;
+    @FXML private Label lblResponsableActuel;
+    @FXML private Label lblTotalNotifications;
+    @FXML private Label lblNotificationsNonLues;
+
+    private NotificationCourrierService notificationService;
+    
     // ==================== SERVICES ====================
     
     private DatabaseService databaseService;
@@ -115,6 +126,7 @@ public class AdministrationController {
         databaseService = DatabaseService.getInstance();
         networkStorageService = NetworkStorageService.getInstance();
         logService = LogService.getInstance();
+        notificationService = NotificationCourrierService.getInstance();
         
         // Vérifier les permissions STRICTEMENT
         if (!verifierPermissionsAdmin()) {
@@ -126,6 +138,7 @@ public class AdministrationController {
         initialiserOngletLogs();
         initialiserOngletConnexions();
         initialiserOngletStatistiques();
+        initialiserOngletResponsable();
         
         // Logger l'accès à l'administration
         logService.logAction("acces_administration", "Accès au panneau d'administration");
@@ -511,6 +524,245 @@ public class AdministrationController {
             showError("Erreur", "Impossible de sauvegarder la configuration");
         }
     }
+    
+    // =================== RESPONSABLE COURRIER ===================
+    
+    /**
+     * Initialise l'onglet de configuration du responsable
+	 */
+	private void initialiserOngletResponsable() {
+	    // Configurer le ComboBox
+	    if (cmbResponsableCourrier != null) {
+	        // Personnaliser l'affichage
+	        cmbResponsableCourrier.setCellFactory(param -> new javafx.scene.control.ListCell<User>() {
+	            @Override
+	            protected void updateItem(User user, boolean empty) {
+	                super.updateItem(user, empty);
+	                if (empty || user == null) {
+	                    setText(null);
+	                } else {
+	                    String roleNom = user.getRole() != null ? user.getRole().getNom() : "Sans rôle";
+	                    setText(String.format("%s - %s (%s)", 
+	                        user.getCode(), 
+	                        user.getNomComplet(), 
+	                        roleNom));
+	                }
+	            }
+	        });
+	        
+	        cmbResponsableCourrier.setButtonCell(new javafx.scene.control.ListCell<User>() {
+	            @Override
+	            protected void updateItem(User user, boolean empty) {
+	                super.updateItem(user, empty);
+	                if (empty || user == null) {
+	                    setText("Choisir un utilisateur...");
+	                } else {
+	                    setText(user.getCode() + " - " + user.getNomComplet());
+	                }
+	            }
+	        });
+	    }
+	    
+	    // Charger les données
+	    chargerUtilisateursDisponibles();
+	    chargerResponsableActuel();
+	    chargerStatistiquesNotifications();
+	    
+	    // Configurer les boutons
+	    if (btnDefinirResponsable != null) {
+	        btnDefinirResponsable.setOnAction(e -> definirResponsable());
+	    }
+	    
+	    if (btnSupprimerResponsable != null) {
+	        btnSupprimerResponsable.setOnAction(e -> supprimerResponsable());
+	    }
+	    
+	    if (btnActualiserResponsable != null) {
+	        btnActualiserResponsable.setOnAction(e -> actualiserResponsable());
+	    }
+	}
+	
+	/**
+	 * Charge la liste des utilisateurs disponibles
+	 */
+	private void chargerUtilisateursDisponibles() {
+	    try {
+	        List<User> users = notificationService.getTousUtilisateursActifs();
+	        
+	        if (cmbResponsableCourrier != null) {
+	            cmbResponsableCourrier.setItems(
+	                javafx.collections.FXCollections.observableArrayList(users));
+	        }
+	        
+	        System.out.println("✓ " + users.size() + " utilisateurs chargés");
+	        
+	    } catch (Exception e) {
+	        System.err.println("Erreur chargement utilisateurs: " + e.getMessage());
+	        showError("Erreur", "Impossible de charger la liste des utilisateurs");
+	    }
+	}
+	
+	/**
+	 * Charge le responsable actuel
+	 */
+	private void chargerResponsableActuel() {
+	    try {
+	        User responsable = notificationService.getResponsableCourrier();
+	        
+	        if (lblResponsableActuel != null) {
+	            if (responsable != null) {
+	                String roleNom = responsable.getRole() != null ? 
+	                    responsable.getRole().getNom() : "Sans rôle";
+	                
+	                lblResponsableActuel.setText(String.format("✅ %s - %s (%s)", 
+	                    responsable.getCode(), 
+	                    responsable.getNomComplet(), 
+	                    roleNom));
+	                lblResponsableActuel.setStyle(
+	                    "-fx-text-fill: #27ae60; -fx-font-weight: bold;");
+	            } else {
+	                lblResponsableActuel.setText("❌ Aucun responsable configuré");
+	                lblResponsableActuel.setStyle(
+	                    "-fx-text-fill: #e74c3c; -fx-font-weight: bold;");
+	            }
+	        }
+	        
+	    } catch (Exception e) {
+	        System.err.println("Erreur chargement responsable: " + e.getMessage());
+	    }
+	}
+	
+	/*
+	 * Charge les statistiques des notifications
+	 */
+	private void chargerStatistiquesNotifications() {
+	    try {
+	        User responsable = notificationService.getResponsableCourrier();
+	        
+	        if (responsable != null) {
+	            // Total des notifications
+	            List<application.models.CourrierNotificationInfo> courriersNotifies = 
+	                notificationService.getCourriersNotifiesAvecInfos(responsable.getId(), false);
+	            
+	            if (lblTotalNotifications != null) {
+	                lblTotalNotifications.setText(String.valueOf(courriersNotifies.size()));
+	            }
+	            
+	            // Notifications non lues
+	            int nonLus = notificationService.compterCourriersNonLus(responsable.getId());
+	            
+	            if (lblNotificationsNonLues != null) {
+	                lblNotificationsNonLues.setText(String.valueOf(nonLus));
+	            }
+	        } else {
+	            if (lblTotalNotifications != null) {
+	                lblTotalNotifications.setText("0");
+	            }
+	            if (lblNotificationsNonLues != null) {
+	                lblNotificationsNonLues.setText("0");
+	            }
+	        }
+	        
+	    } catch (Exception e) {
+	        System.err.println("Erreur chargement statistiques: " + e.getMessage());
+	    }
+	}
+	
+	/**
+	 * Définit le responsable sélectionné
+	 */
+	private void definirResponsable() {
+	    User selectedUser = cmbResponsableCourrier.getValue();
+	    
+	    if (selectedUser == null) {
+	        showWarning("Validation", "Veuillez sélectionner un utilisateur");
+	        return;
+	    }
+	    
+	    // Confirmation
+	    Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+	    confirm.setTitle("Confirmation");
+	    confirm.setHeaderText("Définir le responsable des courriers");
+	    confirm.setContentText(String.format(
+	        "Voulez-vous définir %s comme responsable des courriers ?\n\n" +
+	        "Cette personne recevra automatiquement tous les nouveaux courriers créés.",
+	        selectedUser.getNomComplet()));
+	    
+	    if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+	        try {
+	            boolean success = notificationService.setResponsableCourrier(selectedUser.getId());
+	            
+	            if (success) {
+	                showSuccess(String.format("✅ %s défini comme responsable des courriers", 
+	                    selectedUser.getNomComplet()));
+	                
+	                logService.logAction("definition_responsable_courrier", 
+	                    "Responsable défini: " + selectedUser.getCode());
+	                
+	                actualiserResponsable();
+	            } else {
+	                showError("Erreur", "Impossible de définir le responsable");
+	            }
+	            
+	        } catch (Exception e) {
+	            System.err.println("Erreur définition responsable: " + e.getMessage());
+	            showError("Erreur", "Erreur lors de la définition du responsable");
+	        }
+	    }
+	}
+	
+	/**
+	 * Supprime le responsable actuel
+	 */
+	private void supprimerResponsable() {
+	    User responsableActuel = notificationService.getResponsableCourrier();
+	    
+	    if (responsableActuel == null) {
+	        showInfo("Aucun responsable configuré");
+	        return;
+	    }
+	    
+	    // Confirmation
+	    Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+	    confirm.setTitle("Confirmation");
+	    confirm.setHeaderText("Supprimer le responsable des courriers");
+	    confirm.setContentText(String.format(
+	        "Voulez-vous supprimer %s comme responsable des courriers ?\n\n" +
+	        "Les nouveaux courriers ne seront plus notifiés automatiquement.",
+	        responsableActuel.getNomComplet()));
+	    
+	    if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+	        try {
+	            boolean success = notificationService.supprimerResponsable();
+	            
+	            if (success) {
+	                showSuccess("✅ Responsable supprimé avec succès");
+	                
+	                logService.logAction("suppression_responsable_courrier", 
+	                    "Responsable supprimé: " + responsableActuel.getCode());
+	                
+	                actualiserResponsable();
+	            } else {
+	                showError("Erreur", "Impossible de supprimer le responsable");
+	            }
+	            
+	        } catch (Exception e) {
+	            System.err.println("Erreur suppression responsable: " + e.getMessage());
+	            showError("Erreur", "Erreur lors de la suppression du responsable");
+	        }
+	    }
+	}
+	
+	/**
+	 * Actualise les informations du responsable
+	 */
+	private void actualiserResponsable() {
+	    chargerUtilisateursDisponibles();
+	    chargerResponsableActuel();
+	    chargerStatistiquesNotifications();
+	    showInfo("Informations actualisées");
+	}
+
     
     // ==================== GESTION DES LOGS ====================
     

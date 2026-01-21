@@ -3,14 +3,17 @@ package application.controllers;
 import application.models.Courrier;
 import application.models.Courrier.StatutCourrier;
 import application.models.Courrier.TypeCourrier;
+import application.models.CourrierNotificationInfo;
 import application.models.Courrier.PrioriteCourrier;
 import application.models.Document;
 import application.models.User;
 import application.services.CourrierService;
 import application.services.DocumentService;
 import application.services.LogService;
+import application.services.NotificationCourrierService;
 import application.utils.SessionManager;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -18,23 +21,30 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
- * Contrôleur pour la gestion des courriers
- * 
- * Workflow:
- * 1. Création courrier (NOUVEAU) avec document obligatoire
- * 2. Traitement externe → statut EN_COURS puis TRAITE
- * 3. Quand TRAITE → document archivé automatiquement
+ * Contrôleur pour la gestion des courriers avec système de notifications
  */
 public class CourrierController {
     
-    // ==================== COMPOSANTS FXML ====================
+    // ==================== COMPOSANTS FXML - GÉNÉRAL ====================
+    
+    @FXML private TabPane tabPaneCourrier;
+    @FXML private Tab tabNotifications;
+    
+    // Badge de notifications
+    @FXML private HBox badgeNotifications;
+    @FXML private Label labelBadgeNotifications;
+    
+    // ==================== COMPOSANTS FXML - TOUS LES COURRIERS ====================
     
     @FXML private TableView<Courrier> tableauCourriers;
     @FXML private TableColumn<Courrier, String> colonneCode;
@@ -64,16 +74,37 @@ public class CourrierController {
     @FXML private Label statArchives;
     @FXML private Label labelInfo;
     
+    // ==================== COMPOSANTS FXML - NOTIFICATIONS ====================
+    
+    @FXML private TableView<CourrierNotification> tableauNotifications;
+    @FXML private TableColumn<CourrierNotification, String> colonneNotifStatutLu;
+    @FXML private TableColumn<CourrierNotification, String> colonneNotifCode;
+    @FXML private TableColumn<CourrierNotification, String> colonneNotifType;
+    @FXML private TableColumn<CourrierNotification, String> colonneNotifObjet;
+    @FXML private TableColumn<CourrierNotification, String> colonneNotifExpediteur;
+    @FXML private TableColumn<CourrierNotification, String> colonneNotifDateNotification;
+    @FXML private TableColumn<CourrierNotification, String> colonneNotifPriorite;
+    @FXML private TableColumn<CourrierNotification, String> colonneNotifActions;
+    
+    @FXML private RadioButton radioNonLus;
+    @FXML private Button btnMarquerToutLu;
+    @FXML private Label labelInfoNotifications;
+    
     // ==================== SERVICES ====================
     
     private CourrierService courrierService;
     private DocumentService documentService;
     private LogService logService;
+    private NotificationCourrierService notificationService;
     
     private ObservableList<Courrier> courriers;
     private ObservableList<Courrier> courriersFiltrés;
+    private ObservableList<CourrierNotification> notifications;
+    
+    private Timer refreshTimer;
     
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     
     // ==================== INITIALISATION ====================
     
@@ -84,22 +115,51 @@ public class CourrierController {
         courrierService = CourrierService.getInstance();
         documentService = DocumentService.getInstance();
         logService = LogService.getInstance();
+        notificationService = NotificationCourrierService.getInstance();
         
         courriers = FXCollections.observableArrayList();
         courriersFiltrés = FXCollections.observableArrayList();
+        notifications = FXCollections.observableArrayList();
         
-        configurerColonnesTableau();
+        configurerColonnesTableauCourriers();
+        configurerColonnesTableauNotifications();
         configurerFiltres();
+        
         chargerCourriers();
+        chargerCourriersNotifies();
         mettreAJourStatistiques();
+        afficherBadgeNotifications();
+        
+        // Rafraîchissement automatique toutes les 30 secondes
+        demarrerRafraichissementAutomatique();
+        
+        // Listener pour le changement d'onglet
+        if (tabPaneCourrier != null) {
+            tabPaneCourrier.getSelectionModel().selectedItemProperty().addListener(
+                (obs, oldTab, newTab) -> {
+                    if (newTab == tabNotifications) {
+                        chargerCourriersNotifies();
+                    }
+                }
+            );
+        }
+        
+        // Listener pour le filtre non lus
+        if (radioNonLus != null) {
+            radioNonLus.selectedProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal) {
+                    chargerCourriersNotifies();
+                }
+            });
+        }
         
         System.out.println("=== FIN INITIALISATION ===");
     }
     
     /**
-     * Configure les colonnes du tableau
+     * Configure les colonnes du tableau principal
      */
-    private void configurerColonnesTableau() {
+    private void configurerColonnesTableauCourriers() {
         colonneCode.setCellValueFactory(cellData -> 
             new SimpleStringProperty(cellData.getValue().getCodeCourrier()));
         
@@ -163,12 +223,123 @@ public class CourrierController {
                     
                     buttons.getChildren().addAll(btnVoir, btnModifier);
                     
-                    // Afficher le bouton d'archivage seulement si le courrier est TRAITE
                     if (courrier.getStatut() == StatutCourrier.TRAITE) {
                         buttons.getChildren().add(btnArchiver);
                     }
                     
                     setGraphic(buttons);
+                }
+            }
+        });
+    }
+    
+    /**
+     * Configure les colonnes du tableau des notifications
+     */
+    private void configurerColonnesTableauNotifications() {
+        colonneNotifStatutLu.setCellValueFactory(cellData -> {
+            boolean lu = cellData.getValue().isLu();
+            String statut = lu ? "✅ Lu" : "🔴 Non lu";
+            return new SimpleStringProperty(statut);
+        });
+        
+        // Style personnalisé pour la colonne statut
+        colonneNotifStatutLu.setCellFactory(column -> new TableCell<CourrierNotification, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    if (item.contains("Non lu")) {
+                        setStyle("-fx-font-weight: bold; -fx-text-fill: #e74c3c;");
+                    } else {
+                        setStyle("-fx-text-fill: #27ae60;");
+                    }
+                }
+            }
+        });
+        
+        colonneNotifCode.setCellValueFactory(cellData -> 
+            new SimpleStringProperty(cellData.getValue().getCourrier().getCodeCourrier()));
+        
+        colonneNotifType.setCellValueFactory(cellData -> {
+            TypeCourrier type = cellData.getValue().getCourrier().getTypeCourrier();
+            return new SimpleStringProperty(type != null ? type.getIcone() + " " + type.getLibelle() : "");
+        });
+        
+        colonneNotifObjet.setCellValueFactory(cellData -> 
+            new SimpleStringProperty(cellData.getValue().getCourrier().getObjet()));
+        
+        colonneNotifExpediteur.setCellValueFactory(cellData -> 
+            new SimpleStringProperty(cellData.getValue().getCourrier().getExpediteur()));
+        
+        colonneNotifDateNotification.setCellValueFactory(cellData -> {
+            if (cellData.getValue().getDateNotification() != null) {
+                return new SimpleStringProperty(
+                    cellData.getValue().getDateNotification().format(DATETIME_FORMATTER));
+            }
+            return new SimpleStringProperty("");
+        });
+        
+        colonneNotifPriorite.setCellValueFactory(cellData -> {
+            PrioriteCourrier priorite = cellData.getValue().getCourrier().getPriorite();
+            return new SimpleStringProperty(
+                priorite != null ? priorite.getIcone() + " " + priorite.getLibelle() : "");
+        });
+        
+        colonneNotifActions.setCellFactory(column -> new TableCell<CourrierNotification, String>() {
+            private final Button btnOuvrir = new Button("📖 Ouvrir");
+            private final Button btnMarquerLu = new Button("✅ Marquer lu");
+            
+            {
+                btnOuvrir.setOnAction(event -> {
+                    CourrierNotification notif = getTableView().getItems().get(getIndex());
+                    ouvrirCourrierDepuisNotification(notif);
+                });
+                
+                btnMarquerLu.setOnAction(event -> {
+                    CourrierNotification notif = getTableView().getItems().get(getIndex());
+                    marquerCommeLu(notif);
+                });
+                
+                btnOuvrir.setStyle("-fx-font-size: 11px; -fx-padding: 4 8;");
+                btnMarquerLu.setStyle("-fx-font-size: 11px; -fx-padding: 4 8;");
+            }
+            
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    CourrierNotification notif = getTableView().getItems().get(getIndex());
+                    HBox buttons = new HBox(5);
+                    
+                    buttons.getChildren().add(btnOuvrir);
+                    
+                    if (!notif.isLu()) {
+                        buttons.getChildren().add(btnMarquerLu);
+                    }
+                    
+                    setGraphic(buttons);
+                }
+            }
+        });
+        
+        // Style pour les lignes non lues
+        tableauNotifications.setRowFactory(tv -> new TableRow<CourrierNotification>() {
+            @Override
+            protected void updateItem(CourrierNotification notif, boolean empty) {
+                super.updateItem(notif, empty);
+                if (empty || notif == null) {
+                    setStyle("");
+                } else if (!notif.isLu()) {
+                    setStyle("-fx-background-color: #fff3cd; -fx-font-weight: bold;");
+                } else {
+                    setStyle("");
                 }
             }
         });
@@ -222,6 +393,83 @@ public class CourrierController {
     }
     
     /**
+     * Charge les courriers notifiés pour l'utilisateur courant
+     */
+    private void chargerCourriersNotifies() {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) return;
+        
+        try {
+            boolean seulementNonLus = radioNonLus != null && radioNonLus.isSelected();
+            
+            // Utiliser la nouvelle méthode qui retourne les infos complètes
+            List<CourrierNotificationInfo> infosNotifications = 
+                notificationService.getCourriersNotifiesAvecInfos(currentUser.getId(), seulementNonLus);
+            
+            // Créer les objets CourrierNotification pour l'affichage
+            notifications.clear();
+            
+            for (CourrierNotificationInfo info : infosNotifications) {
+                CourrierNotification notif = new CourrierNotification(info.getCourrier());
+                notif.setLu(info.isLu());
+                notif.setDateNotification(info.getDateNotification());
+                notif.setDateLecture(info.getDateLecture());
+                
+                notifications.add(notif);
+            }
+            
+            tableauNotifications.setItems(notifications);
+            
+            if (labelInfoNotifications != null) {
+                String texte = notifications.size() + " notification(s)";
+                if (seulementNonLus) {
+                    texte += " non lue(s)";
+                }
+                labelInfoNotifications.setText(texte);
+            }
+            
+            System.out.println("✓ " + infosNotifications.size() + " courrier(s) notifié(s) chargé(s)");
+            
+        } catch (Exception e) {
+            System.err.println("Erreur chargement courriers notifiés: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Affiche le badge de notifications
+     */
+    private void afficherBadgeNotifications() {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) return;
+        
+        try {
+            int nbNonLus = notificationService.compterCourriersNonLus(currentUser.getId());
+            
+            if (badgeNotifications != null && labelBadgeNotifications != null) {
+                if (nbNonLus > 0) {
+                    badgeNotifications.setVisible(true);
+                    badgeNotifications.setManaged(true);
+                    labelBadgeNotifications.setText(String.valueOf(nbNonLus));
+                    
+                    // Animation clic sur le badge
+                    badgeNotifications.setOnMouseClicked(e -> {
+                        tabPaneCourrier.getSelectionModel().select(tabNotifications);
+                    });
+                    
+                    System.out.println("🔔 " + nbNonLus + " nouveau(x) courrier(s) non lu(s)");
+                } else {
+                    badgeNotifications.setVisible(false);
+                    badgeNotifications.setManaged(false);
+                }
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Erreur affichage badge: " + e.getMessage());
+        }
+    }
+    
+    /**
      * Applique les filtres
      */
     private void appliquerFiltres() {
@@ -269,6 +517,117 @@ public class CourrierController {
     }
     
     // ==================== ACTIONS ====================
+    
+    /**
+     * Ouvre un courrier depuis une notification
+     */
+    private void ouvrirCourrierDepuisNotification(CourrierNotification notification) {
+        if (notification == null) return;
+        
+        User currentUser = getCurrentUser();
+        if (currentUser == null) return;
+        
+        // Marquer comme lu
+        if (!notification.isLu()) {
+            boolean marked = notificationService.marquerCommeLu(
+                notification.getCourrier().getId(), 
+                currentUser.getId());
+            
+            if (marked) {
+                notification.setLu(true);
+                tableauNotifications.refresh();
+                afficherBadgeNotifications();
+            }
+        }
+        
+        // Afficher les détails du courrier
+        voirCourrier(notification.getCourrier());
+        
+        // Passer à l'onglet principal
+        if (tabPaneCourrier != null) {
+            tabPaneCourrier.getSelectionModel().selectFirst();
+        }
+    }
+    
+    /**
+     * Marque une notification comme lue
+     */
+    private void marquerCommeLu(CourrierNotification notification) {
+        if (notification == null || notification.isLu()) return;
+        
+        User currentUser = getCurrentUser();
+        if (currentUser == null) return;
+        
+        boolean success = notificationService.marquerCommeLu(
+            notification.getCourrier().getId(), 
+            currentUser.getId());
+        
+        if (success) {
+            notification.setLu(true);
+            tableauNotifications.refresh();
+            afficherBadgeNotifications();
+            showInfo("✅ Courrier marqué comme lu");
+        } else {
+            showError("Erreur lors du marquage");
+        }
+    }
+    
+    /**
+     * Marque toutes les notifications comme lues
+     */
+    @FXML
+    private void handleMarquerToutLu() {
+        User currentUser = getCurrentUser();
+        if (currentUser == null) return;
+        
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Confirmation");
+        confirm.setHeaderText("Marquer tout comme lu");
+        confirm.setContentText("Voulez-vous marquer toutes vos notifications comme lues ?");
+        
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+            int marquees = 0;
+            
+            for (CourrierNotification notif : notifications) {
+                if (!notif.isLu()) {
+                    boolean success = notificationService.marquerCommeLu(
+                        notif.getCourrier().getId(), 
+                        currentUser.getId());
+                    
+                    if (success) {
+                        notif.setLu(true);
+                        marquees++;
+                    }
+                }
+            }
+            
+            tableauNotifications.refresh();
+            afficherBadgeNotifications();
+            showSuccess("✅ " + marquees + " notification(s) marquée(s) comme lue(s)");
+        }
+    }
+    
+    /**
+     * Démarre le rafraîchissement automatique
+     */
+    private void demarrerRafraichissementAutomatique() {
+        refreshTimer = new Timer(true);
+        refreshTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                Platform.runLater(() -> {
+                    afficherBadgeNotifications();
+                    
+                    // Si l'onglet notifications est ouvert, rafraîchir
+                    if (tabPaneCourrier.getSelectionModel().getSelectedItem() == tabNotifications) {
+                        chargerCourriersNotifies();
+                    }
+                });
+            }
+        }, 30000, 30000); // Toutes les 30 secondes
+    }
+    
+// ==================== ACTIONS ====================
     
     /**
      * Crée un nouveau courrier
@@ -573,13 +932,12 @@ public class CourrierController {
         }
     }
     
-    /**
-     * Actualise la liste
-     */
     @FXML
     private void handleActualiser() {
         chargerCourriers();
+        chargerCourriersNotifies();
         mettreAJourStatistiques();
+        afficherBadgeNotifications();
         showInfo("Liste actualisée");
     }
     
@@ -619,5 +977,39 @@ public class CourrierController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+    
+    // ==================== CLASSE INTERNE ====================
+    
+    /**
+     * Classe pour encapsuler un courrier avec ses infos de notification
+     */
+    public static class CourrierNotification {
+        private Courrier courrier;
+        private boolean lu;
+        private java.time.LocalDateTime dateNotification;
+        private java.time.LocalDateTime dateLecture;
+        
+        public CourrierNotification(Courrier courrier) {
+            this.courrier = courrier;
+            this.lu = false;
+            this.dateNotification = java.time.LocalDateTime.now();
+        }
+        
+        public Courrier getCourrier() { return courrier; }
+        public void setCourrier(Courrier courrier) { this.courrier = courrier; }
+        
+        public boolean isLu() { return lu; }
+        public void setLu(boolean lu) { this.lu = lu; }
+        
+        public java.time.LocalDateTime getDateNotification() { return dateNotification; }
+        public void setDateNotification(java.time.LocalDateTime dateNotification) { 
+            this.dateNotification = dateNotification; 
+        }
+        
+        public java.time.LocalDateTime getDateLecture() { return dateLecture; }
+        public void setDateLecture(java.time.LocalDateTime dateLecture) { 
+            this.dateLecture = dateLecture; 
+        }
     }
 }

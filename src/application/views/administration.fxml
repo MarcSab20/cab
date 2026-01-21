@@ -83,6 +83,67 @@
             </ScrollPane>
          </Tab>
          
+         <!-- Onglet Configuration Responsable Courrier -->
+		<Tab text="📧 Responsable Courriers">
+		   <ScrollPane fitToWidth="true">
+		      <VBox spacing="20.0" style="-fx-padding: 30;">
+		         
+		         <!-- Configuration du responsable -->
+		         <VBox spacing="15.0" styleClass="card" style="-fx-background-color: white; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-background-radius: 8;">
+		            <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Configuration du responsable des courriers" />
+		            
+		            <VBox spacing="10.0">
+		               <Label text="Le responsable recevra automatiquement tous les nouveaux courriers créés dans le système." 
+		                     style="-fx-text-fill: #7f8c8d; -fx-font-size: 13px;" wrapText="true" />
+		            </VBox>
+		            
+		            <GridPane hgap="15.0" vgap="12.0">
+		               <columnConstraints>
+		                  <ColumnConstraints hgrow="NEVER" minWidth="150.0" />
+		                  <ColumnConstraints hgrow="ALWAYS" />
+		               </columnConstraints>
+		               
+		               <Label text="Responsable actuel:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+		               <Label fx:id="lblResponsableActuel" style="-fx-font-weight: bold; -fx-text-fill: #27ae60;" 
+		                     text="Aucun responsable configuré" 
+		                     GridPane.columnIndex="1" GridPane.rowIndex="0" />
+		               
+		               <Label text="Sélectionner un nouveau responsable:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+		               <ComboBox fx:id="cmbResponsableCourrier" promptText="Choisir un utilisateur..." 
+		                        prefWidth="300.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+		            </GridPane>
+		            
+		            <HBox spacing="10.0" style="-fx-padding: 10 0 0 0;">
+		               <Button fx:id="btnDefinirResponsable" styleClass="button-primary" text="✅ Définir comme responsable" />
+		               <Button fx:id="btnSupprimerResponsable" styleClass="button-danger" text="❌ Supprimer le responsable" />
+		               <Button fx:id="btnActualiserResponsable" styleClass="button-secondary" text="🔄 Actualiser" />
+		            </HBox>
+		         </VBox>
+		         
+		         <!-- Statistiques des notifications -->
+		         <VBox spacing="15.0" styleClass="card" style="-fx-background-color: white; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-background-radius: 8;">
+		            <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Statistiques des notifications" />
+		            
+		            <GridPane hgap="15.0" vgap="12.0">
+		               <columnConstraints>
+		                  <ColumnConstraints hgrow="NEVER" minWidth="200.0" />
+		                  <ColumnConstraints hgrow="ALWAYS" />
+		               </columnConstraints>
+		               
+		               <Label text="Courriers notifiés (total):" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+		               <Label fx:id="lblTotalNotifications" style="-fx-font-weight: bold;" text="0" 
+		                     GridPane.columnIndex="1" GridPane.rowIndex="0" />
+		               
+		               <Label text="Courriers non lus:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+		               <Label fx:id="lblNotificationsNonLues" style="-fx-font-weight: bold; -fx-text-fill: #e74c3c;" text="0" 
+		                     GridPane.columnIndex="1" GridPane.rowIndex="1" />
+		            </GridPane>
+		         </VBox>
+		         
+		      </VBox>
+		   </ScrollPane>
+		</Tab>
+         
          <!-- Onglet Logs d'activité -->
          <Tab text="📋 Logs d'activité">
             <VBox spacing="20.0" style="-fx-padding: 20;">

@@ -14,14 +14,26 @@
    <top>
       <VBox spacing="15.0" style="-fx-padding: 20; -fx-background-color: white;">
          
-         <!-- En-tête -->
+         <!-- En-tête avec badge de notifications -->
          <HBox alignment="CENTER_LEFT" spacing="20.0">
             <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="📧 Gestion des Courriers">
                <font>
                   <Font size="24.0" />
                </font>
             </Label>
+            
+            <!-- Badge de notifications -->
+            <HBox fx:id="badgeNotifications" alignment="CENTER" spacing="8.0" 
+                  style="-fx-background-color: #e74c3c; -fx-background-radius: 20; -fx-padding: 5 15; -fx-cursor: hand;"
+                  visible="false" managed="false">
+               <Label text="🔔" style="-fx-text-fill: white; -fx-font-size: 16px;" />
+               <Label fx:id="labelBadgeNotifications" text="0" 
+                     style="-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px;" />
+               <Label text="nouveau(x)" style="-fx-text-fill: white; -fx-font-size: 12px;" />
+            </HBox>
+            
             <Region HBox.hgrow="ALWAYS" />
+            
             <Button fx:id="btnNouveauCourrier" onAction="#handleNouveauCourrier" 
                     styleClass="button-primary" text="✉️ Nouveau courrier" />
             <Button fx:id="btnActualiser" onAction="#handleActualiser" 
@@ -104,52 +116,114 @@
       </VBox>
    </top>
    
-   <!-- Zone principale -->
+   <!-- Zone principale avec onglets -->
    <center>
-      <VBox spacing="15.0" style="-fx-padding: 20;">
+      <TabPane fx:id="tabPaneCourrier" tabClosingPolicy="UNAVAILABLE" style="-fx-padding: 0;">
          
-         <!-- Tableau des courriers -->
-         <TableView fx:id="tableauCourriers" VBox.vgrow="ALWAYS">
-            <columns>
-               <TableColumn fx:id="colonneCode" prefWidth="120.0" text="Code" />
-               <TableColumn fx:id="colonneType" prefWidth="100.0" text="Type" />
-               <TableColumn fx:id="colonneObjet" prefWidth="250.0" text="Objet" />
-               <TableColumn fx:id="colonneExpediteur" prefWidth="150.0" text="Expéditeur" />
-               <TableColumn fx:id="colonneDestinataire" prefWidth="150.0" text="Destinataire" />
-               <TableColumn fx:id="colonneDateCourrier" prefWidth="120.0" text="Date courrier" />
-               <TableColumn fx:id="colonnePriorite" prefWidth="100.0" text="Priorité" />
-               <TableColumn fx:id="colonneStatut" prefWidth="100.0" text="Statut" />
-               <TableColumn fx:id="colonneActions" prefWidth="150.0" text="Actions" />
-            </columns>
-            
-            <placeholder>
-               <VBox alignment="CENTER" spacing="15.0">
-                  <Label style="-fx-font-size: 48px; -fx-text-fill: #bdc3c7;" text="📧" />
-                  <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 16px;" text="Aucun courrier trouvé" />
-                  <Button onAction="#handleNouveauCourrier" styleClass="button-primary" 
-                          text="✉️ Créer le premier courrier" />
-               </VBox>
-            </placeholder>
-         </TableView>
+         <!-- Onglet: Tous les courriers -->
+         <Tab text="📋 Tous les courriers">
+            <VBox spacing="15.0" style="-fx-padding: 20;">
+               
+               <!-- Tableau des courriers -->
+               <TableView fx:id="tableauCourriers" VBox.vgrow="ALWAYS">
+                  <columns>
+                     <TableColumn fx:id="colonneCode" prefWidth="120.0" text="Code" />
+                     <TableColumn fx:id="colonneType" prefWidth="100.0" text="Type" />
+                     <TableColumn fx:id="colonneObjet" prefWidth="250.0" text="Objet" />
+                     <TableColumn fx:id="colonneExpediteur" prefWidth="150.0" text="Expéditeur" />
+                     <TableColumn fx:id="colonneDestinataire" prefWidth="150.0" text="Destinataire" />
+                     <TableColumn fx:id="colonneDateCourrier" prefWidth="120.0" text="Date courrier" />
+                     <TableColumn fx:id="colonnePriorite" prefWidth="100.0" text="Priorité" />
+                     <TableColumn fx:id="colonneStatut" prefWidth="100.0" text="Statut" />
+                     <TableColumn fx:id="colonneActions" prefWidth="150.0" text="Actions" />
+                  </columns>
+                  
+                  <placeholder>
+                     <VBox alignment="CENTER" spacing="15.0">
+                        <Label style="-fx-font-size: 48px; -fx-text-fill: #bdc3c7;" text="📧" />
+                        <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 16px;" text="Aucun courrier trouvé" />
+                        <Button onAction="#handleNouveauCourrier" styleClass="button-primary" 
+                                text="✉️ Créer le premier courrier" />
+                     </VBox>
+                  </placeholder>
+               </TableView>
+               
+               <!-- Barre d'informations -->
+               <HBox alignment="CENTER_LEFT" spacing="15.0">
+                  <Label fx:id="labelInfo" style="-fx-text-fill: #7f8c8d;" text="0 courrier(s)" />
+                  <Region HBox.hgrow="ALWAYS" />
+                  <Label text="Affichage:" />
+                  <ComboBox fx:id="comboLimiteCourriers" prefWidth="80.0" value="50">
+                     <items>
+                        <FXCollections fx:factory="observableArrayList">
+                           <String fx:value="25" />
+                           <String fx:value="50" />
+                           <String fx:value="100" />
+                           <String fx:value="Tous" />
+                        </FXCollections>
+                     </items>
+                  </ComboBox>
+               </HBox>
+               
+            </VBox>
+         </Tab>
          
-         <!-- Barre d'informations -->
-         <HBox alignment="CENTER_LEFT" spacing="15.0">
-            <Label fx:id="labelInfo" style="-fx-text-fill: #7f8c8d;" text="0 courrier(s)" />
-            <Region HBox.hgrow="ALWAYS" />
-            <Label text="Affichage:" />
-            <ComboBox fx:id="comboLimiteCourriers" prefWidth="80.0" value="50">
-               <items>
-                  <FXCollections fx:factory="observableArrayList">
-                     <String fx:value="25" />
-                     <String fx:value="50" />
-                     <String fx:value="100" />
-                     <String fx:value="Tous" />
-                  </FXCollections>
-               </items>
-            </ComboBox>
-         </HBox>
+         <!-- Onglet: Mes notifications -->
+		<Tab fx:id="tabNotifications" text="🔔 Mes notifications">
+		   <VBox spacing="15.0" style="-fx-padding: 20;">
+		      
+		      <!-- Définition du ToggleGroup (en dehors de la hiérarchie visuelle) -->
+		      <fx:define>
+		         <ToggleGroup fx:id="toggleGroupNotifications" />
+		      </fx:define>
+		      
+		      <!-- Filtres pour les notifications -->
+		      <HBox alignment="CENTER_LEFT" spacing="15.0" 
+		            style="-fx-background-color: #f8f9fa; -fx-padding: 15; -fx-background-radius: 6;">
+		         
+		         <Label text="Afficher:" style="-fx-font-weight: bold;" />
+		         
+		         <RadioButton text="Tous" toggleGroup="$toggleGroupNotifications" selected="true" />
+		         <RadioButton fx:id="radioNonLus" text="Non lus uniquement" toggleGroup="$toggleGroupNotifications" />
+		         
+		         <Region HBox.hgrow="ALWAYS" />
+		         
+		         <Button fx:id="btnMarquerToutLu" styleClass="button-secondary" 
+		                 text="✅ Tout marquer comme lu" onAction="#handleMarquerToutLu" />
+		         
+		         <Label fx:id="labelInfoNotifications" 
+		               style="-fx-text-fill: #7f8c8d; -fx-font-weight: bold;" 
+		               text="0 notification(s)" />
+		      </HBox>
+		      
+		      <!-- Tableau des notifications -->
+		      <TableView fx:id="tableauNotifications" VBox.vgrow="ALWAYS">
+		         <columns>
+		            <TableColumn fx:id="colonneNotifStatutLu" prefWidth="80.0" text="Statut" />
+		            <TableColumn fx:id="colonneNotifCode" prefWidth="120.0" text="Code" />
+		            <TableColumn fx:id="colonneNotifType" prefWidth="100.0" text="Type" />
+		            <TableColumn fx:id="colonneNotifObjet" prefWidth="250.0" text="Objet" />
+		            <TableColumn fx:id="colonneNotifExpediteur" prefWidth="150.0" text="Expéditeur" />
+		            <TableColumn fx:id="colonneNotifDateNotification" prefWidth="150.0" text="Date notification" />
+		            <TableColumn fx:id="colonneNotifPriorite" prefWidth="100.0" text="Priorité" />
+		            <TableColumn fx:id="colonneNotifActions" prefWidth="180.0" text="Actions" />
+		         </columns>
+		         
+		         <placeholder>
+		            <VBox alignment="CENTER" spacing="15.0">
+		               <Label style="-fx-font-size: 48px; -fx-text-fill: #bdc3c7;" text="🔔" />
+		               <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 16px;" 
+		                     text="Aucune notification" />
+		               <Label style="-fx-text-fill: #95a5a6; -fx-font-size: 13px;" 
+		                     text="Les nouveaux courriers qui vous sont attribués apparaîtront ici" />
+		            </VBox>
+		         </placeholder>
+		      </TableView>
+		      
+		   </VBox>
+		</Tab>
          
-      </VBox>
+      </TabPane>
    </center>
    
 </BorderPane>
