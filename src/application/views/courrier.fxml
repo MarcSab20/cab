@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" 
+            fx:controller="application.controllers.CourrierController">
+   
+   <!-- Barre d'outils supérieure -->
+   <top>
+      <VBox spacing="15.0" style="-fx-padding: 20; -fx-background-color: white;">
+         
+         <!-- En-tête -->
+         <HBox alignment="CENTER_LEFT" spacing="20.0">
+            <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="📧 Gestion des Courriers">
+               <font>
+                  <Font size="24.0" />
+               </font>
+            </Label>
+            <Region HBox.hgrow="ALWAYS" />
+            <Button fx:id="btnNouveauCourrier" onAction="#handleNouveauCourrier" 
+                    styleClass="button-primary" text="✉️ Nouveau courrier" />
+            <Button fx:id="btnActualiser" onAction="#handleActualiser" 
+                    styleClass="button-secondary" text="🔄 Actualiser" />
+         </HBox>
+         
+         <!-- Filtres et recherche -->
+         <HBox alignment="CENTER_LEFT" spacing="15.0">
+            <Label text="Filtrer par:" />
+            
+            <ComboBox fx:id="filtreType" prefWidth="120.0" promptText="Type">
+               <items>
+                  <FXCollections fx:factory="observableArrayList">
+                     <String fx:value="Tous" />
+                     <String fx:value="Entrant" />
+                     <String fx:value="Sortant" />
+                     <String fx:value="Interne" />
+                  </FXCollections>
+               </items>
+            </ComboBox>
+            
+            <ComboBox fx:id="filtreStatut" prefWidth="120.0" promptText="Statut">
+               <items>
+                  <FXCollections fx:factory="observableArrayList">
+                     <String fx:value="Tous" />
+                     <String fx:value="Nouveau" />
+                     <String fx:value="En cours" />
+                     <String fx:value="Traité" />
+                     <String fx:value="Archivé" />
+                  </FXCollections>
+               </items>
+            </ComboBox>
+            
+            <ComboBox fx:id="filtrePriorite" prefWidth="120.0" promptText="Priorité">
+               <items>
+                  <FXCollections fx:factory="observableArrayList">
+                     <String fx:value="Tous" />
+                     <String fx:value="Normale" />
+                     <String fx:value="Urgente" />
+                     <String fx:value="Très urgente" />
+                  </FXCollections>
+               </items>
+            </ComboBox>
+            
+            <Region HBox.hgrow="ALWAYS" />
+            
+            <TextField fx:id="champRecherche" prefWidth="250.0" 
+                      promptText="🔍 Rechercher (code, objet, expéditeur...)" />
+            <Button fx:id="btnRechercher" onAction="#handleRechercher" 
+                    styleClass="button-primary" text="Rechercher" />
+         </HBox>
+         
+         <!-- Statistiques rapides -->
+         <HBox spacing="20.0" alignment="CENTER_LEFT">
+            <VBox alignment="CENTER" spacing="5.0" styleClass="stat-card"
+                  style="-fx-background-color: #e8f5e9; -fx-padding: 15; -fx-background-radius: 6;">
+               <Label fx:id="statNouveaux" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #27ae60;" text="0" />
+               <Label style="-fx-text-fill: #27ae60; -fx-font-weight: bold;" text="Nouveaux" />
+            </VBox>
+            
+            <VBox alignment="CENTER" spacing="5.0" styleClass="stat-card"
+                  style="-fx-background-color: #fff3e0; -fx-padding: 15; -fx-background-radius: 6;">
+               <Label fx:id="statEnCours" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #f39c12;" text="0" />
+               <Label style="-fx-text-fill: #f39c12; -fx-font-weight: bold;" text="En cours" />
+            </VBox>
+            
+            <VBox alignment="CENTER" spacing="5.0" styleClass="stat-card"
+                  style="-fx-background-color: #e3f2fd; -fx-padding: 15; -fx-background-radius: 6;">
+               <Label fx:id="statTraites" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #3498db;" text="0" />
+               <Label style="-fx-text-fill: #3498db; -fx-font-weight: bold;" text="Traités" />
+            </VBox>
+            
+            <VBox alignment="CENTER" spacing="5.0" styleClass="stat-card"
+                  style="-fx-background-color: #f3e5f5; -fx-padding: 15; -fx-background-radius: 6;">
+               <Label fx:id="statArchives" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #9b59b6;" text="0" />
+               <Label style="-fx-text-fill: #9b59b6; -fx-font-weight: bold;" text="Archivés" />
+            </VBox>
+         </HBox>
+         
+      </VBox>
+   </top>
+   
+   <!-- Zone principale -->
+   <center>
+      <VBox spacing="15.0" style="-fx-padding: 20;">
+         
+         <!-- Tableau des courriers -->
+         <TableView fx:id="tableauCourriers" VBox.vgrow="ALWAYS">
+            <columns>
+               <TableColumn fx:id="colonneCode" prefWidth="120.0" text="Code" />
+               <TableColumn fx:id="colonneType" prefWidth="100.0" text="Type" />
+               <TableColumn fx:id="colonneObjet" prefWidth="250.0" text="Objet" />
+               <TableColumn fx:id="colonneExpediteur" prefWidth="150.0" text="Expéditeur" />
+               <TableColumn fx:id="colonneDestinataire" prefWidth="150.0" text="Destinataire" />
+               <TableColumn fx:id="colonneDateCourrier" prefWidth="120.0" text="Date courrier" />
+               <TableColumn fx:id="colonnePriorite" prefWidth="100.0" text="Priorité" />
+               <TableColumn fx:id="colonneStatut" prefWidth="100.0" text="Statut" />
+               <TableColumn fx:id="colonneActions" prefWidth="150.0" text="Actions" />
+            </columns>
+            
+            <placeholder>
+               <VBox alignment="CENTER" spacing="15.0">
+                  <Label style="-fx-font-size: 48px; -fx-text-fill: #bdc3c7;" text="📧" />
+                  <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 16px;" text="Aucun courrier trouvé" />
+                  <Button onAction="#handleNouveauCourrier" styleClass="button-primary" 
+                          text="✉️ Créer le premier courrier" />
+               </VBox>
+            </placeholder>
+         </TableView>
+         
+         <!-- Barre d'informations -->
+         <HBox alignment="CENTER_LEFT" spacing="15.0">
+            <Label fx:id="labelInfo" style="-fx-text-fill: #7f8c8d;" text="0 courrier(s)" />
+            <Region HBox.hgrow="ALWAYS" />
+            <Label text="Affichage:" />
+            <ComboBox fx:id="comboLimiteCourriers" prefWidth="80.0" value="50">
+               <items>
+                  <FXCollections fx:factory="observableArrayList">
+                     <String fx:value="25" />
+                     <String fx:value="50" />
+                     <String fx:value="100" />
+                     <String fx:value="Tous" />
+                  </FXCollections>
+               </items>
+            </ComboBox>
+         </HBox>
+         
+      </VBox>
+   </center>
+   
+</BorderPane>
