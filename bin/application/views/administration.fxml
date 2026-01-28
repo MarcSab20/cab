@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" 
+            fx:controller="application.controllers.AdministrationController">
+   
+   <top>
+      <VBox spacing="15.0" style="-fx-padding: 20; -fx-background-color: white;">
+         <Label style="-fx-text-fill: #2c3e50; -fx-font-weight: bold;" text="⚙️ Administration">
+            <font>
+               <Font size="24.0" />
+            </font>
+         </Label>
+         <Label style="-fx-text-fill: #7f8c8d;" text="Gérer la configuration système, les logs et les connexions" />
+      </VBox>
+   </top>
+   
+   <center>
+      <TabPane fx:id="tabPaneAdmin" tabClosingPolicy="UNAVAILABLE">
+         
+         <!-- Onglet Configuration Serveur -->
+         <Tab text="🖥️ Configuration Serveur">
+            <ScrollPane fitToWidth="true">
+               <VBox spacing="20.0" style="-fx-padding: 30;">
+                  
+                  <!-- Configuration du serveur de stockage -->
+                  <VBox spacing="15.0" styleClass="card" style="-fx-background-color: white; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-background-radius: 8;">
+                     <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Configuration du serveur de stockage" />
+                     
+                     <GridPane hgap="15.0" vgap="12.0">
+                        <columnConstraints>
+                           <ColumnConstraints hgrow="NEVER" minWidth="150.0" />
+                           <ColumnConstraints hgrow="ALWAYS" />
+                           <ColumnConstraints hgrow="NEVER" />
+                        </columnConstraints>
+                        
+                        <Label text="Chemin du serveur:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <TextField fx:id="txtCheminServeur" promptText="C:\DocumentManagement\serveur" 
+                                 GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        <Button fx:id="btnParcourirServeur" text="📁 Parcourir" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+                        
+                        <Label text="Serveur actif:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <CheckBox fx:id="chkServeurActif" text="Activer le stockage sur serveur" 
+                                GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                     </GridPane>
+                     
+                     <HBox spacing="10.0" style="-fx-padding: 10 0 0 0;">
+                        <Button fx:id="btnSauvegarderConfig" styleClass="button-primary" text="💾 Sauvegarder" />
+                        <Button fx:id="btnTesterConnexion" styleClass="button-secondary" text="🔌 Tester la connexion" />
+                     </HBox>
+                  </VBox>
+                  
+                  <!-- Statistiques du serveur -->
+                  <VBox spacing="15.0" styleClass="card" style="-fx-background-color: white; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-background-radius: 8;">
+                     <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Statistiques du serveur" />
+                     
+                     <GridPane hgap="15.0" vgap="12.0">
+                        <columnConstraints>
+                           <ColumnConstraints hgrow="NEVER" minWidth="180.0" />
+                           <ColumnConstraints hgrow="ALWAYS" />
+                        </columnConstraints>
+                        
+                        <Label text="Statut du serveur:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <Label fx:id="lblStatutServeur" style="-fx-font-weight: bold;" text="🟢 Actif" 
+                              GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        
+                        <Label text="Nombre de fichiers:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <Label fx:id="lblNombreFichiers" text="0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        
+                        <Label text="Taille totale:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <Label fx:id="lblTailleTotale" text="0 B" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        
+                        <Label text="Espace disponible:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                        <Label fx:id="lblEspaceDisponible" text="0 B" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                     </GridPane>
+                  </VBox>
+                  
+               </VBox>
+            </ScrollPane>
+         </Tab>
+         
+         <!-- Onglet Configuration Responsable Courrier -->
+		<Tab text="📧 Responsable Courriers">
+		   <ScrollPane fitToWidth="true">
+		      <VBox spacing="20.0" style="-fx-padding: 30;">
+		         
+		         <!-- Configuration du responsable -->
+		         <VBox spacing="15.0" styleClass="card" style="-fx-background-color: white; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-background-radius: 8;">
+		            <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Configuration du responsable des courriers" />
+		            
+		            <VBox spacing="10.0">
+		               <Label text="Le responsable recevra automatiquement tous les nouveaux courriers créés dans le système." 
+		                     style="-fx-text-fill: #7f8c8d; -fx-font-size: 13px;" wrapText="true" />
+		            </VBox>
+		            
+		            <GridPane hgap="15.0" vgap="12.0">
+		               <columnConstraints>
+		                  <ColumnConstraints hgrow="NEVER" minWidth="150.0" />
+		                  <ColumnConstraints hgrow="ALWAYS" />
+		               </columnConstraints>
+		               
+		               <Label text="Responsable actuel:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+		               <Label fx:id="lblResponsableActuel" style="-fx-font-weight: bold; -fx-text-fill: #27ae60;" 
+		                     text="Aucun responsable configuré" 
+		                     GridPane.columnIndex="1" GridPane.rowIndex="0" />
+		               
+		               <Label text="Sélectionner un nouveau responsable:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+		               <ComboBox fx:id="cmbResponsableCourrier" promptText="Choisir un utilisateur..." 
+		                        prefWidth="300.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+		            </GridPane>
+		            
+		            <HBox spacing="10.0" style="-fx-padding: 10 0 0 0;">
+		               <Button fx:id="btnDefinirResponsable" styleClass="button-primary" text="✅ Définir comme responsable" />
+		               <Button fx:id="btnSupprimerResponsable" styleClass="button-danger" text="❌ Supprimer le responsable" />
+		               <Button fx:id="btnActualiserResponsable" styleClass="button-secondary" text="🔄 Actualiser" />
+		            </HBox>
+		         </VBox>
+		         
+		         <!-- Statistiques des notifications -->
+		         <VBox spacing="15.0" styleClass="card" style="-fx-background-color: white; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-background-radius: 8;">
+		            <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Statistiques des notifications" />
+		            
+		            <GridPane hgap="15.0" vgap="12.0">
+		               <columnConstraints>
+		                  <ColumnConstraints hgrow="NEVER" minWidth="200.0" />
+		                  <ColumnConstraints hgrow="ALWAYS" />
+		               </columnConstraints>
+		               
+		               <Label text="Courriers notifiés (total):" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+		               <Label fx:id="lblTotalNotifications" style="-fx-font-weight: bold;" text="0" 
+		                     GridPane.columnIndex="1" GridPane.rowIndex="0" />
+		               
+		               <Label text="Courriers non lus:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+		               <Label fx:id="lblNotificationsNonLues" style="-fx-font-weight: bold; -fx-text-fill: #e74c3c;" text="0" 
+		                     GridPane.columnIndex="1" GridPane.rowIndex="1" />
+		            </GridPane>
+		         </VBox>
+		         
+		      </VBox>
+		   </ScrollPane>
+		</Tab>
+         
+         <!-- Onglet Logs d'activité -->
+         <Tab text="📋 Logs d'activité">
+            <VBox spacing="20.0" style="-fx-padding: 20;">
+               
+               <!-- Filtres -->
+               <HBox spacing="10.0" alignment="CENTER_LEFT" style="-fx-padding: 10; -fx-background-color: #f8f9fa; -fx-background-radius: 6;">
+                  <Label text="Période:" />
+                  <DatePicker fx:id="dateDebutLogs" promptText="Du" prefWidth="140.0" />
+                  <Label text="au" />
+                  <DatePicker fx:id="dateFinLogs" promptText="Au" prefWidth="140.0" />
+                  
+                  <Separator orientation="VERTICAL" />
+                  
+                  <Label text="Type:" />
+                  <ComboBox fx:id="cmbTypeAction" prefWidth="150.0" />
+                  
+                  <Region HBox.hgrow="ALWAYS" />
+                  
+                  <TextField fx:id="txtRechercheLog" promptText="🔍 Rechercher..." prefWidth="200.0" />
+                  <Button fx:id="btnRechercherLogs" styleClass="button-primary" text="Rechercher" />
+               </HBox>
+               
+               <!-- Tableau des logs -->
+               <TableView fx:id="tableLogs" VBox.vgrow="ALWAYS">
+                  <columns>
+                     <TableColumn fx:id="colLogDate" prefWidth="150.0" text="Date/Heure" />
+                     <TableColumn fx:id="colLogUtilisateur" prefWidth="150.0" text="Utilisateur" />
+                     <TableColumn fx:id="colLogAction" prefWidth="120.0" text="Action" />
+                     <TableColumn fx:id="colLogDetails" prefWidth="300.0" text="Détails" />
+                     <TableColumn fx:id="colLogIP" prefWidth="120.0" text="Adresse IP" />
+                     <TableColumn fx:id="colLogStatut" prefWidth="120.0" text="Statut" />
+                     
+
+                  </columns>
+                  
+                  <placeholder>
+                     <VBox alignment="CENTER" spacing="10.0">
+                        <Label style="-fx-font-size: 48px; -fx-text-fill: #bdc3c7;" text="📋" />
+                        <Label style="-fx-text-fill: #7f8c8d;" text="Aucun log disponible" />
+                     </VBox>
+                  </placeholder>
+               </TableView>
+               
+               <!-- Actions -->
+               <HBox spacing="10.0" alignment="CENTER_LEFT">
+                  <Button fx:id="btnExporterLogs" styleClass="button-secondary" text="📥 Exporter les logs" />
+                  <Button fx:id="btnViderLogs" styleClass="button-danger" text="🗑️ Vider les anciens logs (> 3 mois)" />
+                  <Region HBox.hgrow="ALWAYS" />
+                  <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" 
+                        text="Affichage des 1000 derniers logs" />
+               </HBox>
+               
+            </VBox>
+         </Tab>
+         
+         <!-- Onglet Connexions -->
+         <Tab text="🔐 Connexions">
+            <VBox spacing="20.0" style="-fx-padding: 20;">
+               
+               <!-- Filtres -->
+               <HBox spacing="10.0" alignment="CENTER_LEFT" style="-fx-padding: 10; -fx-background-color: #f8f9fa; -fx-background-radius: 6;">
+                  <Label text="Période:" />
+                  <DatePicker fx:id="dateDebutConnexions" promptText="Du" prefWidth="140.0" />
+                  <Label text="au" />
+                  <DatePicker fx:id="dateFinConnexions" promptText="Au" prefWidth="140.0" />
+                  
+                  <Separator orientation="VERTICAL" />
+                  
+                  <Label text="Type:" />
+                  <ComboBox fx:id="cmbTypeConnexion" prefWidth="150.0" />
+                  
+                  <Region HBox.hgrow="ALWAYS" />
+                  
+                  <Button fx:id="btnRechercherConnexions" styleClass="button-primary" text="Rechercher" />
+               </HBox>
+               
+               <!-- Tableau des connexions -->
+               <TableView fx:id="tableConnexions" VBox.vgrow="ALWAYS">
+                  <columns>
+                     <TableColumn fx:id="colConnexionDate" prefWidth="150.0" text="Date/Heure" />
+                     <TableColumn fx:id="colConnexionUtilisateur" prefWidth="180.0" text="Utilisateur" />
+                     <TableColumn fx:id="colConnexionRole" prefWidth="120.0" text="Role" />
+					 <TableColumn fx:id="colConnexionDuree" prefWidth="120.0" text="Duree" />
+                     <TableColumn fx:id="colConnexionType" prefWidth="150.0" text="Type" />
+                     <TableColumn fx:id="colConnexionIP" prefWidth="150.0" text="Adresse IP" />
+                     <TableColumn fx:id="colConnexionStatut" prefWidth="150.0" text="Statut" />
+                  </columns>
+                  
+                  <placeholder>
+                     <VBox alignment="CENTER" spacing="10.0">
+                        <Label style="-fx-font-size: 48px; -fx-text-fill: #bdc3c7;" text="🔐" />
+                        <Label style="-fx-text-filadmin	l: #7f8c8d;" text="Aucune connexion enregistrée" />
+                     </VBox>
+                  </placeholder>
+               </TableView>
+               
+               <!-- Actions -->
+               <HBox spacing="10.0" alignment="CENTER_LEFT">
+                  <Button fx:id="btnExporterConnexions" styleClass="button-secondary" text="📥 Exporter" />
+                  <Region HBox.hgrow="ALWAYS" />
+                  <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" 
+                        text="Affichage des 500 dernières connexions" />
+               </HBox>
+               
+            </VBox>
+         </Tab>
+         
+      </TabPane>
+   </center>
+   
+</BorderPane>
