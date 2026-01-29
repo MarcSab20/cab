@@ -45,9 +45,12 @@ public class Courrier {
     }
     
     public enum PrioriteCourrier {
-        NORMALE("Normale", "⚪"),
-        URGENTE("Urgente", "🟡"),
-        TRES_URGENTE("Très urgente", "🔴");
+        FLASH("Normale", "⚪"),
+        URGENT("Urgente", "🟡"),
+        ROUTINE("Routine", "⚪"),
+    	IMMEDIAT("Immédiat", "🟡"),
+    	CONFIDENTIEL("Confidentiel", "🔴");
+    	
         
         private final String libelle;
         private final String icone;

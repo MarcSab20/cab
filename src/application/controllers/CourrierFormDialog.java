@@ -84,7 +84,7 @@ public class CourrierFormDialog extends Dialog<Courrier> {
         // Priorité
         cmbPriorite = new ComboBox<>();
         cmbPriorite.getItems().addAll(PrioriteCourrier.values());
-        cmbPriorite.setValue(PrioriteCourrier.NORMALE);
+        cmbPriorite.setValue(PrioriteCourrier.FLASH);
         grid.add(new Label("Priorité:"), 0, 6);
         grid.add(cmbPriorite, 1, 6);
         
