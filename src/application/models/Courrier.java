@@ -45,8 +45,10 @@ public class Courrier {
     }
     
     public enum PrioriteCourrier {
-        FLASH("Normale", "⚪"),
-        URGENT("Urgente", "🟡"),
+    	NORMALE("Normale", "⚪"),
+        FLASH("Flash", "⚪"),
+        URGENTE("Urgente", "🟡"),
+        TRES_URGENTE("très urgent", "🟡"),
         ROUTINE("Routine", "⚪"),
     	IMMEDIAT("Immédiat", "🟡"),
     	CONFIDENTIEL("Confidentiel", "🔴");
@@ -84,7 +86,7 @@ public class Courrier {
     
     public Courrier() {
         this.statut = StatutCourrier.NOUVEAU;
-        this.priorite = PrioriteCourrier.NORMALE;
+        this.priorite = PrioriteCourrier.FLASH;
         this.confidentiel = false;
         this.dateCreation = LocalDateTime.now();
     }
