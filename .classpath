@@ -17,5 +17,6 @@
 	<classpathentry kind="lib" path="C:/Users/Marco/Documents/librairie/librairie BFE/gson-2.10.1.jar"/>
 	<classpathentry kind="lib" path="C:/Users/Marco/Documents/librairie/jar_files/mysql-connector-j-8.4.0.jar"/>
 	<classpathentry kind="lib" path="C:/Users/Marco/Documents/librairie/jar_files/ojdbc11.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Marco/Documents/librairie/librairie BFE/controlsfx-11.1.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
