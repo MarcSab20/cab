@@ -38,6 +38,8 @@ import application.controllers.PartagerDocumentDialog;
 import application.controllers.DossierFormDialog;
 import application.services.LogService;
 import application.utils.IconeUtils;
+import application.services.ConfidentialCodeService;
+import application.services.ConfidentialCodeService.ActionType;
 
 /**
  * Contrôleur AMÉLIORÉ pour la gestion des documents
@@ -118,6 +120,8 @@ public class DocumentsController {
     private List<Dossier> cheminDossiers = new ArrayList<>();
     private List<Dossier> tousLesDossiers = new ArrayList<>(); // NOUVEAU: pour la recherche
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private ConfidentialCodeService confidentialCodeService;
+    private static final String DOSSIER_CONFIDENTIEL_CODE = "CONFIDENTIEL";
     
     // ==================== INITIALISATION ====================
     
@@ -129,6 +133,7 @@ public class DocumentsController {
         dossierService = DossierService.getInstance();
         networkStorageService = NetworkStorageService.getInstance();
         logService = LogService.getInstance();
+        confidentialCodeService = ConfidentialCodeService.getInstance();
         
         configurerColonnesTableau();
         configurerSelectionDocument();
@@ -606,6 +611,32 @@ public class DocumentsController {
             
             result.ifPresent(document -> {
                 try {
+                    // Vérifier si c'est un dossier confidentiel
+                    boolean isDossierConfidentiel = false;
+                    if (document.getDossierId() != null) {
+                        Dossier dossier = dossierService.getDossierById(document.getDossierId());
+                        if (dossier != null && DOSSIER_CONFIDENTIEL_CODE.equals(dossier.getCodeDossier())) {
+                            isDossierConfidentiel = true;
+                        }
+                    }
+                    
+                    // Si c'est un dossier confidentiel, demander le code
+                    if (isDossierConfidentiel) {
+                        String code = ConfidentialCodeDialog.showAndValidate(ActionType.SAVE_DOCUMENT);
+                        
+                        if (code == null) {
+                            AlertUtils.showWarning("Enregistrement dans le dossier confidentiel annulé");
+                            return;
+                        }
+                        
+                        if (!confidentialCodeService.checkAccessWithCode(
+                                ActionType.SAVE_DOCUMENT, "document", null, code)) {
+                            showError("❌ Code confidentiel incorrect. Enregistrement refusé.");
+                            return;
+                        }
+                    }
+                    
+                    // Créer le document
                     documentService.createDocument(document, fichier, currentUser);
                     
                     logService.logImportDocument(
@@ -615,12 +646,64 @@ public class DocumentsController {
                     );
                     
                     chargerDocuments();
-                    showSuccess("✅ Document importé avec succès !");
+                    
+                    if (isDossierConfidentiel) {
+                        showSuccess("✅ Document confidentiel importé avec succès !");
+                    } else {
+                        showSuccess("✅ Document importé avec succès !");
+                    }
                     
                 } catch (Exception e) {
                     showError("Erreur d'importation : " + e.getMessage());
                 }
             });
+        }
+    }
+    
+    /**
+     * méthode pour ouvrir un document :
+     */
+
+    private void ouvrirDocumentSecurise(Document doc) {
+        if (doc == null) return;
+        
+        // Vérifier si le document est confidentiel (dans un dossier confidentiel)
+        boolean isConfidentiel = false;
+        if (doc.getDossierId() != null) {
+            Dossier dossier = dossierService.getDossierById(doc.getDossierId());
+            if (dossier != null && DOSSIER_CONFIDENTIEL_CODE.equals(dossier.getCodeDossier())) {
+                isConfidentiel = true;
+            }
+        }
+        
+        // Si confidentiel, demander le code
+        if (isConfidentiel) {
+            String code = ConfidentialCodeDialog.showAndValidate(ActionType.READ_DOCUMENT);
+            
+            if (code == null) {
+                AlertUtils.showWarning("Ouverture du document confidentiel annulée");
+                return;
+            }
+            
+            if (!confidentialCodeService.checkAccessWithCode(
+                    ActionType.READ_DOCUMENT, "document", doc.getId(), code)) {
+                showError("❌ Code confidentiel incorrect. Accès refusé.");
+                return;
+            }
+        }
+        
+        // Ouvrir le document
+        File fichier = new File(doc.getCheminFichier());
+        try {
+            if (Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().open(fichier);
+                
+                if (isConfidentiel) {
+                    AlertUtils.showInfo("✅ Document confidentiel ouvert");
+                }
+            }
+        } catch (Exception e) {
+            showError("Erreur: " + e.getMessage());
         }
     }
     
@@ -959,15 +1042,7 @@ public class DocumentsController {
     }
     
     private void ouvrirDocument(Document doc) {
-        if (doc == null) return;
-        File fichier = new File(doc.getCheminFichier());
-        try {
-            if (Desktop.isDesktopSupported()) {
-                Desktop.getDesktop().open(fichier);
-            }
-        } catch (Exception e) {
-            showError("Erreur: " + e.getMessage());
-        }
+        ouvrirDocumentSecurise(doc);
     }
     
     private void telechargerDocument(Document doc) {
@@ -1036,6 +1111,27 @@ public class DocumentsController {
      * Sélectionne un dossier
      */
     private void selectionnerDossier(Dossier dossier) {
+        // Vérifier si c'est un dossier confidentiel
+        if (dossier != null && DOSSIER_CONFIDENTIEL_CODE.equals(dossier.getCodeDossier())) {
+            // Demander le code confidentiel
+            String code = ConfidentialCodeDialog.showAndValidate(ActionType.ACCESS_DOSSIER);
+            
+            if (code == null) {
+                // Utilisateur a annulé
+            	AlertUtils.showWarning("Accès au dossier confidentiel annulé");
+                return;
+            }
+            
+            // Vérifier le code
+            if (!confidentialCodeService.checkAccessWithCode(
+                    ActionType.ACCESS_DOSSIER, "dossier", dossier.getId(), code)) {
+                showError("❌ Code confidentiel incorrect. Accès refusé.");
+                return;
+            }
+            
+            showInfo("✅ Accès au dossier confidentiel autorisé");
+        }
+        
         this.dossierActuel = dossier;
         
         mettreAJourFilAriane(dossier);

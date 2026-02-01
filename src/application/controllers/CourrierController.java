@@ -29,6 +29,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.Timer;
 import java.util.TimerTask;
+import application.services.ConfidentialCodeService;
+import application.services.ConfidentialCodeService.ActionType;
 
 /**
  * Contrôleur pour la gestion des courriers avec système de notifications
@@ -96,7 +98,7 @@ public class CourrierController {
     private DocumentService documentService;
     private LogService logService;
     private NotificationCourrierService notificationService;
-    
+    private ConfidentialCodeService confidentialCodeService;
     private ObservableList<Courrier> courriers;
     private ObservableList<Courrier> courriersFiltrés;
     private ObservableList<CourrierNotification> notifications;
@@ -116,6 +118,7 @@ public class CourrierController {
         documentService = DocumentService.getInstance();
         logService = LogService.getInstance();
         notificationService = NotificationCourrierService.getInstance();
+        confidentialCodeService = ConfidentialCodeService.getInstance();
         
         courriers = FXCollections.observableArrayList();
         courriersFiltrés = FXCollections.observableArrayList();
@@ -518,36 +521,6 @@ public class CourrierController {
     
     // ==================== ACTIONS ====================
     
-    /**
-     * Ouvre un courrier depuis une notification
-     */
-    private void ouvrirCourrierDepuisNotification(CourrierNotification notification) {
-        if (notification == null) return;
-        
-        User currentUser = getCurrentUser();
-        if (currentUser == null) return;
-        
-        // Marquer comme lu
-        if (!notification.isLu()) {
-            boolean marked = notificationService.marquerCommeLu(
-                notification.getCourrier().getId(), 
-                currentUser.getId());
-            
-            if (marked) {
-                notification.setLu(true);
-                tableauNotifications.refresh();
-                afficherBadgeNotifications();
-            }
-        }
-        
-        // Afficher les détails du courrier
-        voirCourrier(notification.getCourrier());
-        
-        // Passer à l'onglet principal
-        if (tabPaneCourrier != null) {
-            tabPaneCourrier.getSelectionModel().selectFirst();
-        }
-    }
     
     /**
      * Marque une notification comme lue
@@ -652,7 +625,24 @@ public class CourrierController {
             if (result.isPresent()) {
                 Courrier courrier = result.get();
                 
-                // 3. Créer le courrier
+                // 3. Vérifier si le courrier est confidentiel
+                if (courrier.isConfidentiel()) {
+                    // Demander le code confidentiel
+                    String code = ConfidentialCodeDialog.showAndValidate(ActionType.SAVE_COURRIER);
+                    
+                    if (code == null) {
+                        showWarning("Création du courrier confidentiel annulée");
+                        return;
+                    }
+                    
+                    if (!confidentialCodeService.checkAccessWithCode(
+                            ActionType.SAVE_COURRIER, "courrier", null, code)) {
+                        showError("❌ Code confidentiel incorrect. Création du courrier refusée.");
+                        return;
+                    }
+                }
+                
+                // 4. Créer le courrier
                 User currentUser = getCurrentUser();
                 if (currentUser != null) {
                     courrier.setCreePar(currentUser.getId());
@@ -660,15 +650,27 @@ public class CourrierController {
                 
                 Courrier courrierCree = courrierService.createCourrier(courrier);
                 
-                // 4. Logger l'action
-                logService.logAction("creation_courrier", 
-                    "Courrier créé: " + courrierCree.getCodeCourrier() + 
-                    " - Document: " + document.getCodeDocument());
+                // 5. Logger l'action
+                String logMessage = "Courrier créé: " + courrierCree.getCodeCourrier() + 
+                    " - Document: " + document.getCodeDocument();
                 
-                showSuccess("✅ Courrier créé avec succès !\n\nCode: " + 
-                           courrierCree.getCodeCourrier());
+                if (courrier.isConfidentiel()) {
+                    logMessage += " [CONFIDENTIEL]";
+                }
                 
-                // 5. Rafraîchir la liste
+                logService.logAction("creation_courrier", logMessage);
+                
+                // 6. Message de succès
+                String successMessage = "✅ Courrier créé avec succès !\n\nCode: " + 
+                                       courrierCree.getCodeCourrier();
+                
+                if (courrier.isConfidentiel()) {
+                    successMessage += "\n\n🔒 Courrier marqué comme CONFIDENTIEL";
+                }
+                
+                showSuccess(successMessage);
+                
+                // 7. Rafraîchir la liste
                 chargerCourriers();
                 mettreAJourStatistiques();
             }
@@ -744,12 +746,30 @@ public class CourrierController {
         if (courrier == null) return;
         
         try {
+            // Vérifier si le courrier est confidentiel
+            if (courrier.isConfidentiel()) {
+                // Demander le code confidentiel
+                String code = ConfidentialCodeDialog.showAndValidate(ActionType.READ_DOCUMENT);
+                
+                if (code == null) {
+                    showWarning("Consultation du courrier confidentiel annulée");
+                    return;
+                }
+                
+                if (!confidentialCodeService.checkAccessWithCode(
+                        ActionType.READ_DOCUMENT, "courrier", courrier.getId(), code)) {
+                    showError("❌ Code confidentiel incorrect. Accès refusé.");
+                    return;
+                }
+            }
+            
             // Récupérer le document associé
             Document document = documentService.getDocumentById(courrier.getDocumentId());
             
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Détails du courrier");
-            alert.setHeaderText(courrier.getCodeCourrier());
+            alert.setHeaderText(courrier.getCodeCourrier() + 
+                               (courrier.isConfidentiel() ? " 🔒 CONFIDENTIEL" : ""));
             
             String details = String.format(
                 "Type: %s\n" +
@@ -774,22 +794,87 @@ public class CourrierController {
                     courrier.getDateCourrier().format(DATE_FORMATTER) : "-",
                 courrier.getPriorite().getLibelle(),
                 courrier.getStatut().getLibelle(),
-                courrier.isConfidentiel() ? "Oui" : "Non",
+                courrier.isConfidentiel() ? "🔒 OUI" : "Non",
                 document != null ? document.getCodeDocument() : "?",
                 document != null ? document.getTitre() : "Document introuvable",
                 courrier.getObservations() != null ? courrier.getObservations() : "Aucune observation"
             );
             
             alert.setContentText(details);
+            
+            // Style pour courrier confidentiel
+            if (courrier.isConfidentiel()) {
+                alert.getDialogPane().setStyle(
+                    "-fx-border-color: #dc3545; -fx-border-width: 3; " +
+                    "-fx-background-color: #fff3cd;"
+                );
+            }
+            
             alert.showAndWait();
             
-            logService.logAction("consultation_courrier", "Courrier consulté: " + courrier.getCodeCourrier());
+            String logMessage = "Courrier consulté: " + courrier.getCodeCourrier();
+            if (courrier.isConfidentiel()) {
+                logMessage += " [CONFIDENTIEL]";
+            }
+            logService.logAction("consultation_courrier", logMessage);
             
         } catch (Exception e) {
             System.err.println("Erreur affichage détails: " + e.getMessage());
             showError("Erreur lors de l'affichage des détails");
         }
     }
+    
+    /**
+     * 6. AJOUTER cette méthode pour ouvrir un courrier depuis une notification avec vérification :
+     */
+
+    private void ouvrirCourrierDepuisNotification(CourrierNotification notification) {
+        if (notification == null) return;
+        
+        User currentUser = getCurrentUser();
+        if (currentUser == null) return;
+        
+        Courrier courrier = notification.getCourrier();
+        
+        // Vérifier si le courrier est confidentiel
+        if (courrier.isConfidentiel()) {
+            // Demander le code confidentiel
+            String code = ConfidentialCodeDialog.showAndValidate(ActionType.READ_DOCUMENT);
+            
+            if (code == null) {
+                showWarning("Ouverture du courrier confidentiel annulée");
+                return;
+            }
+            
+            if (!confidentialCodeService.checkAccessWithCode(
+                    ActionType.READ_DOCUMENT, "courrier", courrier.getId(), code)) {
+                showError("❌ Code confidentiel incorrect. Accès refusé.");
+                return;
+            }
+        }
+        
+        // Marquer comme lu
+        if (!notification.isLu()) {
+            boolean marked = notificationService.marquerCommeLu(
+                courrier.getId(), 
+                currentUser.getId());
+            
+            if (marked) {
+                notification.setLu(true);
+                tableauNotifications.refresh();
+                afficherBadgeNotifications();
+            }
+        }
+        
+        // Afficher les détails du courrier
+        voirCourrier(courrier);
+        
+        // Passer à l'onglet principal
+        if (tabPaneCourrier != null) {
+            tabPaneCourrier.getSelectionModel().selectFirst();
+        }
+    }
+
     
     /**
      * Change le statut d'un courrier
