@@ -344,6 +344,59 @@ public class DatabaseService {
     }
     
     /**
+     * Récupère tous les utilisateurs
+     * NOUVELLE MÉTHODE
+     */
+    public List<User> getAllUsers() throws SQLException {
+        String query = """
+            SELECT u.*, r.nom as role_nom, r.description as role_desc, r.permissions, r.actif as role_actif
+            FROM users u 
+            LEFT JOIN roles r ON u.role_id = r.id 
+            ORDER BY u.nom, u.prenom
+        """;
+        
+        List<User> users = new ArrayList<>();
+        
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                users.add(mapResultSetToUser(rs));
+            }
+        }
+        
+        return users;
+    }
+    
+    /**
+     * Récupère un utilisateur par son ID
+     * NOUVELLE MÉTHODE
+     */
+    public User getUserById(int userId) throws SQLException {
+        String query = """
+            SELECT u.*, r.nom as role_nom, r.description as role_desc, r.permissions, r.actif as role_actif
+            FROM users u 
+            LEFT JOIN roles r ON u.role_id = r.id 
+            WHERE u.id = ?
+        """;
+        
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setInt(1, userId);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToUser(rs);
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
      * Met à jour un utilisateur
      * CORRECTION: Utilise une NOUVELLE connexion
      */
@@ -417,14 +470,11 @@ public class DatabaseService {
     
     // ==================== MAPPING UTILISATEURS/ROLES ====================
     
-    /**
-     * Mappe un ResultSet vers un objet User
-     */
-    private User mapResultSetToUser(ResultSet rs) throws SQLException {
+    User mapResultSetToUser(ResultSet rs) throws SQLException {
         User user = new User();
         user.setId(rs.getInt("id"));
         user.setCode(rs.getString("code"));
-        user.setPassword(rs.getString("password"));
+        user.setPassword(rs.getString("password"));  // ✅ CORRECTION: Ligne ajoutée
         user.setNom(rs.getString("nom"));
         user.setPrenom(rs.getString("prenom"));
         user.setEmail(rs.getString("email"));

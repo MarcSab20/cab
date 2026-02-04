@@ -25,6 +25,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import application.services.ConfidentialCodeService;
+import application.services.ConfidentialCodeService.CodeHistoryEntry;
+import application.services.ConfidentialCodeService.AccessStatistics;
+import application.controllers.ChangeConfidentialCodeDialog;
+import javafx.collections.FXCollections;
+import java.time.format.DateTimeFormatter;
+
 /**
  * Contrôleur pour l'administration système - VERSION AMÉLIORÉE
  * Gestion des logs, connexions, configuration serveur réseau
@@ -92,6 +99,23 @@ public class AdministrationController {
     @FXML private Label lblConnexionsReussies;
     @FXML private Label lblConnexionsEchouees;
     
+    // Onglet Codes Confidentiels - Informations du code actuel
+    @FXML private Label lblStatutCodeActuel;
+    @FXML private Label lblDescriptionCodeActuel;
+    @FXML private Label lblCreateurCodeActuel;
+    @FXML private Label lblDateCreationCodeActuel;
+    @FXML private Label lblJoursDepuisCreation;
+    @FXML private Button btnChangerCode;
+    @FXML private Button btnActualiserCodeInfo;
+
+    // Statistiques d'accès
+    @FXML private Label lblStatTotalTentatives;
+    @FXML private Label lblStatAccesReussis;
+    @FXML private Label lblStatAccesRefuses;
+    @FXML private Label lblStatUtilisateursAcces;
+    @FXML private Label lblStatTotalCodes;
+    @FXML private Label lblStatCodesActifs;
+    
     // Onglet Statistiques
     @FXML private Label lblTotalUtilisateurs;
     @FXML private Label lblUtilisateursActifs;
@@ -106,6 +130,25 @@ public class AdministrationController {
     @FXML private Label lblResponsableActuel;
     @FXML private Label lblTotalNotifications;
     @FXML private Label lblNotificationsNonLues;
+    
+    // Historique des codes
+    @FXML private TableView<CodeHistoryEntry> tableHistoriqueCode;
+    @FXML private TableColumn<CodeHistoryEntry, String> colHistoriqueDescription;
+    @FXML private TableColumn<CodeHistoryEntry, String> colHistoriqueStatut;
+    @FXML private TableColumn<CodeHistoryEntry, String> colHistoriqueCreateur;
+    @FXML private TableColumn<CodeHistoryEntry, String> colHistoriqueDateCreation;
+    @FXML private TableColumn<CodeHistoryEntry, String> colHistoriqueAge;
+    @FXML private Button btnActualiserHistorique;
+
+    // Responsable courriers confidentiels
+    @FXML private Label lblResponsableCourrierConfidentiel;
+    @FXML private ComboBox<User> cmbResponsableCourrierConfidentiel;
+    @FXML private Button btnDefinirResponsableConfidentiel;
+    @FXML private Button btnSupprimerResponsableConfidentiel;
+    @FXML private Button btnActualiserResponsableConfidentiel;
+
+    // Service
+    private ConfidentialCodeService confidentialCodeService;
 
     private NotificationCourrierService notificationService;
     
@@ -127,6 +170,7 @@ public class AdministrationController {
         networkStorageService = NetworkStorageService.getInstance();
         logService = LogService.getInstance();
         notificationService = NotificationCourrierService.getInstance();
+        confidentialCodeService = ConfidentialCodeService.getInstance();
         
         // Vérifier les permissions STRICTEMENT
         if (!verifierPermissionsAdmin()) {
@@ -139,12 +183,423 @@ public class AdministrationController {
         initialiserOngletConnexions();
         initialiserOngletStatistiques();
         initialiserOngletResponsable();
+        initialiserOngletCodesConfidentiels();
         
         // Logger l'accès à l'administration
         logService.logAction("acces_administration", "Accès au panneau d'administration");
         
         System.out.println("=== FIN INITIALISATION ===");
     }
+    
+    /**
+     * Initialise l'onglet des codes confidentiels
+     */
+    private void initialiserOngletCodesConfidentiels() {
+        // Configurer le tableau de l'historique
+        configurerTableauHistorique();
+        
+        // Charger les données
+        chargerInformationsCodeActuel();
+        chargerStatistiquesAcces();
+        chargerHistoriqueCode();
+        chargerResponsableCourrierConfidentiel();
+        
+        System.out.println("✓ Onglet codes confidentiels initialisé");
+    }
+    
+    /**
+     * Configure les colonnes du tableau de l'historique
+     */
+    private void configurerTableauHistorique() {
+        if (colHistoriqueDescription != null) {
+            colHistoriqueDescription.setCellValueFactory(cellData ->
+                new SimpleStringProperty(cellData.getValue().getDescription()));
+        }
+        
+        if (colHistoriqueStatut != null) {
+            colHistoriqueStatut.setCellValueFactory(cellData -> {
+                String statut = cellData.getValue().isActif() ? "✅ Actif" : "❌ Inactif";
+                return new SimpleStringProperty(statut);
+            });
+            
+            // Style pour le statut
+            colHistoriqueStatut.setCellFactory(column -> new TableCell<CodeHistoryEntry, String>() {
+                @Override
+                protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText(null);
+                        setStyle("");
+                    } else {
+                        setText(item);
+                        if (item.contains("Actif")) {
+                            setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold;");
+                        } else {
+                            setStyle("-fx-text-fill: #7f8c8d;");
+                        }
+                    }
+                }
+            });
+        }
+        
+        if (colHistoriqueCreateur != null) {
+            colHistoriqueCreateur.setCellValueFactory(cellData -> 
+                new SimpleStringProperty(cellData.getValue().getCreateurNom() != null ? 
+                    cellData.getValue().getCreateurNom() : "Système"));
+        }
+        
+        if (colHistoriqueDateCreation != null) {
+            colHistoriqueDateCreation.setCellValueFactory(cellData -> {
+                if (cellData.getValue().getDateCreation() != null) {
+                    return new SimpleStringProperty(
+                        cellData.getValue().getDateCreation().format(DATE_TIME_FORMATTER));
+                }
+                return new SimpleStringProperty("");
+            });
+        }
+        
+        if (colHistoriqueAge != null) {
+            colHistoriqueAge.setCellValueFactory(cellData ->
+                new SimpleStringProperty(cellData.getValue().getAgeJours() + " jours"));
+        }
+    }
+
+    /**
+     * Charge les informations du code confidentiel actuel
+     */
+    private void chargerInformationsCodeActuel() {
+        try {
+            ConfidentialCodeService.CodeInfo codeActuel = confidentialCodeService.getCodeActuel();
+            
+            if (codeActuel != null) {
+                // Statut
+                if (lblStatutCodeActuel != null) {
+                    if (codeActuel.isActif()) {
+                        lblStatutCodeActuel.setText("✅ Actif");
+                        lblStatutCodeActuel.setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold;");
+                    } else {
+                        lblStatutCodeActuel.setText("❌ Inactif");
+                        lblStatutCodeActuel.setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold;");
+                    }
+                }
+                
+                // Description
+                if (lblDescriptionCodeActuel != null) {
+                    lblDescriptionCodeActuel.setText(codeActuel.getDescription() != null ? 
+                        codeActuel.getDescription() : "Code confidentiel du système");
+                }
+                
+                // Créateur
+                if (lblCreateurCodeActuel != null) {
+                    lblCreateurCodeActuel.setText(codeActuel.getCreateurNom() != null ? 
+                        codeActuel.getCreateurNom() : "Système");
+                }
+                
+                // Date de création
+                if (lblDateCreationCodeActuel != null && codeActuel.getDateCreation() != null) {
+                    lblDateCreationCodeActuel.setText(
+                        codeActuel.getDateCreation().format(DATE_TIME_FORMATTER));
+                }
+                
+                // Âge du code
+                if (lblJoursDepuisCreation != null) {
+                    // Calculer les jours depuis la création
+                    long jours = java.time.temporal.ChronoUnit.DAYS.between(
+                        codeActuel.getDateCreation(), java.time.LocalDateTime.now());
+                    lblJoursDepuisCreation.setText(jours + " jours");
+                    
+                    // Couleur selon l'âge (> 90 jours = avertissement)
+                    if (jours > 90) {
+                        lblJoursDepuisCreation.setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold;");
+                    } else if (jours > 60) {
+                        lblJoursDepuisCreation.setStyle("-fx-text-fill: #f39c12; -fx-font-weight: bold;");
+                    } else {
+                        lblJoursDepuisCreation.setStyle("-fx-text-fill: #27ae60;");
+                    }
+                }
+                
+            } else {
+                // Aucun code actif trouvé
+                if (lblStatutCodeActuel != null) {
+                    lblStatutCodeActuel.setText("⚠️ Aucun code actif");
+                    lblStatutCodeActuel.setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold;");
+                }
+                if (lblDescriptionCodeActuel != null) {
+                    lblDescriptionCodeActuel.setText("Aucun code confidentiel configuré");
+                }
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Erreur chargement code actuel: " + e.getMessage());
+            AlertUtils.showError("Erreur lors du chargement du code actuel");
+        }
+    }
+
+    /**
+     * Charge les statistiques d'accès
+     */
+    private void chargerStatistiquesAcces() {
+        try {
+            AccessStatistics stats = confidentialCodeService.getStatistiquesAcces();
+            
+            if (lblStatTotalTentatives != null) {
+                lblStatTotalTentatives.setText(String.valueOf(stats.getTotalTentatives()));
+            }
+            
+            if (lblStatAccesReussis != null) {
+                lblStatAccesReussis.setText(String.valueOf(stats.getAccesReussis()));
+            }
+            
+            if (lblStatAccesRefuses != null) {
+                lblStatAccesRefuses.setText(String.valueOf(stats.getAccesRefuses()));
+            }
+            if (lblStatUtilisateursAcces != null) {
+                lblStatUtilisateursAcces.setText(String.valueOf(stats.getUtilisateursDistincts()));
+            }
+            
+            if (lblStatTotalCodes != null) {
+                lblStatTotalCodes.setText(String.valueOf(stats.getTotalCodes()));
+            }
+            
+            if (lblStatCodesActifs != null) {
+                lblStatCodesActifs.setText(String.valueOf(stats.getCodesActifs()));
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Erreur chargement statistiques: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Charge l'historique des codes
+     */
+    private void chargerHistoriqueCode() {
+        try {
+            List<CodeHistoryEntry> historique = confidentialCodeService.getHistoriqueCode();
+            
+            if (tableHistoriqueCode != null) {
+                tableHistoriqueCode.setItems(
+                    javafx.collections.FXCollections.observableArrayList(historique));
+            }
+            
+            System.out.println("✓ " + historique.size() + " entrées d'historique chargées");
+            
+        } catch (Exception e) {
+            System.err.println("Erreur chargement historique: " + e.getMessage());
+            AlertUtils.showError("Erreur lors du chargement de l'historique");
+        }
+    }
+
+    /**
+     * Charge le responsable des courriers confidentiels
+     */
+    private void chargerResponsableCourrierConfidentiel() {
+        // Charger les utilisateurs disponibles
+        if (cmbResponsableCourrierConfidentiel != null) {
+            try {
+                List<User> users = notificationService.getTousUtilisateursActifs();
+                
+                cmbResponsableCourrierConfidentiel.setItems(
+                    javafx.collections.FXCollections.observableArrayList(users));
+                
+                // Personnaliser l'affichage
+                cmbResponsableCourrierConfidentiel.setCellFactory(param -> 
+                    new javafx.scene.control.ListCell<User>() {
+                        @Override
+                        protected void updateItem(User user, boolean empty) {
+                            super.updateItem(user, empty);
+                            if (empty || user == null) {
+                                setText(null);
+                            } else {
+                                String roleNom = user.getRole() != null ? user.getRole().getNom() : "Sans rôle";
+                                setText(String.format("%s - %s (%s)", 
+                                    user.getCode(), 
+                                    user.getNomComplet(), 
+                                    roleNom));
+                            }
+                        }
+                    });
+                
+                cmbResponsableCourrierConfidentiel.setButtonCell(
+                    new javafx.scene.control.ListCell<User>() {
+                        @Override
+                        protected void updateItem(User user, boolean empty) {
+                            super.updateItem(user, empty);
+                            if (empty || user == null) {
+                                setText("Choisir un utilisateur...");
+                            } else {
+                                setText(user.getCode() + " - " + user.getNomComplet());
+                            }
+                        }
+                    });
+                
+            } catch (Exception e) {
+                System.err.println("Erreur chargement utilisateurs: " + e.getMessage());
+            }
+        }
+        
+        // Charger le responsable actuel
+        try {
+            User responsable = confidentialCodeService.getResponsableCourrierConfidentiel();
+            
+            if (lblResponsableCourrierConfidentiel != null) {
+                if (responsable != null) {
+                    String roleNom = responsable.getRole() != null ? 
+                        responsable.getRole().getNom() : "Sans rôle";
+                    
+                    lblResponsableCourrierConfidentiel.setText(String.format("✅ %s - %s (%s)", 
+                        responsable.getCode(), 
+                        responsable.getNomComplet(), 
+                        roleNom));
+                    lblResponsableCourrierConfidentiel.setStyle(
+                        "-fx-text-fill: #27ae60; -fx-font-weight: bold;");
+                } else {
+                    lblResponsableCourrierConfidentiel.setText("❌ Aucun responsable configuré");
+                    lblResponsableCourrierConfidentiel.setStyle(
+                        "-fx-text-fill: #e74c3c; -fx-font-weight: bold;");
+                }
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Erreur chargement responsable confidentiel: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Handler pour changer le code confidentiel
+     */
+    @FXML
+    private void handleChangerCodeConfidentiel() {
+        boolean success = ChangeConfidentialCodeDialog.showDialog();
+        
+        if (success) {
+            // Recharger les informations
+            chargerInformationsCodeActuel();
+            chargerHistoriqueCode();
+            chargerStatistiquesAcces();
+            
+            showSuccess("✅ Code confidentiel changé avec succès !");
+        }
+    }
+
+    /**
+     * Handler pour actualiser les informations du code
+     */
+    @FXML
+    private void handleActualiserCodeInfo() {
+        chargerInformationsCodeActuel();
+        chargerStatistiquesAcces();
+        showInfo("Informations actualisées");
+    }
+
+    /**
+     * Handler pour actualiser l'historique
+     */
+    @FXML
+    private void handleActualiserHistorique() {
+        chargerHistoriqueCode();
+        showInfo("Historique actualisé");
+    }
+
+    /**
+     * Handler pour définir le responsable des courriers confidentiels
+     */
+    @FXML
+    private void handleDefinirResponsableConfidentiel() {
+        User selectedUser = cmbResponsableCourrierConfidentiel.getValue();
+        
+        if (selectedUser == null) {
+            showWarning("Validation", "Veuillez sélectionner un utilisateur");
+            return;
+        }
+        
+        // Confirmation
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Confirmation");
+        confirm.setHeaderText("Définir le responsable des courriers confidentiels");
+        confirm.setContentText(String.format(
+            "Voulez-vous définir %s comme responsable des courriers confidentiels ?\n\n" +
+            "Cette personne recevra automatiquement tous les nouveaux courriers confidentiels créés.",
+            selectedUser.getNomComplet()));
+        
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+            try {
+                boolean success = confidentialCodeService.setResponsableCourrierConfidentiel(
+                    selectedUser.getId());
+                
+                if (success) {
+                    showSuccess(String.format(
+                        "✅ %s défini comme responsable des courriers confidentiels", 
+                        selectedUser.getNomComplet()));
+                    
+                    logService.logAction("definition_responsable_courrier_confidentiel", 
+                        "Responsable défini: " + selectedUser.getCode());
+                    
+                    chargerResponsableCourrierConfidentiel();
+                } else {
+                    AlertUtils.showError("Impossible de définir le responsable");
+                }
+                
+            } catch (Exception e) {
+                System.err.println("Erreur définition responsable: " + e.getMessage());
+                AlertUtils.showError("Erreur lors de la définition du responsable");
+            }
+        }
+    }
+
+    /**
+     * Handler pour supprimer le responsable des courriers confidentiels
+     * @throws SQLException 
+     */
+    @FXML
+    private void handleSupprimerResponsableConfidentiel() throws SQLException {
+        User responsableActuel = confidentialCodeService.getResponsableCourrierConfidentiel();
+        
+        if (responsableActuel == null) {
+            showInfo("Aucun responsable configuré");
+            return;
+        }
+        
+        // Confirmation
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Confirmation");
+        confirm.setHeaderText("Supprimer le responsable des courriers confidentiels");
+        confirm.setContentText(String.format(
+            "Voulez-vous supprimer %s comme responsable des courriers confidentiels ?\n\n" +
+            "Les nouveaux courriers confidentiels ne seront plus notifiés automatiquement.",
+            responsableActuel.getNomComplet()));
+        
+        if (confirm.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+            try {
+                boolean success = confidentialCodeService.supprimerResponsableCourrierConfidentiel();
+                
+                if (success) {
+                    showSuccess("✅ Responsable supprimé avec succès");
+                    
+                    logService.logAction("suppression_responsable_courrier_confidentiel", 
+                        "Responsable supprimé: " + responsableActuel.getCode());
+                    
+                    chargerResponsableCourrierConfidentiel();
+                } else {
+                    AlertUtils.showError("Impossible de supprimer le responsable");
+                }
+                
+            } catch (Exception e) {
+                System.err.println("Erreur suppression responsable: " + e.getMessage());
+                AlertUtils.showError("Erreur lors de la suppression du responsable");
+            }
+        }
+    }
+
+    /**
+     * Handler pour actualiser le responsable des courriers confidentiels
+     */
+    @FXML
+    private void handleActualiserResponsableConfidentiel() {
+        chargerResponsableCourrierConfidentiel();
+        showInfo("Informations actualisées");
+    }
+
     
     /**
      * Vérifie strictement que l'utilisateur est administrateur

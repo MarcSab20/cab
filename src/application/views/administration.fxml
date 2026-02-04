@@ -15,14 +15,184 @@
                <Font size="24.0" />
             </font>
          </Label>
-         <Label style="-fx-text-fill: #7f8c8d;" text="Gérer la configuration système, les logs et les connexions" />
+         <Label style="-fx-text-fill: #7f8c8d;" text="Gérer la configuration système, les logs et les codes confidentiels" />
       </VBox>
    </top>
    
    <center>
       <TabPane fx:id="tabPaneAdmin" tabClosingPolicy="UNAVAILABLE">
          
-         <!-- Onglet Configuration Serveur -->
+         <!-- NOUVEL ONGLET : Codes Confidentiels -->
+         <Tab text="🔐 Codes Confidentiels">
+            <ScrollPane fitToWidth="true">
+               <VBox spacing="20.0" style="-fx-padding: 30;">
+                  
+                  <!-- Avertissement de sécurité -->
+                  <VBox spacing="10.0" style="-fx-background-color: #fff3cd; -fx-padding: 15; -fx-background-radius: 6; -fx-border-color: #ffc107; -fx-border-width: 2; -fx-border-radius: 6;">
+                     <Label style="-fx-font-weight: bold; -fx-text-fill: #856404; -fx-font-size: 14px;" text="⚠️ ZONE SÉCURISÉE - ADMINISTRATEURS UNIQUEMENT" />
+                     <Label style="-fx-text-fill: #856404; -fx-font-size: 12px;" 
+                           text="Cette section permet de gérer les codes confidentiels du système. Tous les changements sont enregistrés et tracés." 
+                           wrapText="true" />
+                  </VBox>
+                  
+                  <!-- Code confidentiel actuel -->
+                  <VBox spacing="15.0" style="-fx-background-color: white; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-background-radius: 8;">
+                     <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Code confidentiel actuel" />
+                     
+                     <GridPane hgap="15.0" vgap="12.0">
+                        <columnConstraints>
+                           <ColumnConstraints hgrow="NEVER" minWidth="200.0" />
+                           <ColumnConstraints hgrow="ALWAYS" />
+                        </columnConstraints>
+                        
+                        <Label text="Statut du code:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <Label fx:id="lblStatutCodeActuel" style="-fx-font-weight: bold; -fx-text-fill: #27ae60;" 
+                              text="✅ Actif" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        
+                        <Label text="Description:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <Label fx:id="lblDescriptionCodeActuel" text="Code confidentiel du système" 
+                              GridPane.columnIndex="1" GridPane.rowIndex="1" wrapText="true" />
+                        
+                        <Label text="Créé par:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <Label fx:id="lblCreateurCodeActuel" text="Système" 
+                              GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        
+                        <Label text="Date de création:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                        <Label fx:id="lblDateCreationCodeActuel" text="--/--/---- --:--" 
+                              GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                        
+                        <Label text="Jours depuis création:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                        <Label fx:id="lblJoursDepuisCreation" text="0 jours" 
+                              GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                     </GridPane>
+                     
+                     <Separator />
+                     
+                     <HBox spacing="10.0" style="-fx-padding: 10 0 0 0;">
+                        <Button fx:id="btnChangerCode" styleClass="button-primary" 
+                               text="🔑 Changer le code confidentiel" 
+                               onAction="#handleChangerCodeConfidentiel" />
+                        <Button fx:id="btnActualiserCodeInfo" styleClass="button-secondary" 
+                               text="🔄 Actualiser" 
+                               onAction="#handleActualiserCodeInfo" />
+                     </HBox>
+                  </VBox>
+                  
+                  <!-- Statistiques d'accès -->
+                  <VBox spacing="15.0" style="-fx-background-color: white; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-background-radius: 8;">
+                     <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Statistiques d'accès aux ressources confidentielles" />
+                     
+                     <GridPane hgap="30.0" vgap="12.0">
+                        <columnConstraints>
+                           <ColumnConstraints hgrow="ALWAYS" />
+                           <ColumnConstraints hgrow="ALWAYS" />
+                           <ColumnConstraints hgrow="ALWAYS" />
+                        </columnConstraints>
+                        
+                        <!-- Colonne 1 -->
+                        <VBox spacing="5.0" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Total tentatives" />
+                           <Label fx:id="lblStatTotalTentatives" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #3498db;" text="0" />
+                        </VBox>
+                        
+                        <VBox spacing="5.0" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Accès réussis" />
+                           <Label fx:id="lblStatAccesReussis" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #27ae60;" text="0" />
+                        </VBox>
+                        
+                        <VBox spacing="5.0" GridPane.columnIndex="2" GridPane.rowIndex="0">
+                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Accès refusés" />
+                           <Label fx:id="lblStatAccesRefuses" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #e74c3c;" text="0" />
+                        </VBox>
+                        
+                        <!-- Colonne 2 -->
+                        <VBox spacing="5.0" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Utilisateurs ayant accès" />
+                           <Label fx:id="lblStatUtilisateursAcces" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #9b59b6;" text="0" />
+                        </VBox>
+                        
+                        <VBox spacing="5.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Total codes créés" />
+                           <Label fx:id="lblStatTotalCodes" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #34495e;" text="0" />
+                        </VBox>
+                        
+                        <VBox spacing="5.0" GridPane.columnIndex="2" GridPane.rowIndex="1">
+                           <Label style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;" text="Codes actifs" />
+                           <Label fx:id="lblStatCodesActifs" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #16a085;" text="0" />
+                        </VBox>
+                     </GridPane>
+                  </VBox>
+                  
+                  <!-- Historique des codes -->
+                  <VBox spacing="15.0" style="-fx-background-color: white; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-background-radius: 8;">
+                     <HBox spacing="10.0" alignment="CENTER_LEFT">
+                        <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Historique des codes confidentiels" />
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Button fx:id="btnActualiserHistorique" text="🔄 Actualiser" 
+                               onAction="#handleActualiserHistorique" />
+                     </HBox>
+                     
+                     <TableView fx:id="tableHistoriqueCode" prefHeight="300.0">
+                        <columns>
+                           <TableColumn fx:id="colHistoriqueDescription" prefWidth="300.0" text="Description" />
+                           <TableColumn fx:id="colHistoriqueStatut" prefWidth="100.0" text="Statut" />
+                           <TableColumn fx:id="colHistoriqueCreateur" prefWidth="150.0" text="Créé par" />
+                           <TableColumn fx:id="colHistoriqueDateCreation" prefWidth="150.0" text="Date création" />
+                           <TableColumn fx:id="colHistoriqueAge" prefWidth="100.0" text="Âge (jours)" />
+                        </columns>
+                        
+                        <placeholder>
+                           <VBox alignment="CENTER" spacing="10.0">
+                              <Label style="-fx-font-size: 48px; -fx-text-fill: #bdc3c7;" text="🔐" />
+                              <Label style="-fx-text-fill: #7f8c8d;" text="Aucun historique disponible" />
+                           </VBox>
+                        </placeholder>
+                     </TableView>
+                  </VBox>
+                  
+                  <!-- Responsable courriers confidentiels -->
+                  <VBox spacing="15.0" style="-fx-background-color: white; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-background-radius: 8;">
+                     <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Responsable des courriers confidentiels" />
+                     
+                     <VBox spacing="10.0">
+                        <Label text="Le responsable recevra automatiquement tous les nouveaux courriers confidentiels créés." 
+                              style="-fx-text-fill: #7f8c8d; -fx-font-size: 13px;" wrapText="true" />
+                     </VBox>
+                     
+                     <GridPane hgap="15.0" vgap="12.0">
+                        <columnConstraints>
+                           <ColumnConstraints hgrow="NEVER" minWidth="200.0" />
+                           <ColumnConstraints hgrow="ALWAYS" />
+                        </columnConstraints>
+                        
+                        <Label text="Responsable actuel:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <Label fx:id="lblResponsableCourrierConfidentiel" style="-fx-font-weight: bold; -fx-text-fill: #27ae60;" 
+                              text="Aucun responsable configuré" 
+                              GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        
+                        <Label text="Sélectionner un responsable:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <ComboBox fx:id="cmbResponsableCourrierConfidentiel" promptText="Choisir un utilisateur..." 
+                                 prefWidth="300.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                     </GridPane>
+                     
+                     <HBox spacing="10.0" style="-fx-padding: 10 0 0 0;">
+                        <Button fx:id="btnDefinirResponsableConfidentiel" styleClass="button-primary" 
+                               text="✅ Définir comme responsable" 
+                               onAction="#handleDefinirResponsableConfidentiel" />
+                        <Button fx:id="btnSupprimerResponsableConfidentiel" styleClass="button-danger" 
+                               text="❌ Supprimer le responsable" 
+                               onAction="#handleSupprimerResponsableConfidentiel" />
+                        <Button fx:id="btnActualiserResponsableConfidentiel" styleClass="button-secondary" 
+                               text="🔄 Actualiser" 
+                               onAction="#handleActualiserResponsableConfidentiel" />
+                     </HBox>
+                  </VBox>
+                  
+               </VBox>
+            </ScrollPane>
+         </Tab>
+         
+         <!-- Onglet Configuration Serveur (EXISTANT) -->
          <Tab text="🖥️ Configuration Serveur">
             <ScrollPane fitToWidth="true">
                <VBox spacing="20.0" style="-fx-padding: 30;">
@@ -83,17 +253,17 @@
             </ScrollPane>
          </Tab>
          
-         <!-- Onglet Configuration Responsable Courrier -->
-		<Tab text="📧 Responsable Courriers">
+         <!-- Onglet Configuration Responsable Courrier Standards (EXISTANT) -->
+		<Tab text="📧 Responsable Courriers Standards">
 		   <ScrollPane fitToWidth="true">
 		      <VBox spacing="20.0" style="-fx-padding: 30;">
 		         
 		         <!-- Configuration du responsable -->
 		         <VBox spacing="15.0" styleClass="card" style="-fx-background-color: white; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2); -fx-background-radius: 8;">
-		            <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Configuration du responsable des courriers" />
+		            <Label style="-fx-font-weight: bold; -fx-font-size: 16px;" text="Configuration du responsable des courriers standards" />
 		            
 		            <VBox spacing="10.0">
-		               <Label text="Le responsable recevra automatiquement tous les nouveaux courriers créés dans le système." 
+		               <Label text="Le responsable recevra automatiquement tous les nouveaux courriers standards créés dans le système." 
 		                     style="-fx-text-fill: #7f8c8d; -fx-font-size: 13px;" wrapText="true" />
 		            </VBox>
 		            
@@ -144,7 +314,7 @@
 		   </ScrollPane>
 		</Tab>
          
-         <!-- Onglet Logs d'activité -->
+         <!-- Onglet Logs d'activité (EXISTANT - inchangé) -->
          <Tab text="📋 Logs d'activité">
             <VBox spacing="20.0" style="-fx-padding: 20;">
                
@@ -175,8 +345,6 @@
                      <TableColumn fx:id="colLogDetails" prefWidth="300.0" text="Détails" />
                      <TableColumn fx:id="colLogIP" prefWidth="120.0" text="Adresse IP" />
                      <TableColumn fx:id="colLogStatut" prefWidth="120.0" text="Statut" />
-                     
-
                   </columns>
                   
                   <placeholder>
@@ -199,7 +367,7 @@
             </VBox>
          </Tab>
          
-         <!-- Onglet Connexions -->
+         <!-- Onglet Connexions (EXISTANT - inchangé) -->
          <Tab text="🔐 Connexions">
             <VBox spacing="20.0" style="-fx-padding: 20;">
                
@@ -235,7 +403,7 @@
                   <placeholder>
                      <VBox alignment="CENTER" spacing="10.0">
                         <Label style="-fx-font-size: 48px; -fx-text-fill: #bdc3c7;" text="🔐" />
-                        <Label style="-fx-text-filadmin	l: #7f8c8d;" text="Aucune connexion enregistrée" />
+                        <Label style="-fx-text-fill: #7f8c8d;" text="Aucune connexion enregistrée" />
                      </VBox>
                   </placeholder>
                </TableView>

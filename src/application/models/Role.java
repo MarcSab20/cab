@@ -271,7 +271,10 @@ public class Role {
      * Vérifie si c'est un rôle administrateur
      */
     public boolean isAdmin() {
-        return hasPermission(Permission.ADMIN_SYSTEME) || code.equalsIgnoreCase("ADMIN");
+    	if (this.code == null) {
+            return "Administrateur".equalsIgnoreCase(this.nom);
+        }
+        return this.code.equalsIgnoreCase("ADMIN");
     }
     
     /**
