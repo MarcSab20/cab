@@ -29,7 +29,7 @@
                   
                   <!-- Avertissement de sécurité -->
                   <VBox spacing="10.0" style="-fx-background-color: #fff3cd; -fx-padding: 15; -fx-background-radius: 6; -fx-border-color: #ffc107; -fx-border-width: 2; -fx-border-radius: 6;">
-                     <Label style="-fx-font-weight: bold; -fx-text-fill: #856404; -fx-font-size: 14px;" text="⚠️ ZONE SÉCURISÉE - ADMINISTRATEURS UNIQUEMENT" />
+                     <Label style="-fx-font-weight: bold; -fx-text-fill: #856404; -fx-font-size: 14px;" text="ZONE SÉCURISÉE - ADMINISTRATEURS UNIQUEMENT" />
                      <Label style="-fx-text-fill: #856404; -fx-font-size: 12px;" 
                            text="Cette section permet de gérer les codes confidentiels du système. Tous les changements sont enregistrés et tracés." 
                            wrapText="true" />
