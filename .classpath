@@ -18,5 +18,7 @@
 	<classpathentry kind="lib" path="C:/Users/Marco/Documents/librairie/jar_files/mysql-connector-j-8.4.0.jar"/>
 	<classpathentry kind="lib" path="C:/Users/Marco/Documents/librairie/jar_files/ojdbc11.jar"/>
 	<classpathentry kind="lib" path="C:/Users/Marco/Documents/librairie/librairie BFE/controlsfx-11.1.2.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Marco/Downloads/HikariCP-5.0.1.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Marco/Documents/librairie/librairie BFE/slf4j-api-2.0.9.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

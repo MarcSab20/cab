@@ -71,11 +71,11 @@ public class DocumentService {
         
         List<Document> documents = new ArrayList<>();
         String query = "SELECT * FROM v_documents_complets WHERE statut != 'supprime' AND (" +
-                      "code_document ILIKE ? OR " +
-                      "titre ILIKE ? OR " +
-                      "description ILIKE ? OR " +
-                      "mots_cles ILIKE ? OR " +
-                      "extension ILIKE ?) " +
+                      "code_document LIKE ? OR " +
+                      "titre LIKE ? OR " +
+                      "description LIKE ? OR " +
+                      "mots_cles LIKE ? OR " +
+                      "extension LIKE ?) " +
                       "ORDER BY date_modification DESC";
         
         try (Connection conn = databaseService.getConnection();
@@ -122,7 +122,7 @@ public class DocumentService {
         
         // Recherche textuelle
         if (recherche != null && !recherche.trim().isEmpty()) {
-            queryBuilder.append("AND (code_document ILIKE ? OR titre ILIKE ? OR description ILIKE ? OR mots_cles ILIKE ?) ");
+            queryBuilder.append("AND (code_document LIKE ? OR titre LIKE ? OR description LIKE ? OR mots_cles LIKE ?) ");
             String pattern = "%" + recherche + "%";
             params.add(pattern);
             params.add(pattern);
@@ -188,7 +188,7 @@ public class DocumentService {
     public List<Document> rechercherParExtension(String extension) {
         List<Document> documents = new ArrayList<>();
         String query = "SELECT * FROM v_documents_complets WHERE statut != 'supprime' " +
-                      "AND extension ILIKE ? ORDER BY date_modification DESC";
+                      "AND extension LIKE ? ORDER BY date_modification DESC";
         
         try (Connection conn = databaseService.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {

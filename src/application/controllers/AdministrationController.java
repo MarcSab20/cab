@@ -18,7 +18,6 @@ import javafx.stage.DirectoryChooser;
 
 import java.io.File;
 import java.sql.*;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -28,9 +27,6 @@ import java.util.Map;
 import application.services.ConfidentialCodeService;
 import application.services.ConfidentialCodeService.CodeHistoryEntry;
 import application.services.ConfidentialCodeService.AccessStatistics;
-import application.controllers.ChangeConfidentialCodeDialog;
-import javafx.collections.FXCollections;
-import java.time.format.DateTimeFormatter;
 
 /**
  * Contrôleur pour l'administration système - VERSION AMÉLIORÉE
@@ -489,7 +485,7 @@ public class AdministrationController {
     private void handleActualiserCodeInfo() {
         chargerInformationsCodeActuel();
         chargerStatistiquesAcces();
-        showInfo("Informations actualisées");
+        AlertUtils.showInfo("Informations actualisées");
     }
 
     /**
@@ -498,7 +494,7 @@ public class AdministrationController {
     @FXML
     private void handleActualiserHistorique() {
         chargerHistoriqueCode();
-        showInfo("Historique actualisé");
+        AlertUtils.showInfo("Historique actualisé");
     }
 
     /**
@@ -509,7 +505,7 @@ public class AdministrationController {
         User selectedUser = cmbResponsableCourrierConfidentiel.getValue();
         
         if (selectedUser == null) {
-            showWarning("Validation", "Veuillez sélectionner un utilisateur");
+            AlertUtils.showWarning("Validation", "Veuillez sélectionner un utilisateur");
             return;
         }
         
@@ -556,7 +552,7 @@ public class AdministrationController {
         User responsableActuel = confidentialCodeService.getResponsableCourrierConfidentiel();
         
         if (responsableActuel == null) {
-            showInfo("Aucun responsable configuré");
+            AlertUtils.showInfo("Aucun responsable configuré");
             return;
         }
         
@@ -597,7 +593,7 @@ public class AdministrationController {
     @FXML
     private void handleActualiserResponsableConfidentiel() {
         chargerResponsableCourrierConfidentiel();
-        showInfo("Informations actualisées");
+        AlertUtils.showInfo("Informations actualisées");
     }
 
     
@@ -748,7 +744,7 @@ public class AdministrationController {
             
         } catch (SQLException e) {
             System.err.println("Erreur chargement configuration: " + e.getMessage());
-            showError("Erreur", "Impossible de charger la configuration");
+            AlertUtils.showError("Erreur", "Impossible de charger la configuration");
         }
     }
     
@@ -830,7 +826,7 @@ public class AdministrationController {
                 String motDePasse = txtMotDePasseServeur.getText();
                 
                 if (adresse == null || adresse.trim().isEmpty()) {
-                    showWarning("Validation", "Veuillez saisir l'adresse du serveur");
+                    AlertUtils.showWarning("Validation", "Veuillez saisir l'adresse du serveur");
                     return;
                 }
                 
@@ -839,12 +835,12 @@ public class AdministrationController {
                     adresse, port, utilisateur, motDePasse);
                 
                 if (connexionReussie) {
-                    showSuccess("✅ Connexion au serveur distant réussie !\n\n" +
+                   showSuccess("✅ Connexion au serveur distant réussie !\n\n" +
                                "Adresse: " + adresse + "\n" +
                                "Port: " + port);
                     logService.logAction("test_connexion_serveur", "Test connexion distant réussi: " + adresse);
                 } else {
-                    showError("Échec de connexion", 
+                    AlertUtils.showError("Échec de connexion", 
                              "Impossible de se connecter au serveur distant.\n\n" +
                              "Vérifiez l'adresse, le port et les identifiants.");
                     logService.logAction("test_connexion_serveur", "Test connexion distant échoué: " + adresse);
@@ -855,26 +851,26 @@ public class AdministrationController {
                 String chemin = txtCheminServeur.getText();
                 
                 if (chemin == null || chemin.trim().isEmpty()) {
-                    showWarning("Validation", "Veuillez saisir le chemin du serveur");
+                    AlertUtils.showWarning("Validation", "Veuillez saisir le chemin du serveur");
                     return;
                 }
                 
                 File repertoire = new File(chemin);
                 
                 if (!repertoire.exists()) {
-                    showWarning("Chemin invalide", 
+                    AlertUtils.showWarning("Chemin invalide", 
                                "Le répertoire spécifié n'existe pas.\n\n" +
                                "Voulez-vous le créer ?");
                     return;
                 }
                 
                 if (!repertoire.canRead() || !repertoire.canWrite()) {
-                    showError("Permissions insuffisantes", 
+                    AlertUtils.showError("Permissions insuffisantes", 
                              "Le répertoire n'a pas les permissions de lecture/écriture nécessaires.");
                     return;
                 }
                 
-                showSuccess("✅ Test de connexion réussi !\n\n" +
+               showSuccess("✅ Test de connexion réussi !\n\n" +
                            "Chemin: " + chemin + "\n" +
                            "Lecture: ✓\n" +
                            "Écriture: ✓");
@@ -884,7 +880,7 @@ public class AdministrationController {
             
         } catch (Exception e) {
             System.err.println("Erreur test connexion: " + e.getMessage());
-            showError("Erreur", "Erreur lors du test de connexion: " + e.getMessage());
+            AlertUtils.showError("Erreur", "Erreur lors du test de connexion: " + e.getMessage());
         }
     }
     
@@ -899,14 +895,14 @@ public class AdministrationController {
             
             // Validation
             if (!estDistant && (chemin == null || chemin.trim().isEmpty())) {
-                showWarning("Validation", "Veuillez saisir le chemin du serveur");
+                AlertUtils.showWarning("Validation", "Veuillez saisir le chemin du serveur");
                 return;
             }
             
             if (estDistant) {
                 String adresse = txtAdresseServeur.getText();
                 if (adresse == null || adresse.trim().isEmpty()) {
-                    showWarning("Validation", "Veuillez saisir l'adresse du serveur");
+                    AlertUtils.showWarning("Validation", "Veuillez saisir l'adresse du serveur");
                     return;
                 }
             }
@@ -976,7 +972,7 @@ public class AdministrationController {
             
         } catch (SQLException e) {
             System.err.println("Erreur sauvegarde configuration: " + e.getMessage());
-            showError("Erreur", "Impossible de sauvegarder la configuration");
+            AlertUtils.showError("Erreur", "Impossible de sauvegarder la configuration");
         }
     }
     
@@ -1053,7 +1049,7 @@ public class AdministrationController {
 	        
 	    } catch (Exception e) {
 	        System.err.println("Erreur chargement utilisateurs: " + e.getMessage());
-	        showError("Erreur", "Impossible de charger la liste des utilisateurs");
+	        AlertUtils.showError("Erreur", "Impossible de charger la liste des utilisateurs");
 	    }
 	}
 	
@@ -1130,7 +1126,7 @@ public class AdministrationController {
 	    User selectedUser = cmbResponsableCourrier.getValue();
 	    
 	    if (selectedUser == null) {
-	        showWarning("Validation", "Veuillez sélectionner un utilisateur");
+	        AlertUtils.showWarning("Validation", "Veuillez sélectionner un utilisateur");
 	        return;
 	    }
 	    
@@ -1156,12 +1152,12 @@ public class AdministrationController {
 	                
 	                actualiserResponsable();
 	            } else {
-	                showError("Erreur", "Impossible de définir le responsable");
+	                AlertUtils.showError("Erreur", "Impossible de définir le responsable");
 	            }
 	            
 	        } catch (Exception e) {
 	            System.err.println("Erreur définition responsable: " + e.getMessage());
-	            showError("Erreur", "Erreur lors de la définition du responsable");
+	            AlertUtils.showError("Erreur", "Erreur lors de la définition du responsable");
 	        }
 	    }
 	}
@@ -1173,7 +1169,7 @@ public class AdministrationController {
 	    User responsableActuel = notificationService.getResponsableCourrier();
 	    
 	    if (responsableActuel == null) {
-	        showInfo("Aucun responsable configuré");
+	        AlertUtils.showInfo("Aucun responsable configuré");
 	        return;
 	    }
 	    
@@ -1198,12 +1194,12 @@ public class AdministrationController {
 	                
 	                actualiserResponsable();
 	            } else {
-	                showError("Erreur", "Impossible de supprimer le responsable");
+	                AlertUtils.showError("Erreur", "Impossible de supprimer le responsable");
 	            }
 	            
 	        } catch (Exception e) {
 	            System.err.println("Erreur suppression responsable: " + e.getMessage());
-	            showError("Erreur", "Erreur lors de la suppression du responsable");
+	            AlertUtils.showError("Erreur", "Erreur lors de la suppression du responsable");
 	        }
 	    }
 	}
@@ -1215,7 +1211,7 @@ public class AdministrationController {
 	    chargerUtilisateursDisponibles();
 	    chargerResponsableActuel();
 	    chargerStatistiquesNotifications();
-	    showInfo("Informations actualisées");
+	    AlertUtils.showInfo("Informations actualisées");
 	}
 
     
@@ -1385,11 +1381,11 @@ public class AdministrationController {
                 lblTotalLogs.setText(logs.size() + " résultats trouvés");
             }
             
-            showInfo(logs.size() + " entrées correspondantes trouvées");
+            AlertUtils.showInfo(logs.size() + " entrées correspondantes trouvées");
             
         } catch (SQLException e) {
             System.err.println("Erreur recherche logs: " + e.getMessage());
-            showError("Erreur", "Erreur lors de la recherche dans les logs");
+            AlertUtils.showError("Erreur", "Erreur lors de la recherche dans les logs");
         }
     }
     
@@ -1424,7 +1420,7 @@ public class AdministrationController {
             
         } catch (Exception e) {
             System.err.println("Erreur export logs: " + e.getMessage());
-            showError("Erreur", "Impossible d'exporter les logs");
+            AlertUtils.showError("Erreur", "Impossible d'exporter les logs");
         }
     }
     
@@ -1452,7 +1448,7 @@ public class AdministrationController {
                 }
                 
             } catch (SQLException e) {
-                showError("Erreur", "Impossible de vider les logs");
+                AlertUtils.showError("Erreur", "Impossible de vider les logs");
             }
         }
     }
@@ -1671,7 +1667,7 @@ public class AdministrationController {
             }
             
             tableConnexions.setItems(FXCollections.observableArrayList(connexions));
-            showInfo(connexions.size() + " connexions trouvées");
+            AlertUtils.showInfo(connexions.size() + " connexions trouvées");
             
         } catch (SQLException e) {
             System.err.println("Erreur recherche connexions: " + e.getMessage());
@@ -1710,7 +1706,7 @@ public class AdministrationController {
             
         } catch (Exception e) {
             System.err.println("Erreur export connexions: " + e.getMessage());
-            showError("Erreur", "Impossible d'exporter les connexions");
+            AlertUtils.showError("Erreur", "Impossible d'exporter les connexions");
         }
     }
     
@@ -1866,22 +1862,6 @@ public class AdministrationController {
         return String.format("%.2f %s", taille, unites[uniteIndex]);
     }
     
-    private void showError(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-    
-    private void showWarning(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-    
     private void showSuccess(String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Succès");
@@ -1890,11 +1870,4 @@ public class AdministrationController {
         alert.showAndWait();
     }
     
-    private void showInfo(String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Information");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
 }

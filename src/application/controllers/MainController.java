@@ -4,6 +4,7 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -11,6 +12,7 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import application.models.User;
 import application.services.AuthenticationService;
+import application.services.NetworkService;
 import application.utils.SessionManager;
 import application.utils.AlertUtils;
 import java.io.IOException;
@@ -152,7 +154,15 @@ public class MainController implements Initializable {
         try {
             System.out.println("Chargement de la vue: " + viewName);
             
-            // Mise à jour du statut des boutons de navigation
+            if (contentArea != null && contentArea.getCenter() != null) {
+                Node currentNode = contentArea.getCenter();
+                // Récupérer le contrôleur de la vue actuelle via les propriétés
+                Object oldController = currentNode.getProperties().get("controller");
+                if (oldController instanceof CourrierController) {
+                    ((CourrierController) oldController).cleanup();
+                    System.out.println("✓ cleanup() appelé sur CourrierController");
+                }
+            }
             updateNavigationButtons(viewName);
             
             // Chargement du fichier FXML correspondant
@@ -171,6 +181,7 @@ public class MainController implements Initializable {
             // Récupération du contrôleur et passage de la référence au MainController
             Object controller = loader.getController();
             if (controller != null) {
+            	view.getProperties().put("controller", controller);
                 try {
                     controller.getClass().getMethod("setMainController", MainController.class)
                         .invoke(controller, this);
@@ -321,6 +332,8 @@ public class MainController implements Initializable {
      * Démarre les tâches en arrière-plan
      */
     private void startBackgroundTasks() {
+
+        // 1. Mise à jour de l'horloge (chaque seconde)
         Thread timeUpdater = new Thread(() -> {
             while (true) {
                 try {
@@ -333,6 +346,66 @@ public class MainController implements Initializable {
         });
         timeUpdater.setDaemon(true);
         timeUpdater.start();
+
+        // 2. Rafraîchissement automatique toutes les 30 secondes
+        Thread autoRefresh = new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(30_000);
+                    Platform.runLater(() -> {
+                        if (currentView != null && !currentView.isEmpty()) {
+                            loadView(currentView);
+                            if (statusLabel != null) {
+                                statusLabel.setText("🔄 Synchronisé à " +
+                                    java.time.LocalDateTime.now().format(
+                                        java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")));
+                            }
+                        }
+                    });
+                } catch (InterruptedException e) {
+                    break;
+                }
+            }
+        });
+        autoRefresh.setDaemon(true);
+        autoRefresh.start();
+
+        // 3. Écoute des notifications réseau en temps réel
+        try {
+            NetworkService networkService = application.services.NetworkService.getInstance();
+            networkService.initialize();
+            networkService.addWorkflowUpdateListener(
+                new application.services.NetworkService.WorkflowUpdateListener() {
+                    @Override
+                    public void onWorkflowUpdate(int courrierId, String serviceCode) {
+                        Platform.runLater(() -> {
+                            if ("courrier".equals(currentView)) loadView("courrier");
+                            if (statusLabel != null)
+                                statusLabel.setText("📬 Courrier #" + courrierId + " mis à jour");
+                        });
+                    }
+                    @Override
+                    public void onWorkflowComplete(int courrierId) {
+                        Platform.runLater(() -> {
+                            if ("courrier".equals(currentView)) loadView("courrier");
+                            if (statusLabel != null)
+                                statusLabel.setText("✅ Courrier #" + courrierId + " traité");
+                        });
+                    }
+                    @Override
+                    public void onRefreshRequest() {
+                        Platform.runLater(() -> {
+                            if (currentView != null && !currentView.isEmpty()) {
+                                loadView(currentView);
+                            }
+                        });
+                    }
+                }
+            );
+            System.out.println("✅ Écoute réseau démarrée");
+        } catch (Exception e) {
+            System.err.println("⚠️ Impossible de démarrer l'écoute réseau: " + e.getMessage());
+        }
     }
     
     /**

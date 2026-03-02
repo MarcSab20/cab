@@ -327,13 +327,13 @@ public class DocumentsController {
     private void handleModifierDossier(Dossier dossier) {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
-            showError("Utilisateur non connecté");
+            AlertUtils.showError("Utilisateur non connecté");
             return;
         }
         
         // Vérifier les permissions
         if (!dossierService.peutCreerDossier(currentUser)) {
-            showError("Vous n'avez pas les permissions pour modifier ce dossier");
+            AlertUtils.showError("Vous n'avez pas les permissions pour modifier ce dossier");
             return;
         }
         
@@ -357,11 +357,11 @@ public class DocumentsController {
                     showSuccess("✅ Dossier modifié avec succès !");
                     
                 } else {
-                    showError("Erreur lors de la modification du dossier");
+                    AlertUtils.showError("Erreur lors de la modification du dossier");
                 }
                 
             } catch (Exception e) {
-                showError("Erreur : " + e.getMessage());
+                AlertUtils.showError("Erreur : " + e.getMessage());
             }
         });
     }
@@ -372,12 +372,12 @@ public class DocumentsController {
     private void handleNouveauSousDossier(Dossier parent) {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
-            showError("Utilisateur non connecté");
+            AlertUtils.showError("Utilisateur non connecté");
             return;
         }
         
         if (!dossierService.peutCreerDossier(currentUser)) {
-            showError("Vous n'avez pas les permissions pour créer un dossier");
+            AlertUtils.showError("Vous n'avez pas les permissions pour créer un dossier");
             return;
         }
         
@@ -397,7 +397,7 @@ public class DocumentsController {
                 showSuccess("✅ Sous-dossier créé avec succès !");
                 
             } catch (Exception e) {
-                showError("Erreur : " + e.getMessage());
+                AlertUtils.showError("Erreur : " + e.getMessage());
             }
         });
     }
@@ -408,7 +408,7 @@ public class DocumentsController {
     private void handleSupprimerDossier(Dossier dossier) {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
-            showError("Utilisateur non connecté");
+            AlertUtils.showError("Utilisateur non connecté");
             return;
         }
         
@@ -431,10 +431,10 @@ public class DocumentsController {
                     chargerArborescence();
                     showSuccess("✅ Dossier supprimé avec succès !");
                 } else {
-                    showError("Erreur lors de la suppression");
+                    AlertUtils.showError("Erreur lors de la suppression");
                 }
             } catch (Exception e) {
-                showError("Erreur : " + e.getMessage());
+                AlertUtils.showError("Erreur : " + e.getMessage());
             }
         }
     }
@@ -597,7 +597,7 @@ public class DocumentsController {
     public void handleImporterDocument() {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
-            showError("Utilisateur non connecté");
+            AlertUtils.showError("Utilisateur non connecté");
             return;
         }
         
@@ -631,7 +631,7 @@ public class DocumentsController {
                         
                         if (!confidentialCodeService.checkAccessWithCode(
                                 ActionType.SAVE_DOCUMENT, "document", null, code)) {
-                            showError("❌ Code confidentiel incorrect. Enregistrement refusé.");
+                            AlertUtils.showError("❌ Code confidentiel incorrect. Enregistrement refusé.");
                             return;
                         }
                     }
@@ -654,7 +654,7 @@ public class DocumentsController {
                     }
                     
                 } catch (Exception e) {
-                    showError("Erreur d'importation : " + e.getMessage());
+                    AlertUtils.showError("Erreur d'importation : " + e.getMessage());
                 }
             });
         }
@@ -687,7 +687,7 @@ public class DocumentsController {
             
             if (!confidentialCodeService.checkAccessWithCode(
                     ActionType.READ_DOCUMENT, "document", doc.getId(), code)) {
-                showError("❌ Code confidentiel incorrect. Accès refusé.");
+                AlertUtils.showError("❌ Code confidentiel incorrect. Accès refusé.");
                 return;
             }
         }
@@ -703,7 +703,7 @@ public class DocumentsController {
                 }
             }
         } catch (Exception e) {
-            showError("Erreur: " + e.getMessage());
+            AlertUtils.showError("Erreur: " + e.getMessage());
         }
     }
     
@@ -711,12 +711,12 @@ public class DocumentsController {
     public void handleNouveauDossier() {
         User currentUser = getCurrentUser();
         if (currentUser == null) {
-            showError("Utilisateur non connecté");
+            AlertUtils.showError("Utilisateur non connecté");
             return;
         }
         
         if (!dossierService.peutCreerDossier(currentUser)) {
-            showError("Vous n'avez pas les permissions pour créer un dossier");
+            AlertUtils.showError("Vous n'avez pas les permissions pour créer un dossier");
             return;
         }
         
@@ -736,7 +736,7 @@ public class DocumentsController {
                 showSuccess("✅ Dossier créé avec succès !");
                 
             } catch (Exception e) {
-                showError("Erreur : " + e.getMessage());
+                AlertUtils.showError("Erreur : " + e.getMessage());
             }
         });
     }
@@ -747,12 +747,12 @@ public class DocumentsController {
         User currentUser = getCurrentUser();
         
         if (doc == null) {
-            showError("Veuillez sélectionner un document");
+            AlertUtils.showError("Veuillez sélectionner un document");
             return;
         }
         
         if (currentUser == null) {
-            showError("Utilisateur non connecté");
+            AlertUtils.showError("Utilisateur non connecté");
             return;
         }
         
@@ -772,7 +772,7 @@ public class DocumentsController {
                 showSuccess("✅ Document modifié avec succès !");
                 
             } catch (Exception e) {
-                showError("Erreur : " + e.getMessage());
+                AlertUtils.showError("Erreur : " + e.getMessage());
             }
         });
     }
@@ -783,12 +783,12 @@ public class DocumentsController {
         User currentUser = getCurrentUser();
         
         if (doc == null) {
-            showError("Veuillez sélectionner un document");
+            AlertUtils.showError("Veuillez sélectionner un document");
             return;
         }
         
         if (currentUser == null) {
-            showError("Utilisateur non connecté");
+            AlertUtils.showError("Utilisateur non connecté");
             return;
         }
         
@@ -808,7 +808,7 @@ public class DocumentsController {
                 chargerDocuments();
                 showSuccess("✅ Document supprimé avec succès !");
             } else {
-                showError("Erreur lors de la suppression");
+                AlertUtils.showError("Erreur lors de la suppression");
             }
         }
     }
@@ -819,7 +819,7 @@ public class DocumentsController {
                       tableauDocuments.getSelectionModel().getSelectedItem();
         
         if (doc == null) {
-            showError("Veuillez sélectionner un document");
+            AlertUtils.showError("Veuillez sélectionner un document");
             return;
         }
         
@@ -836,7 +836,7 @@ public class DocumentsController {
                 showSuccess("✅ Document téléchargé avec succès !");
                 
             } catch (Exception e) {
-                showError("Erreur de téléchargement : " + e.getMessage());
+                AlertUtils.showError("Erreur de téléchargement : " + e.getMessage());
             }
         }
     }
@@ -847,12 +847,12 @@ public class DocumentsController {
         User currentUser = getCurrentUser();
         
         if (doc == null) {
-            showError("Veuillez sélectionner un document");
+            AlertUtils.showError("Veuillez sélectionner un document");
             return;
         }
         
         if (currentUser == null) {
-            showError("Utilisateur non connecté");
+            AlertUtils.showError("Utilisateur non connecté");
             return;
         }
         
@@ -876,7 +876,7 @@ public class DocumentsController {
                 showSuccess("✅ Document déplacé avec succès !");
                 
             } catch (Exception e) {
-                showError("Erreur : " + e.getMessage());
+                AlertUtils.showError("Erreur : " + e.getMessage());
             }
         });
     }
@@ -1125,11 +1125,11 @@ public class DocumentsController {
             // Vérifier le code
             if (!confidentialCodeService.checkAccessWithCode(
                     ActionType.ACCESS_DOSSIER, "dossier", dossier.getId(), code)) {
-                showError("❌ Code confidentiel incorrect. Accès refusé.");
+                AlertUtils.showError("❌ Code confidentiel incorrect. Accès refusé.");
                 return;
             }
             
-            showInfo("✅ Accès au dossier confidentiel autorisé");
+            AlertUtils.showInfo("✅ Accès au dossier confidentiel autorisé");
         }
         
         this.dossierActuel = dossier;
@@ -1185,7 +1185,7 @@ public class DocumentsController {
         if (tableauDocuments != null) {
             tableauDocuments.getSelectionModel().selectAll();
             int count = tableauDocuments.getSelectionModel().getSelectedItems().size();
-            showInfo(count + " document(s) sélectionné(s)");
+            AlertUtils.showInfo(count + " document(s) sélectionné(s)");
         }
     }
     
@@ -1199,7 +1199,7 @@ public class DocumentsController {
         var selectedItems = tableauDocuments.getSelectionModel().getSelectedItems();
         
         if (selectedItems.isEmpty()) {
-            showError("Veuillez sélectionner au moins un document");
+            AlertUtils.showError("Veuillez sélectionner au moins un document");
             return;
         }
         
@@ -1246,7 +1246,7 @@ public class DocumentsController {
     @FXML public void handleActualiser() { 
         chargerArborescence(); 
         chargerDocuments(); 
-        showInfo("✅ Données actualisées");
+        AlertUtils.showInfo("✅ Données actualisées");
     }
     @FXML public void handleDeplacerSelection() { handleDeplacerDocument(); }
     @FXML public void handleSupprimerSelection() { handleSupprimerDocument(); }
@@ -1268,7 +1268,7 @@ public class DocumentsController {
     public void handlePartagerDocument() { 
     	Document doc = tableauDocuments.getSelectionModel().getSelectedItem();
         if (doc == null) {
-            showError("Veuillez sélectionner un document");
+            AlertUtils.showError("Veuillez sélectionner un document");
             return;
         }
         
@@ -1290,7 +1290,7 @@ public class DocumentsController {
                            partageInfo.getUtilisateurs().size() + " utilisateur(s) !");
                 
             } catch (Exception e) {
-                showError("Erreur lors du partage : " + e.getMessage());
+                AlertUtils.showError("Erreur lors du partage : " + e.getMessage());
             }
         });
     }
@@ -1334,7 +1334,5 @@ public class DocumentsController {
     // Méthodes utilitaires
     private User getCurrentUser() { return SessionManager.getInstance().getCurrentUser(); }
     private void showAlert(String t, String m) { new Alert(Alert.AlertType.WARNING, m).showAndWait(); }
-    private void showError(String m) { new Alert(Alert.AlertType.ERROR, m).showAndWait(); }
     private void showSuccess(String m) { new Alert(Alert.AlertType.INFORMATION, m).showAndWait(); }
-    private void showInfo(String m) { new Alert(Alert.AlertType.INFORMATION, m).showAndWait(); }
 }

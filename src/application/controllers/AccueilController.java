@@ -87,107 +87,7 @@ public class AccueilController implements Initializable {
         }
     }
     
-    /**
-     * Charge les activités récentes
-     */
-    private void loadRecentActivities() {
-        try {
-            activitesContainer.getChildren().clear();
-            
-            // Ajouter quelques activités récentes (à remplacer par de vraies données)
-            String[] activites = {
-                "📧 Nouveau courrier reçu: Demande de devis",
-                "✅ Courrier traité: Rapport mensuel",
-                "📄 Document créé: Plan d'action 2025",
-                "📤 Courrier transféré: Demande de congé"
-            };
-            
-            for (String activite : activites) {
-                Label actLabel = new Label(activite);
-                actLabel.setStyle("-fx-padding: 8; -fx-text-fill: #2c3e50; -fx-font-size: 13px;");
-                activitesContainer.getChildren().add(actLabel);
-            }
-            
-        } catch (Exception e) {
-            System.err.println("Erreur lors du chargement des activités: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Met à jour les informations système
-     */
-    private void updateSystemInfo() {
-        try {
-            String info = "Système opérationnel - " + 
-                         currentUser.getRole().getNom() + " - " +
-                         (currentUser.getServiceCode() != null ? 
-                             "Service: " + currentUser.getServiceCode() : 
-                             "Tous services");
-            labelInfoSysteme.setText(info);
-            
-        } catch (Exception e) {
-            System.err.println("Erreur lors de la mise à jour des infos système: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * Gestion de l'action "Nouveau courrier"
-     */
-    @FXML
-    private void handleNouveauCourrier(MouseEvent event) {
-        System.out.println("Action: Nouveau courrier");
-        navigateToView("courrier");
-    }
-    
-    /**
-     * Gestion de l'action "Tableau de bord"
-     */
-    @FXML
-    private void handleTableauBord(MouseEvent event) {
-        System.out.println("Action: Tableau de bord");
-        navigateToView("dashboard");
-    }
-    
-    /**
-     * Gestion de l'action "Gestion des courriers"
-     */
-    @FXML
-    private void handleGestionCourriers(MouseEvent event) {
-        System.out.println("Action: Gestion des courriers");
-        navigateToView("courrier");
-    }
-    
-    /**
-     * Gestion de l'action "Recherche"
-     */
-    @FXML
-    private void handleRecherche(MouseEvent event) {
-        System.out.println("Action: Recherche");
-        navigateToView("recherche");
-    }
-    
-    /**
-     * Navigation vers une autre vue via le MainController
-     */
-    private void navigateToView(String viewName) {
-        try {
-            // Si le mainController a été défini, l'utiliser
-            if (mainController != null) {
-                mainController.navigateToView(viewName);
-            } else {
-                // Sinon, essayer de le récupérer depuis la scène
-                MainController controller = getMainControllerFromScene();
-                if (controller != null) {
-                    controller.navigateToView(viewName);
-                } else {
-                    System.err.println("ERREUR: MainController non disponible pour la navigation");
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Erreur lors de la navigation vers " + viewName + ": " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
+
     
     /**
      * Récupère le MainController depuis la scène actuelle
@@ -217,7 +117,5 @@ public class AccueilController implements Initializable {
      */
     public void refresh() {
         loadStatistics();
-        loadRecentActivities();
-        updateSystemInfo();
     }
 }

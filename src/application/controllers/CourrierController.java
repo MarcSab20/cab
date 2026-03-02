@@ -31,6 +31,11 @@ import java.util.Timer;
 import java.util.TimerTask;
 import application.services.ConfidentialCodeService;
 import application.services.ConfidentialCodeService.ActionType;
+import application.utils.AlertUtils;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Contrôleur pour la gestion des courriers avec système de notifications
@@ -103,6 +108,8 @@ public class CourrierController {
     private ObservableList<Courrier> courriersFiltrés;
     private ObservableList<CourrierNotification> notifications;
     
+    private ScheduledExecutorService scheduler;
+    
     private Timer refreshTimer;
     
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -133,6 +140,8 @@ public class CourrierController {
         mettreAJourStatistiques();
         afficherBadgeNotifications();
         
+        demarrerRafraichissementAutomatique();
+        
         // Rafraîchissement automatique toutes les 30 secondes
         demarrerRafraichissementAutomatique();
         
@@ -157,6 +166,24 @@ public class CourrierController {
         }
         
         System.out.println("=== FIN INITIALISATION ===");
+    }
+    
+ // ✅ Méthode placée juste après initialize()
+    private void demarrerRafraichissementAutomatique() {
+        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "courrier-refresh");
+            t.setDaemon(true);
+            return t;
+        });
+        scheduler.scheduleAtFixedRate(() ->
+            Platform.runLater(() -> {
+                afficherBadgeNotifications();
+                if (tabPaneCourrier.getSelectionModel().getSelectedItem() == tabNotifications) {
+                    chargerCourriersNotifies();
+                }
+            }),
+            30, 30, TimeUnit.SECONDS
+        );
     }
     
     /**
@@ -391,7 +418,7 @@ public class CourrierController {
             
         } catch (Exception e) {
             System.err.println("Erreur chargement courriers: " + e.getMessage());
-            showError("Erreur lors du chargement des courriers");
+            AlertUtils.showError("Erreur lors du chargement des courriers");
         }
     }
     
@@ -539,9 +566,9 @@ public class CourrierController {
             notification.setLu(true);
             tableauNotifications.refresh();
             afficherBadgeNotifications();
-            showInfo("✅ Courrier marqué comme lu");
+            AlertUtils.showInfo("✅ Courrier marqué comme lu");
         } else {
-            showError("Erreur lors du marquage");
+            AlertUtils.showError("Erreur lors du marquage");
         }
     }
     
@@ -580,26 +607,6 @@ public class CourrierController {
         }
     }
     
-    /**
-     * Démarre le rafraîchissement automatique
-     */
-    private void demarrerRafraichissementAutomatique() {
-        refreshTimer = new Timer(true);
-        refreshTimer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                Platform.runLater(() -> {
-                    afficherBadgeNotifications();
-                    
-                    // Si l'onglet notifications est ouvert, rafraîchir
-                    if (tabPaneCourrier.getSelectionModel().getSelectedItem() == tabNotifications) {
-                        chargerCourriersNotifies();
-                    }
-                });
-            }
-        }, 30000, 30000); // Toutes les 30 secondes
-    }
-    
 // ==================== ACTIONS ====================
     
     /**
@@ -614,7 +621,7 @@ public class CourrierController {
             Document document = selectionnerDocument();
             
             if (document == null) {
-                showWarning("Un document doit être sélectionné pour créer un courrier");
+                AlertUtils.showWarning("Un document doit être sélectionné pour créer un courrier");
                 return;
             }
             
@@ -631,13 +638,13 @@ public class CourrierController {
                     String code = ConfidentialCodeDialog.showAndValidate(ActionType.SAVE_COURRIER);
                     
                     if (code == null) {
-                        showWarning("Création du courrier confidentiel annulée");
+                        AlertUtils.showWarning("Création du courrier confidentiel annulée");
                         return;
                     }
                     
                     if (!confidentialCodeService.checkAccessWithCode(
                             ActionType.SAVE_COURRIER, "courrier", null, code)) {
-                        showError("❌ Code confidentiel incorrect. Création du courrier refusée.");
+                        AlertUtils.showError("❌ Code confidentiel incorrect. Création du courrier refusée.");
                         return;
                     }
                 }
@@ -678,7 +685,7 @@ public class CourrierController {
         } catch (Exception e) {
             System.err.println("Erreur création courrier: " + e.getMessage());
             e.printStackTrace();
-            showError("Erreur lors de la création du courrier:\n" + e.getMessage());
+            AlertUtils.showError("Erreur lors de la création du courrier:\n" + e.getMessage());
         }
     }
     
@@ -690,7 +697,7 @@ public class CourrierController {
             List<Document> documents = documentService.getAllDocuments();
             
             if (documents.isEmpty()) {
-                showWarning("Aucun document disponible.\nVeuillez d'abord créer un document.");
+                AlertUtils.showWarning("Aucun document disponible.\nVeuillez d'abord créer un document.");
                 return null;
             }
             
@@ -752,13 +759,13 @@ public class CourrierController {
                 String code = ConfidentialCodeDialog.showAndValidate(ActionType.READ_DOCUMENT);
                 
                 if (code == null) {
-                    showWarning("Consultation du courrier confidentiel annulée");
+                    AlertUtils.showWarning("Consultation du courrier confidentiel annulée");
                     return;
                 }
                 
                 if (!confidentialCodeService.checkAccessWithCode(
                         ActionType.READ_DOCUMENT, "courrier", courrier.getId(), code)) {
-                    showError("❌ Code confidentiel incorrect. Accès refusé.");
+                    AlertUtils.showError("❌ Code confidentiel incorrect. Accès refusé.");
                     return;
                 }
             }
@@ -820,7 +827,7 @@ public class CourrierController {
             
         } catch (Exception e) {
             System.err.println("Erreur affichage détails: " + e.getMessage());
-            showError("Erreur lors de l'affichage des détails");
+            AlertUtils.showError("Erreur lors de l'affichage des détails");
         }
     }
     
@@ -842,13 +849,13 @@ public class CourrierController {
             String code = ConfidentialCodeDialog.showAndValidate(ActionType.READ_DOCUMENT);
             
             if (code == null) {
-                showWarning("Ouverture du courrier confidentiel annulée");
+                AlertUtils.showWarning("Ouverture du courrier confidentiel annulée");
                 return;
             }
             
             if (!confidentialCodeService.checkAccessWithCode(
                     ActionType.READ_DOCUMENT, "courrier", courrier.getId(), code)) {
-                showError("❌ Code confidentiel incorrect. Accès refusé.");
+                AlertUtils.showError("❌ Code confidentiel incorrect. Accès refusé.");
                 return;
             }
         }
@@ -899,7 +906,7 @@ public class CourrierController {
                 StatutCourrier nouveauStatut = result.get();
                 
                 if (nouveauStatut == courrier.getStatut()) {
-                    showInfo("Le statut est déjà " + nouveauStatut.getLibelle());
+                    AlertUtils.showInfo("Le statut est déjà " + nouveauStatut.getLibelle());
                     return;
                 }
                 
@@ -917,13 +924,13 @@ public class CourrierController {
                     chargerCourriers();
                     mettreAJourStatistiques();
                 } else {
-                    showError("Échec du changement de statut");
+                    AlertUtils.showError("Échec du changement de statut");
                 }
             }
             
         } catch (Exception e) {
             System.err.println("Erreur changement statut: " + e.getMessage());
-            showError("Erreur lors du changement de statut");
+            AlertUtils.showError("Erreur lors du changement de statut");
         }
     }
     
@@ -935,7 +942,7 @@ public class CourrierController {
         
         // Vérifier que le courrier est au statut TRAITE
         if (courrier.getStatut() != StatutCourrier.TRAITE) {
-            showWarning("Le courrier doit être au statut TRAITE pour être archivé");
+            AlertUtils.showWarning("Le courrier doit être au statut TRAITE pour être archivé");
             return;
         }
         
@@ -978,14 +985,14 @@ public class CourrierController {
                     chargerCourriers();
                     mettreAJourStatistiques();
                 } else {
-                    showError("Échec de l'archivage");
+                    AlertUtils.showError("Échec de l'archivage");
                 }
             }
             
         } catch (Exception e) {
             System.err.println("Erreur archivage: " + e.getMessage());
             e.printStackTrace();
-            showError("Erreur lors de l'archivage:\n" + e.getMessage());
+            AlertUtils.showError("Erreur lors de l'archivage:\n" + e.getMessage());
         }
     }
     
@@ -1009,11 +1016,11 @@ public class CourrierController {
             
             appliquerFiltres();
             
-            showInfo(resultats.size() + " courrier(s) trouvé(s)");
+            AlertUtils.showInfo(resultats.size() + " courrier(s) trouvé(s)");
             
         } catch (Exception e) {
             System.err.println("Erreur recherche: " + e.getMessage());
-            showError("Erreur lors de la recherche");
+            AlertUtils.showError("Erreur lors de la recherche");
         }
     }
     
@@ -1023,7 +1030,13 @@ public class CourrierController {
         chargerCourriersNotifies();
         mettreAJourStatistiques();
         afficherBadgeNotifications();
-        showInfo("Liste actualisée");
+        AlertUtils.showInfo("Liste actualisée");
+    }
+    
+    public void cleanup() {
+        if (scheduler != null && !scheduler.isShutdown()) {
+            scheduler.shutdownNow();
+        }
     }
     
     // ==================== MÉTHODES UTILITAIRES ====================
@@ -1040,29 +1053,8 @@ public class CourrierController {
         alert.showAndWait();
     }
     
-    private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Erreur");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
     
-    private void showWarning(String message) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle("Attention");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-    
-    private void showInfo(String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Information");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
+
     
     // ==================== CLASSE INTERNE ====================
     
